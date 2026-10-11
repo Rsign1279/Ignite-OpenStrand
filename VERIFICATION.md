@@ -4,9 +4,9 @@
 
 - `npm run lint`: no errors or warnings.
 - `npm run typecheck`: strict application TypeScript checks pass.
-- `npm test`: 37 tests pass across six files, including actual PostgreSQL RLS execution using PGlite with test Supabase auth claims.
+- `npm test`: 89 tests pass across nine files, including actual PostgreSQL RLS execution using PGlite with test Supabase auth claims.
 - `npm run build`: Next.js production build succeeds locally and on Vercel.
-- `npm run test:e2e`: all 12 desktop/mobile browser tests pass.
+- `npm run test:e2e`: all 32 desktop/mobile browser tests pass.
 - Playwright desktop/mobile full interview journey, profile selection, same pre/post question, feedback, STAR lesson, comparison, transfer, completion form link, reset.
 - Browser voice capture with fake audio: no transcription before explicit finish; completes transcription/evaluation using mocked services.
 - Microphone permission denial fallback.
@@ -22,12 +22,16 @@
 
 The complete dependency audit reports five high-severity entries stemming from one unpatched development-only `braces` stack-exhaustion advisory through Next's lint glob dependencies. The latest braces package is 3.0.3 and is affected; npm's suggested downgrade to Next lint 14 is incompatible with the selected framework. These packages process developer file globs, not student data or production requests. Production dependencies have zero reported vulnerabilities. The Vercel CLI was removed from project dependencies to avoid its unrelated transitive advisory surface; deployments use the supported CLI from the npm cache. Monitor upstream Next lint/braces releases and re-audit before rollout.
 
-## External configuration boundary — not yet production-ready for students
+## Live processing diagnosis and regression checks
 
-Supabase CLI reports no access token. The hosted project cannot be created/linked/migrated until the user completes `npx supabase login` and selects a project. No private credentials were requested through chat. Public Supabase configuration, Groq key, Redis credentials, service-role key, and admin allow-list have not been supplied to the deployment. Consequently live student authentication, profile writes, real Groq transcription/evaluation, Redis counters, and real staff dashboard are unverified.
+Both typed and recorded answers were blocked before reaching Groq because the configured Redis REST token is read-only. PING succeeded, but SET, INCR, EVAL and EVALSHA returned NOPERM. This configuration must be corrected with the standard read/write REST token; rate limiting deliberately remains enabled and fails closed. The diagnostic script now verifies real writes plus quota enforcement.
 
-The production alias was verified publicly accessible with an unauthenticated HTTP 200 request. Generated deployment/preview URLs have Vercel Authentication protection. No security setting was changed.
+Manual provider smoke checks using synthetic content passed for the actual application assessment, comparison, transfer-question and transfer-evaluation schemas. A temporary synthesized spoken recording passed live Groq transcription and was deleted afterward. These limited manual checks used real Groq; all automated tests mock Groq and spend no provider usage. No student recordings or responses were used in these checks.
 
-The automated Auth/AI tests are mocked, and PGlite's auth functions emulate Supabase claims. These tests provide useful evidence about application code and SQL policies but do not establish hosted Supabase configuration or real provider compatibility. Real microphone tests on Chromebook/iPad and a complete live deployed student/staff smoke test remain required.
+Regression coverage includes chunked multipart uploads without Content-Length, all four accepted audio formats, empty/unsupported/oversized/incomplete uploads, unauthorized calls, quota exhaustion, read-only Redis failures, library fail-open timeout responses, malformed/truncated/empty AI outputs, deterministic versus transient provider errors, short/multilingual/injection answers, HTML gateway failures, disconnected/hung requests, retained typed and transcribed answers, retries in pre/post/transfer, duplicate submissions, microphone denial and pending/late permission recovery. Browser checks run Chromium desktop and mobile emulation; physical Chromebook/iPad and Safari microphone checks remain classroom rollout checks.
 
-Follow the README setup steps and deployment checklist. Do not treat the deployment URL alone as the definition of done.
+Hosted Supabase public credentials and service-role profile reads were verified during setup; anonymous access is now enabled and the student registration flow reached the interview screen. The staff email is allowlisted and its account confirmed. A full deployed authenticated processing smoke remains pending a writable Redis credential. A working deployment URL alone does not establish this flow.
+
+## Release / rollback
+
+This release changes application code only; no migration is required. Local lint/typecheck, 89 unit/integration checks, 32 browser checks, production build, client secret scan and production dependency audit passed. Do not record interview content in monitoring. If processing becomes unusable after deployment, inspect credential health first. To roll back code, promote the prior ready Vercel deployment; preserve corrected Redis credentials. Code rollback cannot repair a read-only token.

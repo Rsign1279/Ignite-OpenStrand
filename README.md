@@ -44,7 +44,7 @@ Add **every row below** to the root `.env.local` for development. In Vercel, ope
 | `NEXT_PUBLIC_RESULTS_FORM_URL`  | `https://forms.gle/oXsPai5qjkUb5okw9`                                                      | Public         |
 | `ADMIN_EMAILS`                  | Comma-separated provisioned advisor email addresses                                        | Never          |
 | `UPSTASH_REDIS_REST_URL`        | Upstash Redis database REST URL                                                            | Server         |
-| `UPSTASH_REDIS_REST_TOKEN`      | Upstash Redis database REST token                                                          | Never          |
+| `UPSTASH_REDIS_REST_TOKEN`      | Upstash Redis standard **read/write** REST token (not the read-only token)                 | Never          |
 
 Do not prefix any secret with `NEXT_PUBLIC_`. The service role bypasses RLS and must remain server-only. `server-only` import boundaries prevent accidental bundling of AI, auth, privileged Supabase, and rate-limit modules.
 
@@ -178,3 +178,11 @@ Edit `src/config/strands.ts` to change display names, icons, interviewer roles, 
 ## Verification status
 
 See `VERIFICATION.md` for recorded automated checks and remaining live setup boundaries. A successful deployment/build alone does not establish that unconfigured external services or classroom hardware work.
+
+### Processing health and recovery
+
+After configuring credentials, run `node --env-file=.env.local scripts/verify-processing.mjs`. This tests actual rate-counter writes and quota rejection, not just Redis PING. It checks Groq model availability without paid generation and prints no secrets or interview content. A read-only Redis token causes both voice and text processing to fail before Groq is called. Replace it with the standard REST token in `.env.local` and Vercel Production, then redeploy.
+
+Uploads accept browser multipart bodies with or without Content-Length, bounded to 4 MB while streaming. Empty, oversized, unsupported, or incomplete recordings receive actionable errors. Students can switch to text while microphone permission is pending; late permission responses release their tracks. Recordings are discarded after transcription attempts. Successfully transcribed text remains in component memory when evaluation fails, so retry does not require another recording. Typed responses, including brief responses, are assessed without an arbitrary ten-character minimum. Empty answers remain blocked.
+
+Client requests have a 65-second deadline and do not automatically repeat paid POSTs. Structured provider requests have at most two 12-second attempts; permanent 4xx errors do not retry, malformed responses do. Post evaluation and comparison remain independent. Transcription has one 45-second attempt. Server rate-counter errors and library timeout responses fail closed. No service can guarantee transcription accuracy or availability; text mode and explicit retry provide recovery. Use a quiet room and a working microphone. Real Chromebook/iPad testing remains a classroom rollout check.

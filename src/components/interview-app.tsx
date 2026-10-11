@@ -264,7 +264,7 @@ export function InterviewApp() {
             ))}
           </div>
         </div>
-        {error && (
+        {error && !answering && (
           <p role="alert" className="error">
             {error}
           </p>

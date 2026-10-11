@@ -9,7 +9,14 @@ export async function POST(request: Request) {
     await rateLimit(user.id, "transcribe");
     const max = 4_000_000;
     const length = Number(request.headers.get("content-length"));
-    if (!length || length > max)
+    if (
+      !request.headers.get("content-type")?.startsWith("multipart/form-data;")
+    )
+      throw new HttpError(
+        415,
+        "Send a microphone recording or use text answer mode.",
+      );
+    if (length > max)
       throw new HttpError(
         413,
         "Recording is too large. Please use a shorter recording or type your answer.",
@@ -31,9 +38,19 @@ export async function POST(request: Request) {
       }
       chunks.push(value);
     }
-    const form = await new Response(Buffer.concat(chunks), {
-      headers: { "content-type": request.headers.get("content-type") ?? "" },
-    }).formData();
+    let form: FormData;
+    try {
+      form = await new Response(Buffer.concat(chunks), {
+        headers: { "content-type": request.headers.get("content-type") ?? "" },
+      }).formData();
+    } catch {
+      throw new HttpError(
+        400,
+        "Recording upload was incomplete. Please record again or type your answer.",
+      );
+    }
+    if ([...form.keys()].length !== 1)
+      throw new HttpError(400, "Send one recording at a time.");
     const file = form.get("audio");
     if (
       !(file instanceof File) ||

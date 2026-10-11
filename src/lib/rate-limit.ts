@@ -18,7 +18,21 @@ export async function rateLimit(userId: string, bucket: string) {
     analytics: false,
     prefix: "ignite:limit",
   });
-  const result = await limiter.limit(`${bucket}:${userId}`);
+  let result;
+  try {
+    result = await limiter.limit(`${bucket}:${userId}`);
+  } catch {
+    // Fail closed; never fall back to per-process counters in serverless deployment.
+    throw new HttpError(
+      503,
+      "Interview processing is temporarily unavailable. Please contact your advisor. Your typed answer is still here.",
+    );
+  }
+  if (result.reason === "timeout")
+    throw new HttpError(
+      503,
+      "Interview processing is temporarily unavailable. Your typed answer is still here. Please try again.",
+    );
   if (!result.success)
     throw new HttpError(
       429,

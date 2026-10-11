@@ -55,9 +55,9 @@ export const questionSchema = z
   .strict();
 export const answerSchema = z
   .object({
-    transcript: z.string().trim().min(10).max(16000),
+    transcript: z.string().trim().min(1).max(16000),
     stage: z.enum(["pre", "post"]),
-    preTranscript: z.string().trim().min(10).max(16000).optional(),
+    preTranscript: z.string().trim().min(1).max(16000).optional(),
   })
   .strict()
   .refine(
@@ -66,7 +66,7 @@ export const answerSchema = z
   );
 export const transferAnswerSchema = z
   .object({
-    transcript: z.string().trim().min(10).max(16000),
+    transcript: z.string().trim().min(1).max(16000),
     question: z.string().min(20).max(500),
   })
   .strict();

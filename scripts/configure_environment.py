@@ -19,7 +19,7 @@ KEYS = [
     ('NEXT_PUBLIC_RESULTS_FORM_URL', 'Results form URL', False, 'https://forms.gle/oXsPai5qjkUb5okw9'),
     ('ADMIN_EMAILS', 'Authorized staff emails, separated by commas', False, ''),
     ('UPSTASH_REDIS_REST_URL', 'Upstash Redis REST URL', False, ''),
-    ('UPSTASH_REDIS_REST_TOKEN', 'Upstash Redis REST token', True, ''),
+    ('UPSTASH_REDIS_REST_TOKEN', 'Upstash Redis standard read/write REST token (NOT read-only)', True, ''),
 ]
 
 def read_existing():
