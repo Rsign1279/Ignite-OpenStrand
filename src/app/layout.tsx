@@ -4,6 +4,7 @@ export const metadata: Metadata = {
   title: "IGNITE Interview Coach",
   description:
     "Practice. Reflect. Improve. Strand-specific interview preparation for IGNITE Professional Studies.",
+  icons: { icon: "/ignite-bulb.svg", apple: "/ignite-logo.png" },
   robots: { index: false, follow: false },
 };
 export default function Layout({ children }: { children: React.ReactNode }) {

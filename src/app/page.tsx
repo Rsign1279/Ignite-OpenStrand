@@ -5,7 +5,7 @@ import {
   ShieldCheck,
   Check,
   AudioLines,
-  Sparkles,
+  Lightbulb,
   Target,
   ArrowUpRight,
 } from "lucide-react";
@@ -98,7 +98,7 @@ export default function Home() {
             </div>
             <div className="growth-card">
               <span className="growth-icon">
-                <Sparkles size={21} />
+                <Lightbulb size={21} />
               </span>
               <div>
                 <strong>A little practice. A lot of possibility.</strong>
@@ -151,7 +151,7 @@ export default function Home() {
                 text: "Get thoughtful feedback, discover the STAR method, and try the same question with a fresh perspective.",
               },
               {
-                icon: Sparkles,
+                icon: Lightbulb,
                 n: "03",
                 title: "Put it into practice",
                 text: "See your progress. Take on a new question. Walk away with a framework you can use anywhere.",

@@ -1,13 +1,23 @@
 import Link from "next/link";
-import { Flame, ArrowUpRight } from "lucide-react";
+import Image from "next/image";
+import { ArrowUpRight } from "lucide-react";
 export function Brand() {
   return (
     <Link href="/" className="brand" aria-label="IGNITE Interview Coach home">
-      <span className="brand-mark">
-        <Flame size={25} strokeWidth={2.3} />
+      <span className="brand-logo">
+        <Image
+          src="/ignite-logo.png"
+          width={200}
+          height={200}
+          sizes="200px"
+          loading="eager"
+          alt="IGNITE — real, relevant learning"
+        />
       </span>
-      <span>
-        IGNITE<span className="brand-sub">INTERVIEW COACH</span>
+      <span className="brand-sub">
+        INTERVIEW
+        <br />
+        COACH
       </span>
     </Link>
   );
