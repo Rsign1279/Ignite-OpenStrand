@@ -84,7 +84,7 @@ def main():
         for name, label, private, default in KEYS:
             print(f'Configuring {name}…', flush=True)
             command = ['npx', '--yes', '--package', 'vercel@63.1.2', 'vercel', 'env', 'add', name, 'production', '--force']
-            if private or name == 'ADMIN_EMAILS':
+            if not name.startswith('NEXT_PUBLIC_') and (private or name == 'ADMIN_EMAILS'):
                 command.append('--sensitive')
             command.append('--yes')
             result = subprocess.run(command, cwd=ROOT, input=values[name] + '\n', text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
