@@ -290,7 +290,7 @@ export function InterviewApp() {
                 maxLength={80}
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                placeholder="Your name"
+                placeholder="Ex: Rahul Viswanath"
                 required
               />
               <fieldset>
