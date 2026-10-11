@@ -1,0 +1,15 @@
+node_modules/
+.next/
+.env*
+!.env.example
+!.env.local.example
+.vercel/
+test-results/
+playwright-report/
+supabase/.temp/
+.vercel
+
+*.tsbuildinfo
+
+.local-setup/
+__pycache__/
