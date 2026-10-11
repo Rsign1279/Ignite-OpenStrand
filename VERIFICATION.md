@@ -24,13 +24,13 @@ The complete dependency audit reports five high-severity entries stemming from o
 
 ## Live processing diagnosis and regression checks
 
-Both typed and recorded answers were blocked before reaching Groq because the configured Redis REST token is read-only. PING succeeded, but SET, INCR, EVAL and EVALSHA returned NOPERM. This configuration must be corrected with the standard read/write REST token; rate limiting deliberately remains enabled and fails closed. The diagnostic script now verifies real writes plus quota enforcement.
+Both typed and recorded answers were blocked before reaching Groq because the configured Redis REST token is read-only. PING succeeded, but SET, INCR, EVAL and EVALSHA returned NOPERM. The user replaced it with the standard read/write REST token. Real counter writes and quota rejection now pass, and the corrected credential was securely uploaded to Vercel Production. Rate limiting remains enabled and fails closed. The diagnostic script now verifies real writes plus quota enforcement.
 
 Manual provider smoke checks using synthetic content passed for the actual application assessment, comparison, transfer-question and transfer-evaluation schemas. A temporary synthesized spoken recording passed live Groq transcription and was deleted afterward. These limited manual checks used real Groq; all automated tests mock Groq and spend no provider usage. No student recordings or responses were used in these checks.
 
 Regression coverage includes chunked multipart uploads without Content-Length, all four accepted audio formats, empty/unsupported/oversized/incomplete uploads, unauthorized calls, quota exhaustion, read-only Redis failures, library fail-open timeout responses, malformed/truncated/empty AI outputs, deterministic versus transient provider errors, short/multilingual/injection answers, HTML gateway failures, disconnected/hung requests, retained typed and transcribed answers, retries in pre/post/transfer, duplicate submissions, microphone denial and pending/late permission recovery. Browser checks run Chromium desktop and mobile emulation; physical Chromebook/iPad and Safari microphone checks remain classroom rollout checks.
 
-Hosted Supabase public credentials and service-role profile reads were verified during setup; anonymous access is now enabled and the student registration flow reached the interview screen. The staff email is allowlisted and its account confirmed. A full deployed authenticated processing smoke remains pending a writable Redis credential. A working deployment URL alone does not establish this flow.
+Hosted Supabase public credentials and service-role profile reads were verified during setup; anonymous access is now enabled and the student registration flow reached the interview screen. The staff email is allowlisted and its account confirmed. A full deployed authenticated processing smoke remains a final classroom check; no fake student account was created for testing. A working deployment URL alone does not establish this flow.
 
 ## Release / rollback
 
