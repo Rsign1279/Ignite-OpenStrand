@@ -106,7 +106,7 @@ npm run dev
 npm run lint
 npm run typecheck
 npm test
-npx playwright install chromium
+npx playwright install chromium webkit
 npm run test:e2e
 npm run build
 npm start
@@ -114,7 +114,7 @@ npm start
 
 Automated tests never spend Groq usage. Unit and mocked endpoint tests cover scores, schema validation, malformed generation retries, prompt isolation, strand wording, deterministic transitions, profile/year validation, admin authorization, rate-limit rejection, request sizes, safe errors, and CSV formula-injection protection. PGlite executes the actual SQL migration against PostgreSQL with test auth functions and JWT settings, asserting cross-student RLS restrictions. It does not replace a production Supabase smoke test.
 
-Playwright runs desktop and mobile onboarding through completion/reset with mocked Auth and AI traffic, plus voice recording with fake browser audio, permission denial fallback, responsive overflow checks, and axe WCAG AA scans. Audio capture must also be manually verified on actual Chromebook/iPad hardware over HTTPS before a classroom rollout.
+Playwright runs Chromium desktop/mobile and WebKit (Safari engine) text onboarding through completion/reset with mocked Auth and AI traffic, plus voice recording with fake browser audio, permission denial fallback, responsive overflow checks, and axe WCAG AA scans. Audio capture must also be manually verified on actual Chromebook/iPad hardware over HTTPS before a classroom rollout.
 
 ## Vercel deployment
 

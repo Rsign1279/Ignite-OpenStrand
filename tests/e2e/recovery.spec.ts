@@ -225,7 +225,14 @@ test("microphone permission pending blocks duplicate starts and allows typed fal
   page,
 }) => {
   await page.addInitScript(() => {
-    navigator.mediaDevices.getUserMedia = () => new Promise(() => {});
+    // Headless WebKit has no MediaRecorder; emulate availability to exercise
+    // the pending-permission race separately from unsupported-browser fallback.
+    if (typeof MediaRecorder === "undefined")
+      Object.defineProperty(window, "MediaRecorder", { value: class {} });
+    Object.defineProperty(navigator, "mediaDevices", {
+      value: { getUserMedia: () => new Promise(() => {}) },
+      configurable: true,
+    });
   });
   await enter(page);
   await page
@@ -279,6 +286,8 @@ test("late microphone permission after typed fallback releases its tracks", asyn
     );
     navigator.mediaDevices.getUserMedia = async (constraints) => {
       const stream = await original(constraints);
+      (window as Window & { testTrack?: MediaStreamTrack }).testTrack =
+        stream.getTracks()[0];
       await new Promise((resolve) => setTimeout(resolve, 1200));
       return stream;
     };
@@ -294,8 +303,40 @@ test("late microphone permission after typed fallback releases its tracks", asyn
   await expect(page.getByLabel("Your answer", { exact: true })).toHaveValue(
     answer,
   );
+  await expect
+    .poll(() =>
+      page.evaluate(
+        () =>
+          (window as Window & { testTrack?: MediaStreamTrack }).testTrack
+            ?.readyState,
+      ),
+    )
+    .toBe("ended");
   await expect(page.getByRole("status")).toHaveText("Ready when you are.");
   await expect(
     page.getByRole("button", { name: "Begin Answer", exact: true }),
   ).toHaveCount(0);
+});
+
+test("unsupported recording browser preserves assessment through text mode", async ({
+  page,
+}) => {
+  await page.addInitScript(() => {
+    Object.defineProperty(window, "MediaRecorder", {
+      value: undefined,
+      configurable: true,
+    });
+  });
+  await enter(page);
+  await page
+    .getByRole("button", { name: "Begin Answer", exact: true })
+    .first()
+    .click();
+  await expect(page.getByLabel("Your answer", { exact: true })).toBeVisible();
+  await expect(page.locator("p[role=alert]")).toContainText(
+    "Recording is unavailable",
+  );
+  await expect(
+    page.getByRole("heading", { name: /Tell me about a time when a project/ }),
+  ).toBeVisible();
 });

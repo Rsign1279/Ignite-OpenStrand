@@ -6,7 +6,7 @@
 - `npm run typecheck`: strict application TypeScript checks pass.
 - `npm test`: 89 tests pass across nine files, including actual PostgreSQL RLS execution using PGlite with test Supabase auth claims.
 - `npm run build`: Next.js production build succeeds locally and on Vercel.
-- `npm run test:e2e`: all 32 desktop/mobile browser tests pass.
+- `npm run test:e2e`: all 47 Chromium desktop/mobile and WebKit browser tests pass.
 - Playwright desktop/mobile full interview journey, profile selection, same pre/post question, feedback, STAR lesson, comparison, transfer, completion form link, reset.
 - Browser voice capture with fake audio: no transcription before explicit finish; completes transcription/evaluation using mocked services.
 - Microphone permission denial fallback.
@@ -28,10 +28,12 @@ Both typed and recorded answers were blocked before reaching Groq because the co
 
 Manual provider smoke checks using synthetic content passed for the actual application assessment, comparison, transfer-question and transfer-evaluation schemas. A temporary synthesized spoken recording passed live Groq transcription and was deleted afterward. These limited manual checks used real Groq; all automated tests mock Groq and spend no provider usage. No student recordings or responses were used in these checks.
 
-Regression coverage includes chunked multipart uploads without Content-Length, all four accepted audio formats, empty/unsupported/oversized/incomplete uploads, unauthorized calls, quota exhaustion, read-only Redis failures, library fail-open timeout responses, malformed/truncated/empty AI outputs, deterministic versus transient provider errors, short/multilingual/injection answers, HTML gateway failures, disconnected/hung requests, retained typed and transcribed answers, retries in pre/post/transfer, duplicate submissions, microphone denial and pending/late permission recovery. Browser checks run Chromium desktop and mobile emulation; physical Chromebook/iPad and Safari microphone checks remain classroom rollout checks.
+Regression coverage includes chunked multipart uploads without Content-Length, all four accepted audio formats, empty/unsupported/oversized/incomplete uploads, unauthorized calls, quota exhaustion, read-only Redis failures, library fail-open timeout responses, malformed/truncated/empty AI outputs, deterministic versus transient provider errors, short/multilingual/injection answers, HTML gateway failures, disconnected/hung requests, retained typed and transcribed answers, retries in pre/post/transfer, duplicate submissions, microphone denial and pending/late permission recovery. Browser checks run Chromium desktop/mobile and WebKit (Safari engine) text/recovery flows; physical Chromebook/iPad and Safari microphone checks remain classroom rollout checks.
 
 Hosted Supabase public credentials and service-role profile reads were verified during setup; anonymous access is now enabled and the student registration flow reached the interview screen. The staff email is allowlisted and its account confirmed. A full deployed authenticated processing smoke remains a final classroom check; no fake student account was created for testing. A working deployment URL alone does not establish this flow.
 
 ## Release / rollback
 
-This release changes application code only; no migration is required. Local lint/typecheck, 89 unit/integration checks, 32 browser checks, production build, client secret scan and production dependency audit passed. Do not record interview content in monitoring. If processing becomes unusable after deployment, inspect credential health first. To roll back code, promote the prior ready Vercel deployment; preserve corrected Redis credentials. Code rollback cannot repair a read-only token.
+This release changes application code only; no migration is required. Local lint/typecheck, 89 unit/integration checks, 47 browser checks, production build, client secret scan and production dependency audit passed. Do not record interview content in monitoring. If processing becomes unusable after deployment, inspect credential health first. To roll back code, promote the prior ready Vercel deployment; preserve corrected Redis credentials. Code rollback cannot repair a read-only token.
+
+The production rebuild containing the corrected Redis credential reported READY (`dpl_Bwmd23uVLMt34DotAnq3E4mpL3MK`). The public landing returned HTTP 200 and all four costly endpoints returned HTTP 401 without authentication. Browser microphone capture still requires a physical-device classroom smoke check; the live provider transcription check used a synthetic WAV.

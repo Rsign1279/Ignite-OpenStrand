@@ -13,6 +13,14 @@ export default defineConfig({
     },
   },
   projects: [
+    {
+      name: "safari",
+      use: { ...devices["Desktop Safari"], launchOptions: {} },
+      // WebKit cannot grant automated microphone permissions. Voice is tested
+      // in Chromium; Safari's text/recovery flow uses its actual rendering engine.
+      grepInvert:
+        /voice recording|transcription failure|successful transcription|late microphone/,
+    },
     { name: "desktop", use: { ...devices["Desktop Chrome"] } },
     {
       name: "mobile",
