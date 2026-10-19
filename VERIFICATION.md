@@ -51,3 +51,7 @@ The supplied IGNITE PNG is preserved unchanged. Shared student/staff branding, l
 - Authorized owner applied the prepared production SQL and reported success. REST reads verify both tables exist; OpenAPI verifies the write RPC is available. Unauthenticated table access returns 401. No synthetic student accounts or attempts were created in production.
 - Staff password remains unchanged. Authenticated live staff UI verification requires the existing staff credentials; no password was requested or printed.
 - New explicit retention policy: assessment answers and AI feedback are saved for authorized staff drilldowns. Audio remains transient. Historical unsaved answers/scores cannot be recovered. Anonymous reset creates separate registration identities; repeat names are never merged automatically.
+
+## Staff login reliability patch
+
+The reset credential was verified against Supabase and in a real production browser through the full dashboard. The previous UI hid all provider failures behind a credential error and cleared the password after failed submissions. New same-origin server login/logout routes validate credentials, enforce staff authorization before session creation, and return safe error categories. The password field now remains populated on failure and includes an accessible show/hide control. Lint, typecheck, build, 130 unit/integration tests and 12 targeted browser/accessibility checks pass. No credential values are stored in tracked files or test artifacts.

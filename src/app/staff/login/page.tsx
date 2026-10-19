@@ -1,45 +1,33 @@
 "use client";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Header } from "@/components/brand";
-import { browserClient } from "@/lib/supabase/browser";
-import { api } from "@/lib/client-api";
-import { LockKeyhole, ArrowRight } from "lucide-react";
+import { signInStaff } from "@/lib/staff-login-client";
+import { LockKeyhole, ArrowRight, Eye, EyeOff } from "lucide-react";
 export default function Staff() {
   const router = useRouter();
+  const lock = useRef(false);
+  const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   async function login(e: React.FormEvent) {
     e.preventDefault();
-    if (busy) return;
+    if (lock.current) return;
+    lock.current = true;
     setBusy(true);
     setError("");
     try {
-      const client = browserClient();
-      await client.auth.signOut();
-      const { error } = await client.auth.signInWithPassword({
-        email,
-        password,
-      });
-      if (error)
-        throw new Error(
-          "Unable to sign in. Check your staff email and password.",
-        );
-      try {
-        await api("/api/admin/profiles");
-      } catch (e) {
-        await client.auth.signOut();
-        throw e;
-      }
-      router.push("/staff/dashboard");
+      await signInStaff(email, password);
+      setPassword("");
+      router.replace("/staff/dashboard");
       router.refresh();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Unable to sign in.");
     } finally {
       setBusy(false);
-      setPassword("");
+      lock.current = false;
     }
   }
   return (
@@ -58,6 +46,7 @@ export default function Staff() {
             <input
               id="email"
               type="email"
+              name="email"
               autoComplete="username"
               required
               value={email}
@@ -66,12 +55,22 @@ export default function Staff() {
             <label htmlFor="password">Password</label>
             <input
               id="password"
-              type="password"
+              type={showPassword ? "text" : "password"}
+              name="password"
               autoComplete="current-password"
               required
               value={password}
               onChange={(e) => setPassword(e.target.value)}
             />
+            <button
+              type="button"
+              className="password-visibility"
+              aria-pressed={showPassword}
+              onClick={() => setShowPassword((value) => !value)}
+            >
+              {showPassword ? <EyeOff size={17} /> : <Eye size={17} />}
+              {showPassword ? "Hide password" : "Show password"}
+            </button>
             {error && (
               <p className="error" role="alert">
                 {error}
@@ -83,7 +82,8 @@ export default function Staff() {
             </button>
           </form>
           <p className="privacy-note">
-            Staff accounts are provided by your program administrator.
+            If your password was reset, use the new password rather than a saved
+            browser password.
           </p>
         </section>
       </main>

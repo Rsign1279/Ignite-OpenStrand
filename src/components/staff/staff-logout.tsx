@@ -1,7 +1,7 @@
 "use client";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { browserClient } from "@/lib/supabase/browser";
+import { signOutStaff } from "@/lib/staff-login-client";
 export function StaffLogout() {
   const router = useRouter();
   const [busy, setBusy] = useState(false),
@@ -14,8 +14,7 @@ export function StaffLogout() {
         onClick={async () => {
           setBusy(true);
           try {
-            const { error } = await browserClient().auth.signOut();
-            if (error) throw error;
+            await signOutStaff();
             router.replace("/staff/login");
             router.refresh();
           } catch {

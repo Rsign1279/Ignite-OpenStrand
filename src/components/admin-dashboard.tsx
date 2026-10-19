@@ -9,7 +9,7 @@ import { rubric } from "@/config/strands";
 import { totalScore } from "@/lib/validation";
 import type { Profile } from "@/lib/validation";
 import { profilesCsv } from "@/lib/csv";
-import { browserClient } from "@/lib/supabase/browser";
+import { signOutStaff } from "@/lib/staff-login-client";
 import { Download, LogOut, Search, Users, ShieldCheck } from "lucide-react";
 export function AdminDashboard({
   profiles,
@@ -40,8 +40,7 @@ export function AdminDashboard({
   );
   async function logout() {
     try {
-      const { error } = await browserClient().auth.signOut();
-      if (error) throw error;
+      await signOutStaff();
       router.replace("/staff/login");
       router.refresh();
     } catch {
