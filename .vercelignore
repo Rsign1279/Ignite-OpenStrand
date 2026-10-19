@@ -1,0 +1,10 @@
+.git
+.next
+node_modules
+.local-setup
+test-results
+playwright-report
+tests
+.env*
+*.tsbuildinfo
+supabase/.temp
