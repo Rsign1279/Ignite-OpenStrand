@@ -156,7 +156,7 @@ describe("Configuration and deterministic navigation", () => {
       { name: "=SUM(1)", strand: "education", ignite_year: 1 },
     ]);
     expect(csv).toContain("'=SUM(1)");
-    expect(csv).toContain("IGNITE Education");
+    expect(csv).toContain("Education Innovation");
     expect(csv.split("\r\n")[0]).toBe("name,strand,IGNITE year");
   });
 });
