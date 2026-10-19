@@ -1,10 +1,10 @@
 # IGNITE Interview Coach
 
-A voice-first interview practice application for IGNITE Professional Studies. Students register without email, complete a behavioral pre-assessment, learn STAR, repeat the same question, compare scores, and apply the framework to a transfer question. Advisors see registrations only.
+A voice-first interview practice application for IGNITE Professional Studies. Students register without email, complete a behavioral pre-assessment, learn STAR, repeat the same question, compare scores, and apply the framework to a transfer question. Advisors see registrations, pre/post rubric scores, within-session growth, completion dates, and transfer STAR indicators.
 
 ## Architecture
 
-Next.js App Router and strict TypeScript power the web application. Supabase anonymous Auth identifies students; password Auth identifies provisioned staff. PostgreSQL stores only `user_id`, `name`, `strand`, and `ignite_year`. The verified server-side email allow-list protects all staff reads before a service-role query. Supabase RLS limits anonymous authenticated students to inserting and reading their own profile. No update/delete grants exist.
+Next.js App Router and strict TypeScript power the web application. Supabase anonymous Auth identifies students; password Auth identifies provisioned staff. PostgreSQL stores profiles (`user_id`, `name`, `strand`, `ignite_year`) and a separate server-only `learning_results` table with numeric rubric scores, STAR presence flags, and operational/completion timestamps. The verified server-side email allow-list protects all staff reads before a service-role query. Supabase RLS limits anonymous authenticated students to inserting and reading their own profile. Students have no access to learning_results; only server-generated evaluations are persisted.
 
 The deterministic state machine in `src/lib/machine.ts` controls every interview transition. Groq receives server-built instructions and separate, untrusted response data; it cannot navigate the application. Dedicated prompts cover independent pre/post evaluation, comparison, transfer question generation, and STAR detection. A provider interface permits replacing Groq. JSON Schema strict output and Zod validate responses; malformed generation gets at most two attempts. Arithmetic is recomputed in code.
 
@@ -83,7 +83,7 @@ Dashboard actions for the hosted project:
 4. Authentication → Users → Add User: provision each real advisor with their email and a secure password. Add exactly those emails to server-side `ADMIN_EMAILS`. Do not create student email accounts.
 5. Review vendor auth logs/retention and student data policy with the program owner. Do not add response analytics or content logs.
 
-The primary key provides the only index needed for this profile-only dataset. The dashboard loads registrations in paginated database batches, then filters locally. Very large cohorts may benefit from server-side search/count pagination later.
+The primary key provides the only index needed for this profile dataset. The dashboard loads registrations in paginated database batches, then filters locally. Very large cohorts may benefit from server-side search/count pagination later.
 
 ## Groq setup
 
@@ -151,7 +151,7 @@ Vercel's request limit is approximately 4.5 MB; the app rejects multipart reques
 
 ## Privacy and security
 
-No audio, responses, transcripts, rubric scores, feedback, student emails, phones, IDs, demographics, or analytics are stored in the application database. Profile creation persists only the permitted fields and an internal auth UUID. Anonymous Auth itself maintains operational authentication records. No transcript/audio logging statements are present. Hosting, Supabase, Groq, and Redis have their own operational policies and must be configured/reviewed independently; hosting may retain request metadata such as IPs outside this app's control.
+No audio, responses, transcripts, feedback, student emails, phones, IDs, demographics, or interview-content analytics are stored in the application database. Rubric scores and transfer STAR indicators are now persisted by explicit request (October 19, 2026). Profile creation persists the profile fields and an internal auth UUID. Learning results are linked to that UUID. Each anonymous registration is one session; matching repeat students across sessions is not automatic, and duplicate names must not be assumed to identify the same person. Historical scores cannot be recovered. Anonymous Auth itself maintains operational authentication records. No transcript/audio logging statements are present. Hosting, Supabase, Groq, and Redis have their own operational policies and must be configured/reviewed independently; hosting may retain request metadata such as IPs outside this app's control.
 
 Interview content exists temporarily in browser memory and server request memory. There are no interview localStorage records, files, storage buckets, or database tables. The official results form opens only after a user clicks; no query parameters or automatic submissions transmit student data.
 
@@ -190,3 +190,6 @@ Client requests have a 65-second deadline and do not automatically repeat paid P
 ### IGNITE visual identity
 
 The supplied official PNG is preserved at `public/ignite-logo.png`; the shared Brand component displays it without stretching or recoloring. `public/ignite-bulb.svg` is a small favicon inspired by the logo's lightbulb. The global theme lives in `src/app/globals.css`: `--brand-blue`, `--brand-deep`, `--brand-yellow`, and their soft surface tokens. Blue anchors navigation, controls, scores, and advisor tables; yellow highlights the landing CTA, active recording, STAR cards, and score change. Dark blue text on yellow preserves readable contrast. Keep future strand wording in the strand config and visual colors in the shared theme.
+
+### Learning tracking rollout
+Apply `supabase db push` before deploying this version. Saved results contain pre/post rubric category scores and transfer booleans, never answer text or feedback. Staff statistics use only paired pre/post assessments for growth calculations. Missing results display a dash, not zero. Rollback: revert the app commit; leave the additive table intact to preserve collected results.

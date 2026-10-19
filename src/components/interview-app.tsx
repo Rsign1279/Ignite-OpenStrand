@@ -341,8 +341,9 @@ export function InterviewApp() {
                 <ArrowRight size={18} />
               </button>
               <p className="privacy-note">
-                <ShieldCheck size={15} /> Only your name, strand, and IGNITE
-                year are saved.
+                <ShieldCheck size={15} /> Your name, strand, and IGNITE year,
+                rubric scores, and STAR indicators are saved for your advisor.
+                Recordings and answers are not saved.
               </p>
             </form>
           </section>

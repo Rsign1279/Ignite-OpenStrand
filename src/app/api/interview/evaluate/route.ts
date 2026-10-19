@@ -1,3 +1,4 @@
+import { saveAssessment } from "@/lib/learning";
 import { requireStudent } from "@/lib/auth";
 import {
   profileSchema,
@@ -40,6 +41,7 @@ export async function POST(request: Request) {
             comparisonSchema,
           )
         : undefined;
+    await saveAssessment(user.id, answer.stage, evaluation);
     return json({ evaluation, comparison });
   } catch (e) {
     return failure(e);

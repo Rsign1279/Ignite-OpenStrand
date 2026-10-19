@@ -11,16 +11,37 @@ export default async function Admin() {
     redirect("/staff");
   }
   const client = adminClient();
-  const profiles: Profile[] = [];
+  const profiles: (Profile & { user_id: string })[] = [];
   for (let offset = 0; ; offset += 1000) {
     const { data, error } = await client
       .from("student_profiles")
-      .select("name,strand,ignite_year")
+      .select("user_id,name,strand,ignite_year")
       .order("user_id")
       .range(offset, offset + 999);
     if (error) throw new Error("Unable to load registrations. Please refresh.");
-    profiles.push(...data.map((p) => profileSchema.parse(p)));
+    profiles.push(
+      ...data.map((p) => ({
+        ...profileSchema.parse({
+          name: p.name,
+          strand: p.strand,
+          ignite_year: p.ignite_year,
+        }),
+        user_id: p.user_id,
+      })),
+    );
     if (data.length < 1000) break;
   }
-  return <AdminDashboard profiles={profiles} />;
+  const results = [];
+  for (let offset = 0; ; offset += 1000) {
+    const { data, error } = await client
+      .from("learning_results")
+      .select("*")
+      .order("user_id")
+      .range(offset, offset + 999);
+    if (error)
+      throw new Error("Unable to load learning results. Please refresh.");
+    results.push(...data);
+    if (data.length < 1000) break;
+  }
+  return <AdminDashboard profiles={profiles} results={results} />;
 }

@@ -173,8 +173,9 @@ export default function Home() {
           <div>
             <strong>Your practice stays yours.</strong>
             <p>
-              We save your name, strand, and IGNITE year. Your recordings,
-              answers, and feedback are never saved in our database.
+              We save your name, strand, IGNITE year, rubric scores, and STAR
+              indicators for your advisor. Your recordings, answers, and
+              feedback are never saved in our database.
             </p>
           </div>
           <Check size={22} />

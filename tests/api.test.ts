@@ -4,7 +4,9 @@ const mock = vi.hoisted(() => ({
   limit: vi.fn(),
   structured: vi.fn(),
   transcribe: vi.fn(),
+  save: vi.fn(),
 }));
+vi.mock("@/lib/learning", () => ({ saveAssessment: mock.save }));
 vi.mock("@/lib/auth", () => ({ requireStudent: mock.auth }));
 vi.mock("@/lib/rate-limit", () => ({ rateLimit: mock.limit }));
 vi.mock("@/lib/ai/provider", () => ({
@@ -37,6 +39,7 @@ beforeEach(() => {
     profile: { name: "Student", strand: "education", ignite_year: 1 },
   });
   mock.limit.mockResolvedValue(undefined);
+  mock.save.mockResolvedValue(undefined);
   mock.structured.mockResolvedValue(assessment);
 });
 describe("Authenticated AI endpoints", () => {
@@ -147,4 +150,19 @@ it.each([
 it.each(["", "   "])("rejects empty answer before AI", async (transcript) => {
   expect((await POST(request({ transcript, stage: "pre" }))).status).toBe(400);
   expect(mock.structured).not.toHaveBeenCalled();
+});
+
+it("saves only validated numeric scores for the authenticated student", async () => {
+  await POST(request({ transcript: "Private answer", stage: "pre" }));
+  expect(mock.save).toHaveBeenCalledWith("user-1", "pre", {
+    ...assessment,
+    total: 10,
+  });
+});
+it("does not return success when learning storage fails", async () => {
+  mock.save.mockRejectedValue(new HttpError(503, "Unable to save results"));
+  expect(
+    (await POST(request({ transcript: "Private answer", stage: "pre" })))
+      .status,
+  ).toBe(503);
 });

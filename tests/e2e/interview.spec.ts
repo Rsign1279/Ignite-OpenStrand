@@ -87,7 +87,7 @@ test("full student text interview and secure reset", async ({ page }) => {
   );
   await page.goto("/interview");
   await page.getByLabel("What should we call you?").fill("Test Student");
-  await page.getByRole("button", { name: "Education", exact: true }).click();
+  await page.getByRole("button", { name: "Education Innovation", exact: true }).click();
   await page.getByRole("button", { name: /Year 1 My first/ }).click();
   await page.getByRole("button", { name: "Begin Interview" }).click();
   await expect(

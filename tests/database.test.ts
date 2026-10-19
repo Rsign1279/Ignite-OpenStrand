@@ -46,7 +46,34 @@ it("PostgreSQL RLS isolates students, blocks impersonation and permits privilege
     expect(
       (await db.query("select * from public.student_profiles")).rows,
     ).toHaveLength(0);
+    await db.exec("reset role;");
+    await db.exec(
+      readFileSync(
+        "supabase/migrations/202610190001_learning_results.sql",
+        "utf8",
+      ),
+    );
+    await db.exec("set role authenticated;");
+    await expect(db.query("select * from learning_results")).rejects.toThrow(
+      /permission denied/,
+    );
+    await expect(
+      db.exec(
+        `insert into learning_results(user_id) values ('11111111-1111-4111-8111-111111111111')`,
+      ),
+    ).rejects.toThrow(/permission denied/);
     await db.exec("reset role; set role service_role;");
+    await db.exec(
+      `insert into learning_results(user_id, pre_scores) values ('11111111-1111-4111-8111-111111111111', '{"situationTask":2,"personalActions":2,"resultImpact":1,"professionalCommunication":2}');`,
+    );
+    await db.exec(
+      `insert into learning_results(user_id, post_scores) values ('11111111-1111-4111-8111-111111111111', '{"situationTask":3,"personalActions":3,"resultImpact":2,"professionalCommunication":3}') on conflict(user_id) do update set post_scores=excluded.post_scores;`,
+    );
+    const saved = await db.query<{ pre_scores: unknown; post_scores: unknown }>(
+      "select pre_scores,post_scores from learning_results",
+    );
+    expect(saved.rows[0].pre_scores).toBeTruthy();
+    expect(saved.rows[0].post_scores).toBeTruthy();
     expect(
       (
         await db.query(

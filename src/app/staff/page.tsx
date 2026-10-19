@@ -52,7 +52,7 @@ export default function Staff() {
           </div>
           <span className="eyebrow">ADVISOR ACCESS</span>
           <h1>Welcome back.</h1>
-          <p>Sign in to manage student registrations.</p>
+          <p>Sign in to view registrations and student interview growth.</p>
           <form onSubmit={login}>
             <label htmlFor="email">Staff email</label>
             <input

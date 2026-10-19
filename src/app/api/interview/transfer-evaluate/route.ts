@@ -1,3 +1,4 @@
+import { saveTransfer } from "@/lib/learning";
 import { requireStudent } from "@/lib/auth";
 import {
   profileSchema,
@@ -14,14 +15,14 @@ export async function POST(request: Request) {
     const { user, profile } = await requireStudent();
     await rateLimit(user.id, "assessment");
     const answer = transferAnswerSchema.parse(await readJson(request));
-    return json(
-      await ai.structured(
-        "transfer",
-        buildTransferEvaluationPrompt(profileSchema.parse(profile).strand),
-        answer,
-        transferSchema,
-      ),
+    const result = await ai.structured(
+      "transfer",
+      buildTransferEvaluationPrompt(profileSchema.parse(profile).strand),
+      answer,
+      transferSchema,
     );
+    await saveTransfer(user.id, result);
+    return json(result);
   } catch (e) {
     return failure(e);
   }
