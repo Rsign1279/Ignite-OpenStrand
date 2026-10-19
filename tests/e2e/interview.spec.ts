@@ -258,7 +258,7 @@ test("onboarding and staff login pass accessibility and reduced-motion layout ch
   const { default: AxeBuilder } = await import("@axe-core/playwright");
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.route("**/api/profile", (r) => r.fulfill({ json: null }));
-  for (const path of ["/interview", "/staff"]) {
+  for (const path of ["/interview", "/staff/login"]) {
     await page.goto(path);
     const result = await new AxeBuilder({ page })
       .withTags(["wcag2a", "wcag2aa", "wcag21aa"])

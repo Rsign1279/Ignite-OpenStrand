@@ -1,6 +1,6 @@
 # IGNITE Interview Coach
 
-A voice-first interview practice application for IGNITE Professional Studies. Students register without email, complete a behavioral pre-assessment, learn STAR, repeat the same question, compare scores, and apply the framework to a transfer question. Advisors see registrations, pre/post rubric scores, within-session growth, completion dates, and transfer STAR indicators.
+A voice-first interview practice application for IGNITE Professional Studies. Students register without email, complete a behavioral pre-assessment, learn STAR, repeat the same question, compare scores, and apply the framework to a transfer question. Advisors see registrations, rubric scores, student/question growth, and saved assessment answers/feedback in protected staff analytics.
 
 ## Architecture
 
@@ -151,7 +151,7 @@ Vercel's request limit is approximately 4.5 MB; the app rejects multipart reques
 
 ## Privacy and security
 
-No audio, responses, transcripts, feedback, student emails, phones, IDs, demographics, or interview-content analytics are stored in the application database. Rubric scores and transfer STAR indicators are now persisted by explicit request (October 19, 2026). Profile creation persists the profile fields and an internal auth UUID. Learning results are linked to that UUID. Each anonymous registration is one session; matching repeat students across sessions is not automatic, and duplicate names must not be assumed to identify the same person. Historical scores cannot be recovered. Anonymous Auth itself maintains operational authentication records. No transcript/audio logging statements are present. Hosting, Supabase, Groq, and Redis have their own operational policies and must be configured/reviewed independently; hosting may retain request metadata such as IPs outside this app's control.
+No interview audio, student emails, phone numbers, school IDs, or demographics are stored in the application database. Assessment answer text and AI feedback are now stored for staff review, explicitly requested on October 19, 2026. Rubric scores and transfer STAR indicators are now persisted by explicit request (October 19, 2026). Profile creation persists the profile fields and an internal auth UUID. Learning results are linked to that UUID. Each anonymous registration is one session; matching repeat students across sessions is not automatic, and duplicate names must not be assumed to identify the same person. Historical scores cannot be recovered. Anonymous Auth itself maintains operational authentication records. No transcript/audio logging statements are present. Hosting, Supabase, Groq, and Redis have their own operational policies and must be configured/reviewed independently; hosting may retain request metadata such as IPs outside this app's control.
 
 Interview content exists temporarily in browser memory and server request memory. There are no interview localStorage records, files, storage buckets, or database tables. The official results form opens only after a user clicks; no query parameters or automatic submissions transmit student data.
 
@@ -192,4 +192,36 @@ Client requests have a 65-second deadline and do not automatically repeat paid P
 The supplied official PNG is preserved at `public/ignite-logo.png`; the shared Brand component displays it without stretching or recoloring. `public/ignite-bulb.svg` is a small favicon inspired by the logo's lightbulb. The global theme lives in `src/app/globals.css`: `--brand-blue`, `--brand-deep`, `--brand-yellow`, and their soft surface tokens. Blue anchors navigation, controls, scores, and advisor tables; yellow highlights the landing CTA, active recording, STAR cards, and score change. Dark blue text on yellow preserves readable contrast. Keep future strand wording in the strand config and visual colors in the shared theme.
 
 ### Learning tracking rollout
-Apply `supabase db push` before deploying this version. Saved results contain pre/post rubric category scores and transfer booleans, never answer text or feedback. Staff statistics use only paired pre/post assessments for growth calculations. Missing results display a dash, not zero. Rollback: revert the app commit; leave the additive table intact to preserve collected results.
+Apply `supabase db push` before deploying this version. The original learning_results table contains pre/post rubric category scores and transfer booleans. The newly requested interview_attempts table additionally retains assessment answers and feedback. Staff statistics use only paired pre/post assessments for growth calculations. Missing results display a dash, not zero. Rollback: revert the app commit; leave the additive table intact to preserve collected results.
+
+
+## Staff analytics (October 19, 2026)
+
+- `/staff/login`: existing email/password staff authentication; successful login lands at `/staff/dashboard`. The staff password was not changed.
+- `/staff/dashboard`: server-rendered KPI cards and leaderboard, five Recharts views, URL-based multi-strand/date/name/minimum-attempt filters.
+- `/staff/student/[id]`: numerical timeline, category-versus-strand radar, mastery, per-question attempts, and verbatim saved answers/feedback.
+- `/staff`: paginated raw attempt table (50 rows/page), with CSV export. `/admin` preserves the existing registration table.
+- `GET /api/staff/analytics`: aggregate-only JSON with `strand` (repeated or comma-separated IDs), `student` (name search), `from`/`to` (inclusive UTC dates), and `minAttempts`. Unauthenticated requests return 401; anonymous students and other non-admin accounts return 403. Every server page and data loader independently checks staff authorization. No raw answer or feedback fields are included in analytics JSON or chart props.
+- `GET /api/staff/export-csv`: same filters, optionally `id=<student UUID>`, staff-only attachment containing raw fields and per-student/question first, best, latest, delta, attempts_count. Spreadsheet formula prefixes are neutralized; quotes and line breaks are escaped.
+
+### Aggregation definitions
+
+Within the selected date range, group attempts by **authenticated student UUID and question ID**, order by timestamp then attempt number/ID, and compute first, best, latest, and best-minus-first. First and best averages are computed across a student's questions; program/strand averages then weight students equally. Minimum attempts and student-name search are applied before every program chart. Empty averages are null, never zero. Best-minus-first is nonnegative by definition; the drilldown exposes latest score so declines are still visible. The practice curve is observational and has different contributors at different attempt counts; it does not establish causation. Weeks start Monday in UTC and gaps are filled with zero. Student strand-comparison averages use the same dates but ignore the selected student's name search and minimum-attempt threshold.
+
+The original rubric is retained: **Situation & Task, Personal Actions, Result/Impact, Communication**, each 0–3. There is no fabricated independent Task score. Transfer assessments remain unscored and are excluded from /12 attempt counts.
+
+Anonymous profiles are registration/session identities. Never merge two students by name. Reset signs out the current identity, so repeat registrations remain separate unless a future authenticated identity-linking flow is added. There is no reliable cross-session longitudinal identity matching in this version.
+
+### Storage and migrations
+
+Apply both `202610190001_learning_results.sql` and `202610190002_attempt_history.sql` using `supabase db push` **before deployment**. `interview_attempts` is append-only: its total is a generated SQL column; sequential numbers are assigned under a transaction advisory lock. UUID request IDs make retries idempotent. The server validates evaluation output and reuses an already-saved evaluation on a retry. Browser clients cannot write scores or execute the write RPC. Student SELECT is restricted to their own anonymous UUID; staff reads use the existing server-only allow-list and service-role client.
+
+Existing numeric learning results are backfilled with `is_legacy=true`, null answer/feedback, and the last available session update timestamp. The historical original timestamps and answers cannot be reconstructed. No fake student records or fabricated answers are created.
+
+### PDF reports and verification
+
+PDF export lazily loads jsPDF/svg2pdf.js on click and converts **actual Recharts SVG** to vector paths/text; it does not rasterize charts or send student data to an external PDF service. An A3 landscape first-page summary includes KPI cards and all charts. The complete leaderboard/question summary continues in appendices as needed, with filter state, export time, and page numbering. Fonts and colors follow the existing IGNITE theme. No interview answers are included in these chart-summary PDFs.
+
+React request-scoped cache deduplicates privileged data loads without retaining student data across requests. Responses use no-store. Recharts and PDF code are isolated to staff routes, with PDF modules dynamically imported only on demand. All chart animations are disabled; mobile chart regions scroll rather than squash. Each chart has an accessible data-table alternative, loading skeleton, and empty state.
+
+Tests use mocked AI and a browser-only bundled UI fixture, never a production auth bypass. The fixture is not shipped as an application route. PGlite executes actual migrations and tests student isolation, write denial, backfill, generated totals, sequential numbering and duplicate request IDs. Browser checks cover 0/1/300 attempts, keyboard data tables, accessibility, mobile overflow, authenticated-route rejection, and vector PDF downloads for both views.

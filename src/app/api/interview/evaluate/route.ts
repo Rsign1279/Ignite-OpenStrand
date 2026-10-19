@@ -1,4 +1,4 @@
-import { saveAssessment } from "@/lib/learning";
+import { saveAssessment, recordAttempt, findRecordedAssessment } from "@/lib/learning";
 import { requireStudent } from "@/lib/auth";
 import {
   profileSchema,
@@ -22,7 +22,8 @@ export async function POST(request: Request) {
     const id = profileSchema.parse(profile).strand;
     await rateLimit(user.id, "assessment");
     const answer = answerSchema.parse(await readJson(request));
-    const evaluation = parseEvaluation(
+    const recorded = await findRecordedAssessment(user.id, answer.requestId, answer.transcript);
+    const evaluation = recorded ?? parseEvaluation(
       await ai.structured(
         "assessment",
         answer.stage === "pre"
@@ -42,6 +43,14 @@ export async function POST(request: Request) {
           )
         : undefined;
     await saveAssessment(user.id, answer.stage, evaluation);
+    await recordAttempt(
+      user.id,
+      id,
+      answer.stage,
+      evaluation,
+      answer.transcript,
+      answer.requestId,
+    );
     return json({ evaluation, comparison });
   } catch (e) {
     return failure(e);

@@ -173,9 +173,9 @@ export default function Home() {
           <div>
             <strong>Your practice stays yours.</strong>
             <p>
-              We save your name, strand, IGNITE year, rubric scores, and STAR
-              indicators for your advisor. Your recordings, answers, and
-              feedback are never saved in our database.
+              We save your name, strand, IGNITE year, rubric scores, STAR indicators,
+              assessment answers, and feedback for authorized staff review.
+              Recordings are never saved.
             </p>
           </div>
           <Check size={22} />
@@ -184,7 +184,7 @@ export default function Home() {
       <footer>
         <Brand />
         <span>Built for the next generation of professionals.</span>
-        <Link href="/staff">
+        <Link href="/staff/login">
           Advisor access <ArrowUpRight size={14} />
         </Link>
       </footer>

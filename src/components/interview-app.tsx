@@ -39,6 +39,9 @@ export function InterviewApp() {
   const [transfer, setTransfer] = useState<Transfer>();
   const [question, setQuestion] = useState("");
   const preTranscript = useRef("");
+  const attemptRequests = useRef<
+    Record<string, { id: string; answer: string }>
+  >({});
   useEffect(() => {
     const selected = new URLSearchParams(window.location.search).get("strand");
     let active = true;
@@ -61,6 +64,7 @@ export function InterviewApp() {
     return () => {
       active = false;
       preTranscript.current = "";
+      attemptRequests.current = {};
     };
   }, []);
   function go(next: Stage) {
@@ -119,12 +123,18 @@ export function InterviewApp() {
         setTransfer(value);
         go("TRANSFER_RESULTS");
       } else {
+        if (attemptRequests.current[group]?.answer !== transcript)
+          attemptRequests.current[group] = {
+            id: crypto.randomUUID(),
+            answer: transcript,
+          };
         const result = await api<{
           evaluation: Evaluation;
           comparison?: Comparison;
         }>("/api/interview/evaluate", {
           transcript,
           stage: group === "PRE" ? "pre" : "post",
+          requestId: attemptRequests.current[group].id,
           ...(group === "POST" ? { preTranscript: preTranscript.current } : {}),
         });
         if (group === "PRE") {
@@ -174,6 +184,7 @@ export function InterviewApp() {
     lock.current = true;
     setBusy(true);
     preTranscript.current = "";
+    attemptRequests.current = {};
     setPre(undefined);
     setPost(undefined);
     setComparison(undefined);
@@ -343,7 +354,8 @@ export function InterviewApp() {
               <p className="privacy-note">
                 <ShieldCheck size={15} /> Your name, strand, and IGNITE year,
                 rubric scores, and STAR indicators are saved for your advisor.
-                Recordings and answers are not saved.
+                Assessment answers and feedback are saved for authorized staff
+                review. Recordings are never saved.
               </p>
             </form>
           </section>

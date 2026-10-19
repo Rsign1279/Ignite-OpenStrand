@@ -57,6 +57,7 @@ export const answerSchema = z
   .object({
     transcript: z.string().trim().min(1).max(16000),
     stage: z.enum(["pre", "post"]),
+    requestId: z.uuid().optional(),
     preTranscript: z.string().trim().min(1).max(16000).optional(),
   })
   .strict()

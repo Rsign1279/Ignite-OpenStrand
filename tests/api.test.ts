@@ -5,8 +5,14 @@ const mock = vi.hoisted(() => ({
   structured: vi.fn(),
   transcribe: vi.fn(),
   save: vi.fn(),
+  record: vi.fn(),
+  find: vi.fn(),
 }));
-vi.mock("@/lib/learning", () => ({ saveAssessment: mock.save }));
+vi.mock("@/lib/learning", () => ({
+  saveAssessment: mock.save,
+  recordAttempt: mock.record,
+  findRecordedAssessment: mock.find,
+}));
 vi.mock("@/lib/auth", () => ({ requireStudent: mock.auth }));
 vi.mock("@/lib/rate-limit", () => ({ rateLimit: mock.limit }));
 vi.mock("@/lib/ai/provider", () => ({
@@ -40,6 +46,8 @@ beforeEach(() => {
   });
   mock.limit.mockResolvedValue(undefined);
   mock.save.mockResolvedValue(undefined);
+  mock.record.mockResolvedValue(undefined);
+  mock.find.mockResolvedValue(null);
   mock.structured.mockResolvedValue(assessment);
 });
 describe("Authenticated AI endpoints", () => {
@@ -165,4 +173,18 @@ it("does not return success when learning storage fails", async () => {
     (await POST(request({ transcript: "Private answer", stage: "pre" })))
       .status,
   ).toBe(503);
+});
+
+it("reuses the saved evaluation on a retry instead of changing the recorded score", async () => {
+  mock.find.mockResolvedValue({ ...assessment, total: 10 });
+  const r = await POST(
+    request({
+      transcript: "My answer",
+      stage: "pre",
+      requestId: "11111111-1111-4111-8111-111111111111",
+    }),
+  );
+  expect(r.status).toBe(200);
+  expect((await r.json()).evaluation.total).toBe(10);
+  expect(mock.structured).not.toHaveBeenCalled();
 });

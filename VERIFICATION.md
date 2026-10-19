@@ -41,3 +41,13 @@ The production rebuild containing the corrected Redis credential reported READY 
 ## Official logo theme — October 11, 2026
 
 The supplied IGNITE PNG is preserved unchanged. Shared student/staff branding, landing page, onboarding choices, recording states, rubric feedback, STAR lesson, comparison, completion, staff login and admin dashboard now use a coordinated blue/yellow theme. The favicon uses an illustrated lightbulb motif. Local lint, typecheck, all 89 unit/integration checks, all 47 browser checks (including WCAG AA axe scans), and production build pass for the theme. The landing page was visually inspected in the in-app browser. No schema, authentication, AI or storage changes are part of this release.
+
+## Staff analytics release — October 19, 2026
+
+- Lint, strict TypeScript, 118 unit/integration tests, and production build pass.
+- Full browser suite: 62 passed across Chromium desktop/mobile and WebKit; 15 targeted analytics cases rerun successfully after final UI refinements.
+- PGlite executes the actual attempts migration: backfill, sequential numbering, generated totals, retry idempotency, RPC denial, and cross-student RLS isolation.
+- Browser fixtures exercise the real overview/charts/export components with 0, 1, and 300 attempts. Fixtures are test-only, not application routes or auth bypasses. Both PDFs are checked for vector output and rendered visually; the full 100-student fixture leaderboard is retained across PDF appendices.
+- Authorized owner applied the prepared production SQL and reported success. REST reads verify both tables exist; OpenAPI verifies the write RPC is available. Unauthenticated table access returns 401. No synthetic student accounts or attempts were created in production.
+- Staff password remains unchanged. Authenticated live staff UI verification requires the existing staff credentials; no password was requested or printed.
+- New explicit retention policy: assessment answers and AI feedback are saved for authorized staff drilldowns. Audio remains transient. Historical unsaved answers/scores cannot be recovered. Anonymous reset creates separate registration identities; repeat names are never merged automatically.

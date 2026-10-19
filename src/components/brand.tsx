@@ -28,7 +28,7 @@ export function Header() {
       <Brand />
       <nav aria-label="Main navigation">
         <Link href="/#how-it-works">How it works</Link>
-        <Link href="/staff" className="staff-link">
+        <Link href="/staff/login" className="staff-link">
           Staff Login <ArrowUpRight size={15} />
         </Link>
       </nav>

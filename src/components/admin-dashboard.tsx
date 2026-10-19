@@ -42,7 +42,7 @@ export function AdminDashboard({
     try {
       const { error } = await browserClient().auth.signOut();
       if (error) throw error;
-      router.replace("/staff");
+      router.replace("/staff/login");
       router.refresh();
     } catch {
       setError("Unable to sign out. Please try again.");
@@ -62,6 +62,12 @@ export function AdminDashboard({
     <>
       <header className="header">
         <Brand />
+        <a className="button secondary" href="/staff/dashboard">
+          Growth dashboard
+        </a>
+        <a className="button secondary" href="/staff">
+          Raw data
+        </a>
         <button className="button secondary" onClick={logout}>
           <LogOut size={17} /> Logout
         </button>
@@ -280,9 +286,9 @@ export function AdminDashboard({
           </div>
         </section>
         <p className="privacy-note">
-          <ShieldCheck size={16} /> Registration data, rubric scores, and STAR
-          indicators are saved for learning tracking. Interview recordings,
-          answers, and AI feedback are never stored.
+          <ShieldCheck size={16} /> Registration and learning data are saved.
+          Authorized staff can review assessment answers and feedback in the
+          growth dashboard. Recordings are never saved.
         </p>
       </main>
     </>

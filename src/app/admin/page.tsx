@@ -8,7 +8,7 @@ export default async function Admin() {
   try {
     await requireAdmin();
   } catch {
-    redirect("/staff");
+    redirect("/staff/login");
   }
   const client = adminClient();
   const profiles: (Profile & { user_id: string })[] = [];
