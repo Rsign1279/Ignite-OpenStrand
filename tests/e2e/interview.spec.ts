@@ -218,6 +218,7 @@ test("voice recording waits for explicit finish and transcribes securely", async
     .click();
   await expect(page.getByRole("status")).toContainText("Recording");
   expect(transcribed).toBe(false);
+  await expect(page.getByRole("status")).toContainText(/0:0[1-9]/);
   await page
     .getByRole("button", { name: "I'm Finished", exact: true })
     .first()

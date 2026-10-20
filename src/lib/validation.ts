@@ -58,6 +58,8 @@ export const answerSchema = z
     transcript: z.string().trim().min(1).max(16000),
     stage: z.enum(["pre", "post"]),
     requestId: z.uuid().optional(),
+    questionId: z.string().min(1).max(100).optional(),
+    preRequestId: z.uuid().optional(),
     preTranscript: z.string().trim().min(1).max(16000).optional(),
   })
   .strict()

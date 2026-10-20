@@ -337,6 +337,6 @@ test("unsupported recording browser preserves assessment through text mode", asy
     "Recording is unavailable",
   );
   await expect(
-    page.getByRole("heading", { name: /Tell me about a time when a project/ }),
+    page.getByRole("heading", { name: /Describe a time a technology or coding project/ }),
   ).toBeVisible();
 });

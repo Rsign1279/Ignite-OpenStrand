@@ -38,6 +38,7 @@ export function InterviewApp() {
   const [comparison, setComparison] = useState<Comparison>();
   const [transfer, setTransfer] = useState<Transfer>();
   const [question, setQuestion] = useState("");
+  const [practiceQuestionId, setPracticeQuestionId] = useState("");
   const preTranscript = useRef("");
   const attemptRequests = useRef<
     Record<string, { id: string; answer: string }>
@@ -56,6 +57,13 @@ export function InterviewApp() {
           setName(value.name);
           setStrand(value.strand);
           setYear(value.ignite_year);
+          const savedQuestion = sessionStorage.getItem("ignite-question");
+          if (
+            getStrand(value.strand).questions.some(
+              (q) => q.id === savedQuestion,
+            )
+          )
+            setPracticeQuestionId(savedQuestion!);
           stageRef.current = "READY";
           setStage("READY");
         }
@@ -135,7 +143,13 @@ export function InterviewApp() {
           transcript,
           stage: group === "PRE" ? "pre" : "post",
           requestId: attemptRequests.current[group].id,
-          ...(group === "POST" ? { preTranscript: preTranscript.current } : {}),
+          questionId: activeQuestion?.id,
+          ...(group === "POST"
+            ? {
+                preTranscript: preTranscript.current,
+                preRequestId: attemptRequests.current.PRE?.id,
+              }
+            : {}),
         });
         if (group === "PRE") {
           preTranscript.current = transcript;
@@ -168,7 +182,7 @@ export function InterviewApp() {
     try {
       const result = await api<{ question: string }>(
         "/api/interview/transfer-question",
-        {},
+        { questionId: activeQuestion?.id },
       );
       setQuestion(result.question);
       go("TRANSFER_QUESTION");
@@ -191,6 +205,8 @@ export function InterviewApp() {
     setTransfer(undefined);
     setQuestion("");
     sessionStorage.removeItem("ignite-stage");
+    sessionStorage.removeItem("ignite-question");
+    setPracticeQuestionId("");
     window.speechSynthesis?.cancel();
     try {
       const { error } = await browserClient().auth.signOut();
@@ -212,6 +228,30 @@ export function InterviewApp() {
     }
   }
   const selected = profile ? getStrand(profile.strand) : null;
+  const activeQuestion =
+    selected?.questions.find((q) => q.id === practiceQuestionId) ??
+    selected?.questions[8];
+  function chooseQuestion(id: string) {
+    setPracticeQuestionId(id);
+    sessionStorage.setItem("ignite-question", id);
+  }
+  function practiceAgain() {
+    if (lock.current || !selected) return;
+    const current = selected.questions.findIndex(
+      (q) => q.id === activeQuestion?.id,
+    );
+    chooseQuestion(
+      selected.questions[(current + 1) % selected.questions.length].id,
+    );
+    preTranscript.current = "";
+    attemptRequests.current = {};
+    setPre(undefined);
+    setPost(undefined);
+    setComparison(undefined);
+    setTransfer(undefined);
+    setQuestion("");
+    go("READY");
+  }
   const group = stage.startsWith("PRE")
     ? "PRE"
     : stage.startsWith("POST")
@@ -222,7 +262,7 @@ export function InterviewApp() {
     stage.endsWith("RECORDING") ||
     stage.endsWith("PROCESSING");
   const displayQuestion =
-    group === "TRANSFER" ? question : (selected?.primaryQuestion ?? "");
+    group === "TRANSFER" ? question : (activeQuestion?.text ?? "");
   const progress =
     stage === "PROFILE"
       ? 0
@@ -365,7 +405,7 @@ export function InterviewApp() {
               <Target size={29} />
             </div>
             <span className="eyebrow">
-              {stage === "READY" ? "YOUR FIRST INTERVIEW" : "POST-ASSESSMENT"}
+              {stage === "READY" ? "CHOOSE YOUR PRACTICE" : "POST-ASSESSMENT"}
             </span>
             <h1>
               {stage === "READY"
@@ -383,6 +423,29 @@ export function InterviewApp() {
                 leadership, volunteering, or employment. Professional experience
                 is not expected.
               </p>
+            )}
+            {stage === "READY" && selected && activeQuestion && (
+              <div className="question-picker">
+                <label htmlFor="practice-question">
+                  Choose a practice question · 10 in your strand
+                </label>
+                <select
+                  id="practice-question"
+                  value={activeQuestion.id}
+                  onChange={(e) => chooseQuestion(e.target.value)}
+                >
+                  {selected.questions.map((q, i) => (
+                    <option key={q.id} value={q.id}>
+                      {i + 1}. {q.topic}
+                    </option>
+                  ))}
+                </select>
+                <p className="question-preview">“{activeQuestion.text}”</p>
+                <p className="helper">
+                  You’ll answer this same question before and after the STAR
+                  lesson.
+                </p>
+              </div>
             )}
             <button
               className="button primary"
@@ -583,6 +646,13 @@ export function InterviewApp() {
                 </p>
                 <button
                   className="button secondary"
+                  onClick={practiceAgain}
+                  disabled={busy}
+                >
+                  Practice another question
+                </button>
+                <button
+                  className="button secondary"
                   onClick={reset}
                   disabled={busy}
                 >
@@ -594,8 +664,8 @@ export function InterviewApp() {
         ) : null}
       </main>
       <div className="session-footer">
-        <ShieldCheck size={16} /> A private space to practice. Interview content
-        stays out of our database.
+        <ShieldCheck size={16} /> Recordings are never saved. Assessment answers
+        and feedback are available to authorized staff.
       </div>
     </>
   );

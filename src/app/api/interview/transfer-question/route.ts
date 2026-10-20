@@ -1,27 +1,35 @@
+import { randomInt } from "node:crypto";
 import { z } from "zod";
 import { requireStudent } from "@/lib/auth";
-import { profileSchema, questionSchema } from "@/lib/validation";
+import { getStrand, getPracticeQuestion } from "@/config/strands";
+import { profileSchema } from "@/lib/validation";
 import { rateLimit } from "@/lib/rate-limit";
-import { ai } from "@/lib/ai/provider";
-import { buildTransferQuestionPrompt } from "@/lib/ai/prompts";
-import { sameOrigin, readJson, json, failure } from "@/lib/http";
+import { sameOrigin, readJson, json, failure, HttpError } from "@/lib/http";
 export async function POST(request: Request) {
   try {
     sameOrigin(request);
     const { user, profile } = await requireStudent();
     await rateLimit(user.id, "question");
-    z.object({})
+    const { questionId } = z
+      .object({ questionId: z.string().min(1).max(100).optional() })
       .strict()
       .parse(await readJson(request, 1000));
-    return json(
-      await ai.structured(
-        "question",
-        buildTransferQuestionPrompt(profileSchema.parse(profile).strand),
-        {},
-        questionSchema,
-      ),
+    const strand = profileSchema.parse(profile).strand;
+    let current;
+    try {
+      current = getPracticeQuestion(strand, questionId);
+    } catch {
+      throw new HttpError(
+        400,
+        "Choose a valid practice question for your strand.",
+      );
+    }
+    const available = getStrand(strand).questions.filter(
+      (q) => q.id !== current.id && q.text !== current.text,
     );
-  } catch (e) {
-    return failure(e);
+    const selected = available[randomInt(available.length)];
+    return json({ question: selected.text, questionId: selected.id });
+  } catch (error) {
+    return failure(error);
   }
 }

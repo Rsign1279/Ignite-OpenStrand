@@ -1,3 +1,8 @@
+import {
+  buildQuestionBank,
+  legacyQuestions,
+  type PracticeQuestion,
+} from "./question-bank";
 export const strandIds = [
   "technology",
   "health-sciences",
@@ -36,11 +41,10 @@ export const strands = strandIds.map((id, i) => ({
       ? "You are a school principal interviewing the student for their first teaching position. The student is a high-school student in the IGNITE Education Innovation program, without assumed full-time teaching experience. Examples may come from IGNITE, classroom observations, work with learners, client projects, team projects, leadership, employment, or volunteering."
       : `Interview a high-school IGNITE ${definitions[i][0]} student, without assuming professional experience. Accept examples from ${experiences}.`,
   primaryQuestion:
-    id === "education"
-      ? "Tell me about a time when a lesson, activity, project, or plan did not go as expected. What did you do?"
-      : "Tell me about a time when a project, task, activity, or plan did not go as expected. What did you do?",
+    id === "education" ? legacyQuestions.education : legacyQuestions.general,
   transferPrompt: `Ask ONE new behavioral question a ${definitions[i][1]} would realistically ask an entry-level candidate. Appropriate for a high-school student; accept ${experiences}. Do not mention STAR or coach. Do not repeat the primary question.`,
   allowedExperiences: experiences,
+  questions: buildQuestionBank(id),
 }));
 export const rubric = [
   {
@@ -66,3 +70,21 @@ export const rubric = [
   },
 ] as const;
 export const getStrand = (id: StrandId) => strands.find((s) => s.id === id)!;
+
+export function getPracticeQuestion(
+  id: StrandId,
+  questionId?: string,
+): PracticeQuestion {
+  const strand = getStrand(id);
+  const legacyId =
+    id === "education" ? "education-primary-v1" : "general-primary-v1";
+  if (!questionId || questionId === legacyId)
+    return {
+      id: legacyId,
+      topic: "When plans change",
+      text: strand.primaryQuestion,
+    };
+  const question = strand.questions.find((q) => q.id === questionId);
+  if (!question) throw new Error("Unknown practice question");
+  return question;
+}

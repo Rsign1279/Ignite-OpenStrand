@@ -7,11 +7,13 @@ const mock = vi.hoisted(() => ({
   save: vi.fn(),
   record: vi.fn(),
   find: vi.fn(),
+  validatePre: vi.fn(),
 }));
 vi.mock("@/lib/learning", () => ({
   saveAssessment: mock.save,
   recordAttempt: mock.record,
   findRecordedAssessment: mock.find,
+  validatePreQuestion: mock.validatePre,
 }));
 vi.mock("@/lib/auth", () => ({ requireStudent: mock.auth }));
 vi.mock("@/lib/rate-limit", () => ({ rateLimit: mock.limit }));
@@ -48,6 +50,7 @@ beforeEach(() => {
   mock.save.mockResolvedValue(undefined);
   mock.record.mockResolvedValue(undefined);
   mock.find.mockResolvedValue(null);
+  mock.validatePre.mockResolvedValue(undefined);
   mock.structured.mockResolvedValue(assessment);
 });
 describe("Authenticated AI endpoints", () => {
@@ -186,5 +189,58 @@ it("reuses the saved evaluation on a retry instead of changing the recorded scor
   );
   expect(r.status).toBe(200);
   expect((await r.json()).evaluation.total).toBe(10);
+  expect(mock.structured).not.toHaveBeenCalled();
+});
+
+it("evaluates and persists the selected canonical bank question", async () => {
+  const r = await POST(
+    request({
+      transcript: "My answer",
+      stage: "pre",
+      questionId: "education-teamwork-v1",
+    }),
+  );
+  expect(r.status).toBe(200);
+  expect(mock.structured.mock.calls[0][1]).toContain(
+    "support learners or complete an education project",
+  );
+  expect(mock.record.mock.calls[0].at(-1)).toBe("education-teamwork-v1");
+});
+it("rejects cross-strand question IDs before spending AI usage", async () => {
+  expect(
+    (
+      await POST(
+        request({
+          transcript: "My answer",
+          stage: "pre",
+          questionId: "technology-teamwork-v1",
+        }),
+      )
+    ).status,
+  ).toBe(400);
+  expect(mock.structured).not.toHaveBeenCalled();
+});
+it("verifies the selected post question against the student's saved pre attempt", async () => {
+  mock.validatePre.mockRejectedValue(
+    new HttpError(409, "Same question required"),
+  );
+  const r = await POST(
+    request({
+      transcript: "Post",
+      preTranscript: "Pre",
+      stage: "post",
+      questionId: "education-teamwork-v1",
+      preRequestId: "11111111-1111-4111-8111-111111111111",
+    }),
+  );
+  expect(r.status).toBe(409);
+  expect(mock.structured).not.toHaveBeenCalled();
+});
+it("selects a distinct curated transfer question without an AI-generation call", async () => {
+  const r = await transfer(request({ questionId: "education-teamwork-v1" }));
+  expect(r.status).toBe(200);
+  const data = await r.json();
+  expect(data.questionId).not.toBe("education-teamwork-v1");
+  expect(data.question).toBeTruthy();
   expect(mock.structured).not.toHaveBeenCalled();
 });
