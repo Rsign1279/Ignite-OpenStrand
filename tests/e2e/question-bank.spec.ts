@@ -103,20 +103,46 @@ test("selected bank question stays identical through pre and post, then another 
     .getByLabel("Your answer", { exact: true })
     .fill("I learned a new tool, practiced using it, and finished my project.");
   await page.getByRole("button", { name: "I'm Finished", exact: true }).click();
-  await page.getByRole("button", { name: "Continue to completion" }).click();
-  await page.getByRole("button", { name: "Practice another question" }).click();
   await expect(
-    page.getByRole("heading", { name: "Ready, Practice Student?" }),
+    page.getByRole("heading", { name: "Your practice results." }),
   ).toBeVisible();
-  await expect(select).toHaveValue("technology-challenge-v1");
-  await page.getByRole("button", { name: "Meet your interviewer" }).click();
+  expect(submissions[2].stage).toBe("practice");
+  expect(submissions[2].questionId).toBe("technology-challenge-v1");
+  await expect(page.getByText("Clear actions.")).toBeVisible();
+  // More than ten rounds proves the bank wraps without restarting onboarding.
+  for (let round = 0; round < 12; round++) {
+    await page
+      .getByRole("button", { name: "Try a New Question", exact: true })
+      .click();
+    await page.getByRole("button", { name: "Type my answer" }).click();
+    await page
+      .getByLabel("Your answer", { exact: true })
+      .fill(
+        `Practice answer ${round}: I organized my team and we completed our project.`,
+      );
+    await page
+      .getByRole("button", { name: "I'm Finished", exact: true })
+      .click();
+    await expect(
+      page.getByRole("heading", { name: "Your practice results." }),
+    ).toBeVisible();
+  }
+  expect(new Set(submissions.slice(2).map((s) => s.questionId)).size).toBe(10);
+  expect(new Set(submissions.map((s) => s.requestId)).size).toBe(
+    submissions.length,
+  );
+  const previousQuestion = submissions.at(-1)?.questionId;
+  await page.getByRole("button", { name: "Retry this question" }).click();
   await page.getByRole("button", { name: "Type my answer" }).click();
   await page
     .getByLabel("Your answer", { exact: true })
-    .fill("A new answer for my next practice question.");
+    .fill("An improved answer for this same question.");
   await page.getByRole("button", { name: "I'm Finished", exact: true }).click();
-  expect(submissions[2].questionId).toBe("technology-challenge-v1");
-  expect(submissions[2].requestId).not.toBe(submissions[0].requestId);
+  await expect(
+    page.getByRole("heading", { name: "Your practice results." }),
+  ).toBeVisible();
+  expect(submissions.at(-1)?.questionId).toBe(previousQuestion);
+  expect(submissions.at(-1)?.requestId).not.toBe(submissions.at(-2)?.requestId);
 });
 test("all ten strand banks have ten questions in the ready screen", async ({
   page,

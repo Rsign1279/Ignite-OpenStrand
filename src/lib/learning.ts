@@ -46,7 +46,7 @@ export async function saveTransfer(userId: string, result: Transfer) {
 export async function recordAttempt(
   userId: string,
   strand: StrandId,
-  stage: "pre" | "post",
+  stage: "pre" | "post" | "practice",
   evaluation: Evaluation,
   transcript: string,
   requestId: string = randomUUID(),

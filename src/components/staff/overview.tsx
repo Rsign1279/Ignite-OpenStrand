@@ -68,8 +68,8 @@ export function OverviewContent({ data }: { data: Analytics }) {
         First and best scores are calculated per student and question within the
         selected dates, then averaged equally across students. Best-minus-first
         cannot be negative and can hide a declining latest score. Counts include
-        scored PRE/POST responses; transfer checks are unscored. Anonymous
-        registrations remain separate identities.
+        scored pre-assessment, post-assessment, and ongoing practice responses.
+        Anonymous registrations remain separate identities.
       </p>
       <ProgramCharts data={data} />
       <section className="table-panel">

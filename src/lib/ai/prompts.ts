@@ -21,3 +21,8 @@ export const buildTransferQuestionPrompt = (id: StrandId) =>
   `${context(id)} ${getStrand(id).transferPrompt} Return one question only in JSON.`;
 export const buildTransferEvaluationPrompt = (id: StrandId) =>
   `${context(id)} TRANSFER: Detect Situation, Task, Action, Result in the supplied response to the new question. Return boolean presence for each and one brief observation. No /12 score. Do not infer missing details.`;
+
+export const buildPracticeAssessmentPrompt = (
+  id: StrandId,
+  questionId?: string,
+) => assessment(id, "SCORED PRACTICE", questionId);

@@ -12,7 +12,7 @@ export const attemptSchema = z.object({
   total_score: z.number().int().min(0).max(12),
   scores: evaluationSchema.shape.scores,
   created_at: z.iso.datetime({ offset: true }),
-  stage: z.enum(["pre", "post"]),
+  stage: z.enum(["pre", "post", "practice"]),
   answer_text: z.string().nullable().optional(),
   feedback_text: z.string().nullable().optional(),
   is_legacy: z.boolean().default(false),

@@ -84,6 +84,11 @@ test("post and transfer evaluation failures preserve current answer and stage", 
   let transferCalls = 0;
   await page.route("**/api/interview/evaluate", (r) => {
     const post = r.request().postDataJSON().stage === "post";
+    if (
+      r.request().postDataJSON().stage === "practice" &&
+      ++transferCalls === 1
+    )
+      return r.fulfill({ status: 503, json: { error: "Please try again." } });
     if (post && ++postCalls === 1)
       return r.fulfill({ status: 503, json: { error: "Please try again." } });
     return r.fulfill({
@@ -146,7 +151,7 @@ test("post and transfer evaluation failures preserve current answer and stage", 
   );
   await finish(page);
   await expect(
-    page.getByRole("heading", { name: "Interview Practice Complete" }),
+    page.getByRole("heading", { name: "Your practice results." }),
   ).toBeVisible();
   expect(postCalls).toBe(2);
   expect(transferCalls).toBe(2);
@@ -337,6 +342,8 @@ test("unsupported recording browser preserves assessment through text mode", asy
     "Recording is unavailable",
   );
   await expect(
-    page.getByRole("heading", { name: /Describe a time a technology or coding project/ }),
+    page.getByRole("heading", {
+      name: /Describe a time a technology or coding project/,
+    }),
   ).toBeVisible();
 });

@@ -56,7 +56,7 @@ export const questionSchema = z
 export const answerSchema = z
   .object({
     transcript: z.string().trim().min(1).max(16000),
-    stage: z.enum(["pre", "post"]),
+    stage: z.enum(["pre", "post", "practice"]),
     requestId: z.uuid().optional(),
     questionId: z.string().min(1).max(100).optional(),
     preRequestId: z.uuid().optional(),
@@ -66,6 +66,10 @@ export const answerSchema = z
   .refine(
     (x) => x.stage !== "post" || !!x.preTranscript,
     "Post comparison needs the pre response",
+  )
+  .refine(
+    (x) => x.stage !== "practice" || !!x.questionId,
+    "Practice needs a selected question",
   );
 export const transferAnswerSchema = z
   .object({

@@ -17,6 +17,7 @@ import { rateLimit } from "@/lib/rate-limit";
 import { ai } from "@/lib/ai/provider";
 import {
   buildPreAssessmentPrompt,
+  buildPracticeAssessmentPrompt,
   buildPostAssessmentPrompt,
   buildComparisonPrompt,
 } from "@/lib/ai/prompts";
@@ -57,7 +58,9 @@ export async function POST(request: Request) {
           "assessment",
           answer.stage === "pre"
             ? buildPreAssessmentPrompt(id, answer.questionId)
-            : buildPostAssessmentPrompt(id, answer.questionId),
+            : answer.stage === "practice"
+              ? buildPracticeAssessmentPrompt(id, answer.questionId)
+              : buildPostAssessmentPrompt(id, answer.questionId),
           { transcript: answer.transcript },
           evaluationSchema,
         ),
@@ -71,7 +74,8 @@ export async function POST(request: Request) {
             comparisonSchema,
           )
         : undefined;
-    await saveAssessment(user.id, answer.stage, evaluation);
+    if (answer.stage !== "practice")
+      await saveAssessment(user.id, answer.stage, evaluation);
     await recordAttempt(
       user.id,
       id,

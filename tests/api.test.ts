@@ -244,3 +244,35 @@ it("selects a distinct curated transfer question without an AI-generation call",
   expect(data.question).toBeTruthy();
   expect(mock.structured).not.toHaveBeenCalled();
 });
+
+it("scores independent practice with the full rubric, recomputes totals and records growth", async () => {
+  const response = await POST(
+    request({
+      transcript: "I organized a school project and we finished on time.",
+      stage: "practice",
+      questionId: "education-teamwork-v1",
+    }),
+  );
+  expect(response.status).toBe(200);
+  expect((await response.json()).evaluation.total).toBe(10);
+  expect(mock.structured.mock.calls[0][1]).toContain("SCORED PRACTICE");
+  expect(mock.record).toHaveBeenCalledWith(
+    "user-1",
+    "education",
+    "practice",
+    expect.objectContaining({ total: 10 }),
+    expect.any(String),
+    undefined,
+    "education-teamwork-v1",
+  );
+  expect(mock.save).not.toHaveBeenCalled();
+  expect(mock.validatePre).not.toHaveBeenCalled();
+});
+
+it("rejects practice without a canonical question before spending AI usage", async () => {
+  const response = await POST(
+    request({ transcript: "My answer", stage: "practice" }),
+  );
+  expect(response.status).toBe(400);
+  expect(mock.structured).not.toHaveBeenCalled();
+});

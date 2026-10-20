@@ -17,7 +17,7 @@ export type AttemptRow = {
   student_id: string;
   question_id: string;
   question_text: string;
-  stage: "pre" | "post";
+  stage: "pre" | "post" | "practice";
   attempt_number: number;
   situation_task: number;
   personal_actions: number;

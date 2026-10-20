@@ -1,6 +1,6 @@
 # IGNITE Interview Coach
 
-A voice-first interview practice application for IGNITE Professional Studies. Students register without email, complete a behavioral pre-assessment, learn STAR, repeat the same question, compare scores, and apply the framework to a transfer question. Advisors see registrations, rubric scores, student/question growth, and saved assessment answers/feedback in protected staff analytics.
+A voice-first interview practice application for IGNITE Professional Studies. Students register without email, complete a behavioral pre-assessment, learn STAR, repeat the same question, compare scores, and continue through unlimited scored practice rounds. Advisors see registrations, rubric scores, student/question growth, and saved assessment answers/feedback in protected staff analytics.
 
 ## Architecture
 
@@ -192,7 +192,7 @@ Client requests have a 65-second deadline and do not automatically repeat paid P
 The supplied official PNG is preserved at `public/ignite-logo.png`; the shared Brand component displays it without stretching or recoloring. `public/ignite-bulb.svg` is a small favicon inspired by the logo's lightbulb. The global theme lives in `src/app/globals.css`: `--brand-blue`, `--brand-deep`, `--brand-yellow`, and their soft surface tokens. Blue anchors navigation, controls, scores, and advisor tables; yellow highlights the landing CTA, active recording, STAR cards, and score change. Dark blue text on yellow preserves readable contrast. Keep future strand wording in the strand config and visual colors in the shared theme.
 
 ### Learning tracking rollout
-Apply `supabase db push` before deploying this version. The original learning_results table contains pre/post rubric category scores and transfer booleans. The newly requested interview_attempts table additionally retains assessment answers and feedback. Staff statistics use only paired pre/post assessments for growth calculations. Missing results display a dash, not zero. Rollback: revert the app commit; leave the additive table intact to preserve collected results.
+Apply `supabase db push` before deploying this version. The original learning_results table contains pre/post rubric category scores and transfer booleans. The newly requested interview_attempts table additionally retains assessment answers and feedback. Staff statistics use scored attempts grouped by student and canonical question for growth calculations. Missing results display a dash, not zero. Rollback: revert the app commit; leave the additive table intact to preserve collected results.
 
 
 ## Staff analytics (October 19, 2026)
@@ -208,7 +208,7 @@ Apply `supabase db push` before deploying this version. The original learning_re
 
 Within the selected date range, group attempts by **authenticated student UUID and question ID**, order by timestamp then attempt number/ID, and compute first, best, latest, and best-minus-first. First and best averages are computed across a student's questions; program/strand averages then weight students equally. Minimum attempts and student-name search are applied before every program chart. Empty averages are null, never zero. Best-minus-first is nonnegative by definition; the drilldown exposes latest score so declines are still visible. The practice curve is observational and has different contributors at different attempt counts; it does not establish causation. Weeks start Monday in UTC and gaps are filled with zero. Student strand-comparison averages use the same dates but ignore the selected student's name search and minimum-attempt threshold.
 
-The original rubric is retained: **Situation & Task, Personal Actions, Result/Impact, Communication**, each 0–3. There is no fabricated independent Task score. Transfer assessments remain unscored and are excluded from /12 attempt counts.
+The original rubric is retained: **Situation & Task, Personal Actions, Result/Impact, Communication**, each 0–3. There is no fabricated independent Task score. Ongoing practice uses the same /12 rubric and is included in attempt counts and growth analytics.
 
 Anonymous profiles are registration/session identities. Never merge two students by name. Reset signs out the current identity, so repeat registrations remain separate unless a future authenticated identity-linking flow is added. There is no reliable cross-session longitudinal identity matching in this version.
 
@@ -237,6 +237,10 @@ Every strand has exactly ten curated questions (100 variants total), based on th
 
 The Ready screen provides a ten-question selector and selected-question preview. PRE and POST display the identical locked selection. Server-side prompt builders resolve the ID to canonical config wording; arbitrary client question text and another strand's IDs cannot replace it. POST validates the saved PRE request ID, question ID, student UUID, and pre transcript. The selected question ID/text are recorded in existing attempt rows, enabling per-question growth without a new database migration.
 
-The transfer endpoint chooses another curated question from the same strand, excluding the current question. It retains authentication and rate limits and no longer spends a Groq generation call for question wording. Evaluation and transcription still use Groq. At completion, “Practice another question” clears current answers/results and returns to Ready under the same registration, selecting the next topic by default; “Next Student” still clears the session and signs out. Only the nonsensitive question ID and stage marker enter sessionStorage. Old clients without a question ID retain their legacy default question.
+New-question rounds cycle through the curated strand bank without spending a Groq generation call for question wording. Evaluation and transcription still use Groq. “Try a New Question” and “Retry this question” continue under the same registration with a new retry-safe attempt ID. “Next Student” clears the session and signs out. Only the nonsensitive question ID and stage marker enter sessionStorage. Old pre/post clients without a question ID retain their legacy default question.
 
 The default selected topic is “When plans change” (question 9), preserving the original Education experience. Students can choose any other topic before starting. Selection is locked once the pre-assessment begins; the completion screen advances to the next topic when starting another practice round.
+
+## Unlimited scored practice
+
+After the initial pre/lesson/post sequence, every new question is independently scored using the same four-category /12 rubric. “Try a New Question” cycles through all ten strand questions and wraps indefinitely; “Retry this question” creates a fresh attempt for that question. Neither action repeats onboarding or the STAR lesson. Scores, rubric breakdowns, answers and feedback enter the protected staff attempt history with stage `practice`; audio is never stored. Apply `202610200001_scored_practice.sql` before deployment. Legacy transfer endpoints remain compatible with old clients, but the current interview UI never submits to the unscored endpoint.

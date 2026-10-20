@@ -18,7 +18,6 @@ import {
   type Profile,
   type Evaluation,
   type Comparison,
-  type Transfer,
 } from "@/lib/validation";
 import { transition, type Stage } from "@/lib/machine";
 import { browserClient } from "@/lib/supabase/browser";
@@ -36,7 +35,7 @@ export function InterviewApp() {
   const [pre, setPre] = useState<Evaluation>();
   const [post, setPost] = useState<Evaluation>();
   const [comparison, setComparison] = useState<Comparison>();
-  const [transfer, setTransfer] = useState<Transfer>();
+  const [transfer, setTransfer] = useState<Evaluation>();
   const [question, setQuestion] = useState("");
   const [practiceQuestionId, setPracticeQuestionId] = useState("");
   const preTranscript = useRef("");
@@ -123,14 +122,7 @@ export function InterviewApp() {
         : "TRANSFER";
     go(`${group}_PROCESSING` as Stage);
     try {
-      if (group === "TRANSFER") {
-        const value = await api<Transfer>("/api/interview/transfer-evaluate", {
-          transcript,
-          question,
-        });
-        setTransfer(value);
-        go("TRANSFER_RESULTS");
-      } else {
+      {
         if (attemptRequests.current[group]?.answer !== transcript)
           attemptRequests.current[group] = {
             id: crypto.randomUUID(),
@@ -141,7 +133,8 @@ export function InterviewApp() {
           comparison?: Comparison;
         }>("/api/interview/evaluate", {
           transcript,
-          stage: group === "PRE" ? "pre" : "post",
+          stage:
+            group === "PRE" ? "pre" : group === "POST" ? "post" : "practice",
           requestId: attemptRequests.current[group].id,
           questionId: activeQuestion?.id,
           ...(group === "POST"
@@ -155,6 +148,9 @@ export function InterviewApp() {
           preTranscript.current = transcript;
           setPre(result.evaluation);
           go("PRE_RESULTS");
+        } else if (group === "TRANSFER") {
+          setTransfer(result.evaluation);
+          go("TRANSFER_RESULTS");
         } else {
           setPost(result.evaluation);
           setComparison(result.comparison);
@@ -180,11 +176,16 @@ export function InterviewApp() {
     lock.current = true;
     setBusy(true);
     try {
-      const result = await api<{ question: string }>(
-        "/api/interview/transfer-question",
-        { questionId: activeQuestion?.id },
+      if (!selected || !activeQuestion) return;
+      const current = selected.questions.findIndex(
+        (q) => q.id === activeQuestion.id,
       );
-      setQuestion(result.question);
+      const next =
+        selected.questions[(current + 1) % selected.questions.length];
+      chooseQuestion(next.id);
+      setQuestion(next.text);
+      delete attemptRequests.current.TRANSFER;
+      setTransfer(undefined);
       go("TRANSFER_QUESTION");
     } catch (e) {
       setError(e instanceof Error ? e.message : "Please try again.");
@@ -235,23 +236,6 @@ export function InterviewApp() {
     setPracticeQuestionId(id);
     sessionStorage.setItem("ignite-question", id);
   }
-  function practiceAgain() {
-    if (lock.current || !selected) return;
-    const current = selected.questions.findIndex(
-      (q) => q.id === activeQuestion?.id,
-    );
-    chooseQuestion(
-      selected.questions[(current + 1) % selected.questions.length].id,
-    );
-    preTranscript.current = "";
-    attemptRequests.current = {};
-    setPre(undefined);
-    setPost(undefined);
-    setComparison(undefined);
-    setTransfer(undefined);
-    setQuestion("");
-    go("READY");
-  }
   const group = stage.startsWith("PRE")
     ? "PRE"
     : stage.startsWith("POST")
@@ -297,24 +281,32 @@ export function InterviewApp() {
         </div>
       </header>
       <main id="main" className="interview-main">
-        <div className="progress">
-          <span>YOUR INTERVIEW JOURNEY</span>
-          <div>
-            {[
-              "Set up",
-              "Practice",
-              "Learn",
-              "Try again",
-              "Apply",
-              "Complete",
-            ].map((s, i) => (
-              <span key={s} className={i <= progress ? "active" : ""}>
-                <i>{i < progress ? <Check size={12} /> : i + 1}</i>
-                <b>{s}</b>
-              </span>
-            ))}
+        {stage.startsWith("TRANSFER") || stage === "COMPLETE" ? (
+          <div className="progress">
+            <span>
+              ONGOING SCORED PRACTICE · 10 QUESTIONS · UNLIMITED ROUNDS
+            </span>
           </div>
-        </div>
+        ) : (
+          <div className="progress">
+            <span>YOUR INTERVIEW JOURNEY</span>
+            <div>
+              {[
+                "Set up",
+                "Practice",
+                "Learn",
+                "Try again",
+                "Apply",
+                "Complete",
+              ].map((s, i) => (
+                <span key={s} className={i <= progress ? "active" : ""}>
+                  <i>{i < progress ? <Check size={12} /> : i + 1}</i>
+                  <b>{s}</b>
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
         {error && !answering && (
           <p role="alert" className="error">
             {error}
@@ -461,10 +453,14 @@ export function InterviewApp() {
             <div className="interview-stage">
               <span className="eyebrow">
                 {group === "TRANSFER"
-                  ? "TRANSFER INTERVIEW"
+                  ? "SCORED PRACTICE"
                   : `${group}-ASSESSMENT`}
               </span>
-              <span>Question 1 of 1</span>
+              <span>
+                {group === "TRANSFER"
+                  ? "Practice at your own pace"
+                  : "Question 1 of 1"}
+              </span>
             </div>
             <div className="interviewer">
               <div className="persona-icon">
@@ -602,27 +598,36 @@ export function InterviewApp() {
               <Check size={34} />
             </div>
             <span className="eyebrow">
-              {stage === "COMPLETE" ? "YOU DID IT" : "TRANSFER RESULTS"}
+              {stage === "COMPLETE" ? "YOU DID IT" : "PRACTICE RESULTS"}
             </span>
-            <h1>Interview Practice Complete</h1>
-            <p>Here’s how you applied the framework to a new question.</p>
-            <div className="star-status">
-              {(["situation", "task", "action", "result"] as const).map((k) => (
-                <div key={k}>
-                  <strong>{k}</strong>
-                  <span>{transfer[k] ? "✓ Present" : "Missing"}</span>
-                </div>
-              ))}
-            </div>
-            <h2>
-              {transfer.situation &&
-              transfer.task &&
-              transfer.action &&
-              transfer.result
-                ? "All four STAR components were present."
-                : "You’re building your STAR toolkit."}
-            </h2>
-            <p>{transfer.observation}</p>
+            <h1>
+              {stage === "COMPLETE"
+                ? "Interview Practice Complete"
+                : "Your practice results."}
+            </h1>
+            <p>Every answer is scored using the same four-category rubric.</p>
+            <p className="question-preview">“{question}”</p>
+            <Assessment value={transfer} />
+            <button
+              className="button primary"
+              onClick={newQuestion}
+              disabled={busy}
+            >
+              Try a New Question <ArrowRight size={18} />
+            </button>
+            {stage === "TRANSFER_RESULTS" && (
+              <button
+                className="button secondary"
+                disabled={busy}
+                onClick={() => {
+                  delete attemptRequests.current.TRANSFER;
+                  setTransfer(undefined);
+                  go("TRANSFER_QUESTION");
+                }}
+              >
+                Retry this question
+              </button>
+            )}
             {stage === "TRANSFER_RESULTS" ? (
               <button className="button primary" onClick={() => go("COMPLETE")}>
                 Continue to completion <ArrowRight size={18} />
@@ -644,13 +649,6 @@ export function InterviewApp() {
                   The results form opens in a new tab. No information is sent
                   automatically.
                 </p>
-                <button
-                  className="button secondary"
-                  onClick={practiceAgain}
-                  disabled={busy}
-                >
-                  Practice another question
-                </button>
                 <button
                   className="button secondary"
                   onClick={reset}

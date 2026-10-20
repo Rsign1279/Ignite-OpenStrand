@@ -24,6 +24,12 @@ it("append-only attempts enforce isolation, recomputed totals, retry IDs and seq
         "utf8",
       ),
     );
+    await db.exec(
+      readFileSync(
+        "supabase/migrations/202610200001_scored_practice.sql",
+        "utf8",
+      ),
+    );
     const legacy = await db.query<{
       total_score: number;
       answer_text: null;
@@ -67,7 +73,7 @@ it("append-only attempts enforce isolation, recomputed totals, retry IDs and seq
       "44444444-4444-4444-8444-444444444444",
       "q1",
       "A realistic question",
-      "post",
+      "practice",
       ...args.slice(5),
     ]);
     const mine = await db.query<{

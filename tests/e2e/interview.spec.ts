@@ -87,7 +87,9 @@ test("full student text interview and secure reset", async ({ page }) => {
   );
   await page.goto("/interview");
   await page.getByLabel("What should we call you?").fill("Test Student");
-  await page.getByRole("button", { name: "Education Innovation", exact: true }).click();
+  await page
+    .getByRole("button", { name: "Education Innovation", exact: true })
+    .click();
   await page.getByRole("button", { name: /Year 1 My first/ }).click();
   await page.getByRole("button", { name: "Begin Interview" }).click();
   await expect(
@@ -129,7 +131,7 @@ test("full student text interview and secure reset", async ({ page }) => {
     .getByRole("button", { name: "Try a New Interview Question" })
     .click();
   await expect(
-    page.getByRole("heading", { name: /Tell me about a time you helped/ }),
+    page.getByRole("heading", { name: /Tell me about an accomplishment/ }),
   ).toBeVisible();
   await page.getByRole("button", { name: "Type my answer" }).click();
   await page
@@ -139,7 +141,7 @@ test("full student text interview and secure reset", async ({ page }) => {
     );
   await page.getByRole("button", { name: "I'm Finished", exact: true }).click();
   await expect(
-    page.getByRole("heading", { name: "Interview Practice Complete" }),
+    page.getByRole("heading", { name: "Your practice results." }),
   ).toBeVisible();
   await page.getByRole("button", { name: "Continue to completion" }).click();
   await expect(

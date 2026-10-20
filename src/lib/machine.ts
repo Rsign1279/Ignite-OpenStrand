@@ -34,8 +34,8 @@ const transitions: Record<Stage, readonly Stage[]> = {
   TRANSFER_QUESTION: ["TRANSFER_RECORDING", "TRANSFER_PROCESSING"],
   TRANSFER_RECORDING: ["TRANSFER_PROCESSING", "TRANSFER_QUESTION"],
   TRANSFER_PROCESSING: ["TRANSFER_RESULTS", "TRANSFER_QUESTION"],
-  TRANSFER_RESULTS: ["COMPLETE"],
-  COMPLETE: ["READY"],
+  TRANSFER_RESULTS: ["COMPLETE", "TRANSFER_QUESTION"],
+  COMPLETE: ["READY", "TRANSFER_QUESTION"],
 };
 export function transition(stage: Stage, next: Stage) {
   if (!transitions[stage].includes(next))
