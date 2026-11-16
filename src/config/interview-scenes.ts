@@ -18,46 +18,46 @@ export type InterviewSetting = {
 // Students are candidates: none of the scenes assumes professional credentials.
 export const interviewSettings: Record<StrandId, InterviewSetting> = {
   technology: {
-    place: "The product studio",
+    place: "The product lab",
     opportunity: "Student technology internship",
     arrival:
-      "You enter a product studio, where a prototype glows on a monitor.",
+      "You enter a product lab. A prototype display is ready for the team’s next usability test.",
     detail:
-      "Your interviewer closes their laptop and turns their chair toward you. For the next few minutes, the focus is on your experience.",
-    object: "A prototype on the screen",
+      "This imagined internship helps a team test a student-facing app. The hiring manager wants to hear how you learn, solve problems, and contribute.",
+    object: "A prototype interface display",
     accent: "#a7c9ff",
     atmosphere: "Curious minds. Real possibilities.",
   },
   "health-sciences": {
-    place: "The learning center",
-    opportunity: "Health sciences student placement",
+    place: "The simulation briefing room",
+    opportunity: "Supervised health sciences placement",
     arrival:
-      "You enter a health sciences learning center as students prepare for a supervised simulation.",
+      "You enter a simulation briefing room, where an empty training bed is ready for supervised practice.",
     detail:
-      "The clinical team leader sets a training folder aside and welcomes you. They want to understand how you learn and work with people.",
-    object: "A simulation schedule",
+      "This placement supports supervised simulation activities, without patient-care credentials. The clinical team leader wants to understand how you learn and work with people.",
+    object: "An empty simulation station",
     accent: "#a1dfd1",
     atmosphere: "Care begins with connection.",
   },
   "law-public-policy": {
-    place: "The civic meeting room",
+    place: "The civic research room",
     opportunity: "Student civic research internship",
     arrival:
-      "You enter a civic meeting room, with community proposals and a neighborhood map on the wall.",
+      "You enter a civic research room. A neighborhood map anchors plans for a community project.",
     detail:
-      "The public policy director puts down a stack of research notes and offers you a seat. They are interested in the person behind your application.",
-    object: "Community plans on the wall",
+      "This imagined role helps a team research community needs. The public policy director wants to hear how you listen, weigh ideas, and follow through.",
+    object: "A neighborhood map",
     accent: "#c9b9ef",
     atmosphere: "Different voices. Shared purpose.",
   },
   aviation: {
-    place: "The aviation training hub",
-    opportunity: "Aviation student learning opportunity",
+    place: "The flight-training briefing room",
+    opportunity: "Supervised aviation student placement",
     arrival:
-      "You arrive at an aviation training hub. A simulator hums beside the quiet training apron.",
+      "You enter a flight-training briefing room. An aircraft is parked outside as the team plans supervised training.",
     detail:
-      "The aviation operations leader checks the time, then gives you their full attention. This conversation is about your experiences as a student.",
-    object: "A training flight plan",
+      "This placement supports training preparation, without assuming pilot credentials. The aviation operations leader wants to hear how you prepare, communicate, and learn.",
+    object: "An aircraft beyond the briefing-room window",
     accent: "#a6d7ec",
     atmosphere: "A new perspective starts here.",
   },
@@ -65,65 +65,65 @@ export const interviewSettings: Record<StrandId, InterviewSetting> = {
     place: "The chef's table",
     opportunity: "Supervised culinary student placement",
     arrival:
-      "You enter a teaching kitchen, its workstations ready and a seasonal menu by the door.",
+      "You enter a teaching kitchen. The practice counters are ready for a supervised team service.",
     detail:
-      "The executive chef joins you at a small table away from the kitchen noise. They want to hear how you approach learning, preparation, and working with others.",
-    object: "A seasonal menu",
+      "This placement joins a supervised team service. The executive chef wants to hear how you prepare, respond to feedback, and work with others.",
+    object: "A teaching kitchen beyond the table",
     accent: "#efbf99",
     atmosphere: "Preparation meets possibility.",
   },
   engineering: {
-    place: "The design workshop",
+    place: "The prototype workshop",
     opportunity: "Student design and engineering internship",
     arrival:
-      "You enter a design workshop, with prototypes and a notebook of revisions on the project table.",
+      "You enter a prototype workshop. Sketches and tools are ready for the team’s next materials review.",
     detail:
-      "The engineering manager clears a space at the project table and welcomes you. They are curious about how you think, test, and learn.",
-    object: "A prototype in progress",
+      "This imagined internship supports comparing materials and refining a physical prototype. The engineering manager wants to hear how you think through problems and learn from revisions.",
+    object: "Design sketches and workshop tools",
     accent: "#bccaa0",
     atmosphere: "Every great idea starts somewhere.",
   },
   construction: {
-    place: "The project planning room",
+    place: "The site-planning office",
     opportunity: "Supervised construction student placement",
     arrival:
-      "You enter a planning room beside a supervised training site, with a model and plans on the table.",
+      "You enter a site-planning office. Blueprints and a scale structure support the next project briefing.",
     detail:
-      "The construction superintendent sets the plans aside and offers you a seat. They want to know how you take responsibility and work with a team.",
-    object: "Plans for the next project",
+      "This placement supports supervised project planning. The construction superintendent wants to hear how you take responsibility, communicate changes, and work with a team.",
+    object: "A scale structure and project plans",
     accent: "#eac68e",
     atmosphere: "Build the foundation for what's next.",
   },
   education: {
-    place: "The school meeting room",
-    opportunity: "Education student learning placement",
+    place: "The learning commons",
+    opportunity: "Supervised education student placement",
     arrival:
-      "You arrive after the school bell. Student projects line the hall outside your meeting room.",
+      "You enter a learning commons, where learner projects and books set the scene for planning classroom support.",
     detail:
-      "The principal places a lesson-planning notebook on the table and welcomes you. They know you are a student and want to hear what your experiences have taught you.",
+      "This placement supports learners under supervision, without assuming teaching credentials. The principal wants to hear what your experiences have taught you about learning and helping others.",
     object: "Learner projects on display",
     accent: "#edc995",
     atmosphere: "Your story can inspire the next one.",
   },
   business: {
-    place: "The venture studio",
+    place: "The venture briefing suite",
     opportunity: "Student business internship",
     arrival:
-      "You enter a venture studio, where the team's next client ideas fill a whiteboard.",
+      "You enter a venture briefing suite. A pitch display is ready for the team's next client project.",
     detail:
-      "The business manager puts their phone away and invites you to sit across the table. They want to hear what you bring to a team.",
-    object: "Ideas for a new venture",
+      "This imagined internship supports a team's client project. The business manager wants to hear how you organize work, contribute ideas, and follow through.",
+    object: "A venture pitch display",
     accent: "#b7c6f2",
     atmosphere: "Big possibilities. Your first step.",
   },
   "digital-media": {
-    place: "The creative studio",
+    place: "The production suite",
     opportunity: "Student creative production internship",
     arrival:
-      "You enter a creative studio, with a storyboard and a paused student production on screen.",
+      "You enter a production suite. A storyboard and edit station are ready for a student production review.",
     detail:
-      "The creative director turns away from the edit and welcomes you. They are interested in the thinking and collaboration behind your work.",
-    object: "A story waiting to be told",
+      "This imagined internship supports a student production. The creative director wants to hear about your ideas, collaboration, and response to creative feedback.",
+    object: "A storyboard beside the edit station",
     accent: "#dfb7de",
     atmosphere: "Find the story only you can tell.",
   },

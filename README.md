@@ -5,7 +5,7 @@ A voice-first interview practice application for IGNITE Professional Studies. St
 ## The interview studio
 
 - A textured, scroll-responsive Moon opens the experience. Native WebGL has a static fallback, motion controls, reduced-motion support, adaptive resolution, and offscreen suspension.
-- Every scored round starts with a question-specific story and an optional original strand film. Films are local silent H.264 videos with pause, replay, loading recovery, and still posters. Students reveal the question when ready; finishing the film is never required.
+- Every scored round starts with a question-specific story and an optional first-person walk-in film. All ten strands have distinct rooms and student placement situations. Films are local silent H.264 videos with pause, replay, loading recovery, and still posters. Students reveal the question when ready; finishing the film is never required.
 - All 100 existing bank questions retain their canonical identities. The library exposes ten topics per strand; feedback, side-by-side answer review, optional STAR sketches, same-question retries, interviewer follow-ups, and explained recommendations support deliberate practice.
 - The AI review uses the selected question, verified strand/year, submitted answer, and shared observable rubric anchors. Students can inspect the scoring guide and download a private practice plan without their name or answer text.
 - Student and advisor screens share locally hosted EB Garamond/Figtree typography, warm cream, dark chambers, lavender actions, and IGNITE branding. Mobile, keyboard, reduced-motion, recording recovery, and cross-tab identity flows have automated coverage.

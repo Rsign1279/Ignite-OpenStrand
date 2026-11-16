@@ -1,9 +1,9 @@
 "use client";
+import Image from "next/image";
 import { ArrowRight, Check, Shuffle, ArrowUpRight } from "lucide-react";
 import { getStrand, type StrandId } from "@/config/strands";
 import { getInterviewScene } from "@/config/interview-scenes";
 import type { PracticeQuestion } from "@/config/question-bank";
-import { InterviewRoom } from "./interview-room";
 
 export function QuestionLibrary({
   strand,
@@ -43,7 +43,16 @@ export function QuestionLibrary({
       <div className="library-layout">
         <div className="library-spotlight">
           <div className="library-room">
-            <InterviewRoom strand={strand} />
+            <Image
+              key={strand}
+              src={`/films/${strand}.webp`}
+              className="strand-room-poster"
+              width={960}
+              height={540}
+              alt=""
+              loading="lazy"
+              unoptimized
+            />
             <span className="scene-tag">
               <span className="live-dot" /> YOUR NEXT SCENE
             </span>

@@ -7,6 +7,7 @@ import {
   useSyncExternalStore,
 } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import {
   ArrowRight,
   Check,
@@ -28,7 +29,6 @@ import {
   emptyStoryNotes,
   type StoryNotes,
 } from "@/components/star-lesson";
-import { InterviewRoom } from "@/components/interview-room";
 import {
   interviewSettings,
   getQuestionTopic,
@@ -747,7 +747,18 @@ export function InterviewApp() {
           <div className="interview-workspace">
             <aside className="room-sidebar">
               <div className="room-sidebar-art">
-                <InterviewRoom strand={selected?.id} />
+                {selected && (
+                  <Image
+                    key={selected.id}
+                    src={`/films/${selected.id}.webp`}
+                    className="strand-room-poster"
+                    width={960}
+                    height={540}
+                    alt=""
+                    loading="lazy"
+                    unoptimized
+                  />
+                )}
               </div>
               <span className="eyebrow">YOU’RE IN THE ROOM</span>
               <h2>{selected && interviewSettings[selected.id].place}</h2>
