@@ -44,6 +44,7 @@ import {
 } from "@/lib/validation";
 import { transition, type Stage } from "@/lib/machine";
 import { browserClient } from "@/lib/supabase/browser";
+import { studentAccessMessage } from "@/lib/student-access-errors";
 import { api } from "@/lib/client-api";
 import { onSessionChange } from "@/lib/session-events";
 import {
@@ -276,9 +277,7 @@ export function InterviewApp() {
         );
       const { data, error: authError } = await client.auth.signInAnonymously();
       if (authError || !data.user)
-        throw new Error(
-          "Student access is unavailable. Please contact your advisor.",
-        );
+        throw new Error(studentAccessMessage(authError));
       const identity = data.user.id;
       await api("/api/profile", value, undefined, {
         studentSessionId: identity,

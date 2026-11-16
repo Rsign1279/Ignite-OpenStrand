@@ -182,6 +182,7 @@ Edit `src/config/strands.ts` to change display names, icons, interviewer roles, 
 ## Troubleshooting
 
 - **Student access not configured:** set public Supabase environment values and rebuild. Enable anonymous sign-ins in the hosted project.
+- **Begin Interview reports unavailable access:** verify that the hosted Supabase project is active. A paused project can stop resolving in DNS even while Vercel serves the website normally. `node --env-file=.env.local scripts/verify-student-access.mjs` checks DNS and auth-service availability without creating an account or printing keys. Restore the existing project before changing credentials. This preflight and mocked browser tests are insufficient release evidence: verify a real synthetic-student signup and profile persistence before declaring registration ready.
 - **Staff forbidden:** verify the authenticated account is permanent and its email exactly matches the server allow-list. Students cannot become administrators by setting client state.
 - **Processing unavailable:** check server Groq/Redis variables, model availability, and provider status. User errors intentionally omit infrastructure details.
 - **429:** wait before retrying. Student content is not destroyed by evaluation errors; text mode keeps the answer in memory. The app never fabricates processing percentages.

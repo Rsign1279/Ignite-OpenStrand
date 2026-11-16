@@ -116,7 +116,6 @@ The review identified a cross-tab session integrity risk: an old student tab cou
 
 The stale-tab API boundary is now enforced: every student processing route requires `X-Student-Session` to match the server-verified Supabase user. `tests/session-route-security.test.ts` exercises the real auth guard with a newer authenticated student and either the previous student's identity or no identity header. All 8 cases passed across evaluation, transcription, transfer-question, and legacy transfer evaluation: HTTP 409/no-store, no current-user ID disclosure, unread request body, and zero profile-query, quota, provider, or storage calls. This header is an identity consistency check, not a substitute for authentication. Legacy clients without the header must reload the updated application before submitting.
 
-
 ## Moon texture and mobile loading optimization
 
 A cold Chromium trace of the earlier production build identified the visible Moon fallback as the mobile LCP element (97,969 CSS pixels), rather than the headline. With a 390×844 viewport, 150 ms network latency, 200,000 bytes/s download throughput, a disabled browser cache, and 4× CPU slowdown, the headline painted at 1.668 s; the original 457,942-byte Moon request started at 1.404 s, completed at 5.114 s, and produced LCP at 5.244 s. This established a late-discovered, large image as the concrete bottleneck.
@@ -125,13 +124,13 @@ Phones and coarse-pointer devices now use NASA's original, unmodified 1024×512 
 
 An isolated before/after run on the current **development server**, using the same cold-cache throttling above, measured:
 
-| Measurement | Before | After |
-| --- | ---: | ---: |
-| Mobile LCP | 8.720 s | 4.160 s |
-| Moon request discovery | 1.182 s | 0.227 s |
-| Moon resource bytes | 457,942 | 139,068 |
+| Measurement                      |    Before |     After |
+| -------------------------------- | --------: | --------: |
+| Mobile LCP                       |   8.720 s |   4.160 s |
+| Moon request discovery           |   1.182 s |   0.227 s |
+| Moon resource bytes              |   457,942 |   139,068 |
 | Total encoded resources, rounded | 1,447 KiB | 1,136 KiB |
-| Observed CLS | 0 | 0 |
+| Observed CLS                     |         0 |         0 |
 
 These are controlled, individual lab runs, not field Core Web Vitals or physical-device measurements. Development bundles differ substantially from production; the 52% development LCP reduction must not be presented as a production result. A rebuilt production measurement is required before claiming the final deployed LCP.
 
@@ -176,3 +175,13 @@ The Chromium graphics soak completed **20 homepage → interview → homepage cy
 WebKit also rendered the actual WebGL scene and recovered from **five native WEBGL_lose_context cycles**, retaining manual pause after each restoration, with zero JavaScript errors and functioning navigation. The offline showcase report was checked at 390px and 1440px: zero broken images, no horizontal overflow, and no axe WCAG AA findings. A separate computed-color scan across settled studio screens found no flat-surface text-contrast findings; text during the brief entrance fade and text over imagery are outside that statement.
 
 Publication remains a separate permission boundary. Automatic approval review rejected the main-branch merge because explicit authorization for that production merge is required. PR #1 is ready for review with passing checks; no workaround or production merge was performed. Hosted Supabase configuration, the optional retry-integrity migration, live model calibration, and physical microphones retain the access limits described above.
+
+## November 16 — live student registration recovery
+
+After the user authorized shipping, PR #1 was merged and the production deployment and post-merge CI passed. A subsequent report exposed a verification gap: the public production smoke had not submitted a real student signup. “Begin Interview” failed at Supabase anonymous authentication, before the profile API was called. The configured hostname returned NXDOMAIN through both system DNS and an independent public resolver. With the newly authorized Supabase connection, the existing “Ignite: OpenStrand” project was confirmed `INACTIVE` and restored to `ACTIVE_HEALTHY`.
+
+A real synthetic Technology / Year 1 signup then succeeded on the production site. Reloading recovered the saved profile, and the scene and question opened. A second synthetic student completed PRE → STAR → POST with actual Groq responses and database writes. A database query restricted to those two test identities confirmed their strand/year and the two saved attempts. This verifies functional processing, not scoring accuracy or student learning. Staff sign-in, physical microphones, model calibration, and application of the optional retry-integrity migration remain outside these checks.
+
+Signup errors now distinguish unreachable service, unavailable signup configuration, throttling, and failed verification without reflecting provider messages or credentials. A new browser regression reproduces the reported John Doe / Technology / Year 1 path, interrupts signup, verifies that all choices remain and no profile is written, then successfully retries. All three browser engines passed. The HTTPS production-build registration and cross-tab isolation run passed 15 cases; lint, TypeScript, 237 unit/integration tests, and the production build passed.
+
+`scripts/verify-student-access.mjs` checks the configured hostname and auth-service availability without creating an account or printing keys. Its output explicitly says it does not replace a real signup/profile-persistence check. The preflight passed after restoration. No authentication bypass, credential replacement, or schema change was needed to restore student access.
