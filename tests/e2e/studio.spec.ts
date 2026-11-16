@@ -287,6 +287,47 @@ test("students can inspect both submitted answers and reset clears the compariso
   const secondAnswer =
     "I listed the unfinished tasks and asked each teammate to choose one. I checked our progress, and we completed the project before the class presentation.";
   await submitAnswer(page, secondAnswer);
+  await page.locator(".comparison-hero").scrollIntoViewIfNeeded();
+  const scoreContrasts = await page
+    .locator(".comparison-hero strong")
+    .evaluateAll((elements) => {
+      const luminance = (color: string) => {
+        const channels = color
+          .match(/[\d.]+/g)!
+          .slice(0, 3)
+          .map(Number)
+          .map((value) => {
+            const channel = value / 255;
+            return channel <= 0.04045
+              ? channel / 12.92
+              : ((channel + 0.055) / 1.055) ** 2.4;
+          });
+        return (
+          channels[0] * 0.2126 + channels[1] * 0.7152 + channels[2] * 0.0722
+        );
+      };
+      return elements.map((element) => {
+        const foreground = getComputedStyle(element).color;
+        const background = getComputedStyle(
+          element.closest(".comparison-hero")!,
+        ).backgroundColor;
+        const light = luminance(foreground),
+          dark = luminance(background);
+        return {
+          foreground,
+          background,
+          ratio:
+            (Math.max(light, dark) + 0.05) / (Math.min(light, dark) + 0.05),
+        };
+      });
+    });
+  expect(scoreContrasts).toHaveLength(2);
+  for (const score of scoreContrasts)
+    expect(score.ratio, JSON.stringify(score)).toBeGreaterThanOrEqual(3);
+  const scoreAccessibility = await new AxeBuilder({ page })
+    .withTags(["wcag2a", "wcag2aa", "wcag21aa"])
+    .analyze();
+  expect(scoreAccessibility.violations).toEqual([]);
   const comparison = page.locator(".answer-comparison");
   await comparison.locator("summary").click();
   await expect(comparison.locator("article").nth(0)).toContainText(answer);

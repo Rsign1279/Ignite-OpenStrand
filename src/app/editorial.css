@@ -476,6 +476,7 @@
 }
 .studio .comparison-hero strong {
   font-family: var(--font-studio-serif), Georgia, serif;
+  color: #ffffeb;
   font-weight: 400;
   font-size: 62px;
 }

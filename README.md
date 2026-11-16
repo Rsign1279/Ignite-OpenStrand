@@ -24,7 +24,7 @@ Upstash Redis sliding-window counters expire automatically. All costly endpoints
 
 ## Stack and compatibility
 
-Next.js 16.4, React 19.3, Tailwind 4, Supabase JS 2, Supabase SSR, Groq SDK, Zod 4, Lucide icons, Vitest, PGlite PostgreSQL, Playwright, and axe. Exact resolved versions are committed in `package-lock.json`. TypeScript 6 is used because the current Next lint stack does not support TypeScript 7. `skipLibCheck` avoids a Supabase WebAuthn declaration conflict with current DOM types; application code remains strict. ESLint 9 matches the peer requirements of Next's React/accessibility plugins.
+Next.js 16.4, React 19.3, Tailwind 4, Supabase JS 2, Supabase SSR, Groq SDK, Zod 4, Lucide icons, Vitest, PGlite PostgreSQL, Playwright, and axe. Exact resolved versions are committed in `package-lock.json`. TypeScript 6 is used because the current Next lint stack does not support TypeScript 7. `skipLibCheck` avoids a Supabase WebAuthn declaration conflict with current DOM types; application code remains strict. ESLint 9 matches the peer requirements of Next's React/accessibility plugins. A scoped override keeps the TypeScript ESLint parser's `minimatch` dependency at 11.0.1 to address GHSA-g3hv-75wg-m249 until the parent package updates its own range; the parser's used glob API and the full lint/build checks are verified.
 
 ## Local installation
 
