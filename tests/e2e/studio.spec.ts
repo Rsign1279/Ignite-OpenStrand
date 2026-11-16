@@ -994,9 +994,7 @@ test("a stalled scene offers recovery without delaying the interview", async ({
     await prepare(page, "technology");
     await page.getByRole("button", { name: "Meet your interviewer" }).click();
     await expect(
-      page.getByText(
-        "Loading your scene. You can continue whenever you’re ready.",
-      ),
+      page.getByText("Loading scene. You can continue."),
     ).toBeVisible();
     await page.clock.fastForward(16000);
     await expect(

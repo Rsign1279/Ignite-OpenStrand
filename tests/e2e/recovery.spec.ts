@@ -144,9 +144,7 @@ test("post and transfer evaluation failures preserve current answer and stage", 
   await expect(page.getByLabel("Your answer", { exact: true })).toHaveValue(
     answer,
   );
-  await expect(
-    page.getByText("POST-ASSESSMENT", { exact: true }),
-  ).toBeVisible();
+  await expect(page.getByText("SECOND TAKE", { exact: true })).toBeVisible();
   await finish(page);
   await page
     .getByRole("button", { name: "Try a New Interview Question" })
