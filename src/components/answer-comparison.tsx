@@ -8,10 +8,9 @@ export function AnswerComparison({
   if (!before || !after) return null;
   return (
     <details className="answer-comparison">
-      <summary>Compare your first and second answers</summary>
+      <summary>Compare both answers</summary>
       <p className="answer-comparison-intro">
-        Read both responses alongside the feedback. Which details became
-        clearer, and what would you explain differently next time?
+        What became clearer? What would you change next time?
       </p>
       <div>
         <article>
@@ -24,8 +23,8 @@ export function AnswerComparison({
         </article>
       </div>
       <p className="answer-comparison-note">
-        These are the submitted texts or transcriptions. Check them against your
-        own experience; an AI review can miss details.
+        Your submitted text or transcription. AI can miss details; check its
+        feedback against your real experience.
       </p>
     </details>
   );

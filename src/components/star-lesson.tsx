@@ -8,25 +8,25 @@ export const starParts = [
     letter: "S",
     title: "Situation",
     question: "What was happening?",
-    text: "Set the scene. Give just enough context to understand the story.",
+    text: "Give the context your listener needs.",
   },
   {
     letter: "T",
     title: "Task",
     question: "What were you responsible for?",
-    text: "Make your goal or responsibility clear.",
+    text: "Name your goal or responsibility.",
   },
   {
     letter: "A",
     title: "Action",
     question: "What specifically did YOU do?",
-    text: "Spend most of your answer here. Explain your steps and choices.",
+    text: "Spend most time on your steps and choices.",
   },
   {
     letter: "R",
     title: "Result",
     question: "What happened or what did you learn?",
-    text: "Share an outcome, feedback, impact, or an honest lesson.",
+    text: "Share an outcome, feedback, impact, or honest lesson.",
   },
 ] as const;
 export type StoryNotes = Record<(typeof starParts)[number]["letter"], string>;
@@ -55,15 +55,13 @@ export function StarLesson({
           <br />
           <em>easy to follow.</em>
         </h1>
-        <p>
-          STAR gives your own story a beginning, a contribution, and an outcome.
-        </p>
+        <p>Use STAR to make your role and outcome clear.</p>
       </div>
       {feedback && (
         <div className="lesson-feedback">
           <Lightbulb size={23} />
           <div>
-            <span className="eyebrow">BRING THIS INTO YOUR NEXT TAKE</span>
+            <span className="eyebrow">YOUR NEXT STEP</span>
             <p>{feedback}</p>
           </div>
         </div>
@@ -78,8 +76,10 @@ export function StarLesson({
           </article>
         ))}
       </div>
-      <div className="example-card">
-        <span className="eyebrow">SEE THE DIFFERENCE · A SEPARATE EXAMPLE</span>
+      <details className="example-card reflection-details">
+        <summary>
+          See a STAR example <span>Separate story</span>
+        </summary>
         <div>
           <article>
             <h3>A vague answer</h3>
@@ -95,7 +95,7 @@ export function StarLesson({
             </p>
           </article>
         </div>
-      </div>
+      </details>
       <details className="story-planner">
         <summary className="planner-heading">
           <span className="planner-icon">
@@ -104,7 +104,7 @@ export function StarLesson({
           <div>
             <span className="eyebrow">OPTIONAL · YOUR STORY SKETCH</span>
             <h2>Sketch your answer.</h2>
-            <p>Short notes are enough. You’ll see them on your next take.</p>
+            <p>Short notes for your next take.</p>
           </div>
           <ChevronDown
             className="planner-toggle"
@@ -137,8 +137,8 @@ export function StarLesson({
           ))}
         </div>
         <p className="helper">
-          These notes stay in this page’s memory. They are not submitted or
-          saved; refreshing clears them. You can continue without writing notes.
+          Optional, private notes. They are not submitted or saved; refreshing
+          clears them.
         </p>
       </details>
       <div className="lesson-takeaway">
@@ -146,7 +146,7 @@ export function StarLesson({
         <p>{topic.takeaway}</p>
       </div>
       <button className="button primary" onClick={onContinue}>
-        I understand STAR — Start Post-Assessment <ArrowRight size={18} />
+        Try again with STAR <ArrowRight size={18} />
       </button>
     </section>
   );
@@ -163,7 +163,7 @@ export function StoryNotesPanel({
   return (
     <details className="story-notes-panel">
       <summary>
-        <PenLine size={16} /> Your STAR notes & question focus
+        <PenLine size={16} /> Your STAR notes
       </summary>
       <div>
         <p>{topic.intention}</p>
@@ -175,10 +175,7 @@ export function StoryNotesPanel({
             <p>{notes[s.letter] || topic.prompts[i]}</p>
           </article>
         ))}
-        <span className="helper">
-          Use this as a guide. Keep your answer natural and true to your
-          experience.
-        </span>
+        <span className="helper">Keep your answer natural and true.</span>
       </div>
     </details>
   );

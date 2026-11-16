@@ -41,8 +41,7 @@ export function AdminDashboard({
             <span className="eyebrow">STUDENT REGISTRATIONS</span>
             <h1>A view of your cohort.</h1>
             <p>
-              Every registration in your IGNITE cohort, including students who
-              have not submitted an answer yet.
+              All registrations, including students with no submitted answers.
             </p>
           </div>
           <button className="button secondary" onClick={exportCsv}>
@@ -62,16 +61,15 @@ export function AdminDashboard({
               <strong>
                 {profiles.filter((p) => p.ignite_year === y).length}
               </strong>
-              <small>Year of participation, not grade</small>
+              <small>Participation year, not grade</small>
             </article>
           ))}
         </div>
         <p className="registration-evidence-note">
-          Each registration is a separate session identity. For scores and
-          growth, use the <Link href="/staff/dashboard">growth dashboard</Link>,
-          which compares repeated answers to the same question.{" "}
-          <Link href="/staff">View every scored attempt</Link> for the
-          underlying evidence.
+          Each registration is a separate identity. The{" "}
+          <Link href="/staff/dashboard">growth dashboard</Link> compares
+          same-question repeats.{" "}
+          <Link href="/staff">View every scored attempt</Link>.
         </p>
         <div className="admin-strands">
           {strands.map((s) => (
@@ -168,9 +166,8 @@ export function AdminDashboard({
           </div>
         </section>
         <p className="privacy-note">
-          <ShieldCheck size={16} /> Registration and learning data are saved.
-          Authorized staff can review assessment answers and feedback in the
-          growth dashboard. Recordings are never saved.
+          <ShieldCheck size={16} /> Profiles, answers, scores, and feedback are
+          saved for authorized staff. Recordings are never saved.
         </p>
       </main>
     </StaffShell>

@@ -24,7 +24,7 @@ it("shows every registration and directs growth analysis to matched question att
   expect(html).toContain("Registered Students");
   expect(html).toContain("No linked session");
   expect(html).toContain("/staff/student/11111111-1111-4111-8111-111111111111");
-  expect(html).toContain("compares repeated answers to the same question");
+  expect(html).toContain("compares same-question repeats");
   expect(html).toContain('href="/staff/dashboard"');
   expect(html).not.toContain("Average score change");
   expect(html).not.toContain("Completed interviews");

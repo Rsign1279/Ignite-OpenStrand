@@ -84,7 +84,7 @@ test("selected bank question stays identical through pre and post, then another 
     .fill("I worked with my team and organized our technology project.");
   await page.getByRole("button", { name: "I'm Finished", exact: true }).click();
   await page.getByRole("button", { name: /Discover the STAR method/ }).click();
-  await page.getByRole("button", { name: /I understand STAR/ }).click();
+  await page.getByRole("button", { name: /Try again with STAR/ }).click();
   await expect(select).toHaveCount(0);
   await expect(page.locator("main")).not.toContainText(selectedText);
   await page.getByRole("button", { name: "Meet your interviewer" }).click();

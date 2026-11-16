@@ -273,7 +273,7 @@ export function InterviewApp() {
       });
       if (signOutError)
         throw new Error(
-          "The previous session could not be ended. Please retry before starting a new student session.",
+          "The previous session could not be ended. Retry before starting a new session.",
         );
       const { data, error: authError } = await client.auth.signInAnonymously();
       if (authError || !data.user)
@@ -491,7 +491,7 @@ export function InterviewApp() {
       clearStudentState();
     } catch {
       setError(
-        "Unable to end the session. Please retry End session before handing over this device.",
+        "Session still open. Retry End session before sharing this device.",
       );
     } finally {
       authMutation.current = false;
@@ -571,9 +571,7 @@ export function InterviewApp() {
       >
         {stage.startsWith("TRANSFER") || stage === "COMPLETE" ? (
           <div className="progress ongoing-progress">
-            <span>
-              ONGOING SCORED PRACTICE · 10 QUESTIONS · UNLIMITED ROUNDS
-            </span>
+            <span>SCORED PRACTICE · 10 QUESTIONS · UNLIMITED ROUNDS</span>
             <span>
               {completedQuestions.length} / 10 topics explored · {answerCount}{" "}
               answers reviewed
@@ -613,15 +611,9 @@ export function InterviewApp() {
         {stage === "PROFILE" ? (
           <section className="onboarding">
             <div className="screen-heading">
-              <span className="eyebrow">LET’S MAKE THIS YOURS</span>
-              <h1>
-                A little about you.
-                <br />
-                <em>A lot ahead of you.</em>
-              </h1>
-              <p>
-                Set up your practice session. No email. No account to create.
-              </p>
+              <span className="eyebrow">YOUR PRACTICE SESSION</span>
+              <h1>Make it yours.</h1>
+              <p>No email or password needed.</p>
             </div>
             <form onSubmit={register} aria-busy={!clientReady || busy}>
               <label htmlFor="name">What should we call you?</label>
@@ -631,7 +623,7 @@ export function InterviewApp() {
                 maxLength={80}
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                placeholder="Your name"
+                placeholder="Name or nickname"
                 required
                 disabled={!clientReady || busy}
               />
@@ -674,8 +666,8 @@ export function InterviewApp() {
                   ))}
                 </div>
                 <p className="helper">
-                  Choose your year in IGNITE, not your grade level. A senior in
-                  their first year of IGNITE is Year 1.
+                  Years in IGNITE, not your school grade. New to IGNITE? Choose
+                  Year 1.
                 </p>
               </fieldset>
               <button
@@ -690,10 +682,10 @@ export function InterviewApp() {
                 <ArrowRight size={18} />
               </button>
               <p className="privacy-note">
-                <ShieldCheck size={15} /> Your name, strand, and IGNITE year,
-                rubric scores, and STAR indicators are saved for your advisor.
-                Assessment answers and feedback are saved for authorized staff
-                review. Recordings are never saved.
+                <ShieldCheck size={15} /> Your name, strand, IGNITE year,
+                submitted answers, feedback, scores and practice checks are
+                saved for authorized staff. Audio is transcribed, not stored by
+                this app.
               </p>
             </form>
           </section>
@@ -711,20 +703,15 @@ export function InterviewApp() {
             <div className="persona-icon">
               <Target size={29} />
             </div>
-            <span className="eyebrow">POST-ASSESSMENT</span>
+            <span className="eyebrow">SECOND TAKE</span>
             <h1>A fresh chance to tell your story.</h1>
-            <p>
-              You’ll meet your {selected?.interviewerTitle.toLowerCase()}.
-              Choose voice or text, take the time you need, and press “I’m
-              Finished” when you’re done.
-            </p>
+            <p>Try the same question with your feedback in mind.</p>
             {activeQuestion && (
               <>
                 <span className="eyebrow">YOUR TOPIC</span>
                 <h2>{activeQuestion.topic}</h2>
                 <p className="helper">
-                  The same question, the same rubric. It appears again when
-                  you’re ready in the room.
+                  Same rubric. Reveal the question when you’re ready.
                 </p>
                 {activeRevisionGoal && (
                   <RevisionGoalReminder goal={activeRevisionGoal} compact />
@@ -764,16 +751,13 @@ export function InterviewApp() {
               </div>
               <span className="eyebrow">YOU’RE IN THE ROOM</span>
               <h2>{selected && interviewSettings[selected.id].place}</h2>
-              <p>{selected && interviewSettings[selected.id].atmosphere}</p>
               <div className="room-sidebar-meta">
                 <MapPin size={16} />
                 <span>Imagined setting · real practice</span>
               </div>
               <div className="room-sidebar-note">
                 <span className="live-dot" />
-                <p>
-                  Take your time. The microphone starts only when you choose.
-                </p>
+                <p>The mic starts only when you choose.</p>
               </div>
               {group !== "PRE" && activeQuestion && (
                 <StoryNotesPanel notes={storyNotes} question={activeQuestion} />
@@ -784,7 +768,9 @@ export function InterviewApp() {
                 <span className="eyebrow">
                   {group === "TRANSFER"
                     ? "SCORED PRACTICE"
-                    : `${group}-ASSESSMENT`}
+                    : group === "PRE"
+                      ? "FIRST TAKE"
+                      : "SECOND TAKE"}
                 </span>
                 <span>
                   {group === "TRANSFER"
@@ -830,7 +816,7 @@ export function InterviewApp() {
           </div>
         ) : stage === "PRE_RESULTS" && pre ? (
           <section className="focus-card">
-            <span className="eyebrow">PRE-ASSESSMENT</span>
+            <span className="eyebrow">FIRST TAKE</span>
             <h1>Your starting point.</h1>
             <Assessment value={pre} />
             {submittedAnswer && (
@@ -841,7 +827,7 @@ export function InterviewApp() {
             )}
             {activeQuestion && (
               <div className="question-insight">
-                <span className="eyebrow">WHAT THIS QUESTION EXPLORES</span>
+                <span className="eyebrow">PRACTICE FOCUS</span>
                 <p>
                   {topicStories[getQuestionTopic(activeQuestion)].intention}
                 </p>
@@ -864,7 +850,7 @@ export function InterviewApp() {
           />
         ) : stage === "POST_COMPARISON" && pre && post && comparison ? (
           <section className="focus-card wide">
-            <span className="eyebrow">POST-ASSESSMENT COMPARISON</span>
+            <span className="eyebrow">YOUR TWO ANSWERS</span>
             <h1>
               {!comparisonComparable
                 ? "A new review of your story."
@@ -893,7 +879,7 @@ export function InterviewApp() {
             )}
             {recommendation && (
               <div className="recommended-practice">
-                <span className="eyebrow">RECOMMENDED FOR YOUR NEXT STEP</span>
+                <span className="eyebrow">TRY NEXT</span>
                 <h2>{recommendation.question.topic}</h2>
                 <p>{recommendation.reason}</p>
                 <button
@@ -930,7 +916,7 @@ export function InterviewApp() {
                 ? "Interview Practice Complete"
                 : "Your practice results."}
             </h1>
-            <p>Every answer is scored using the same four-category rubric.</p>
+            <p>Same four criteria, every answer.</p>
             <p className="question-preview">“{question}”</p>
             <Assessment value={transfer} />
             {stage === "COMPLETE" && selected && (
@@ -960,7 +946,7 @@ export function InterviewApp() {
             )}
             {recommendation && stage !== "COMPLETE" && (
               <div className="recommended-practice">
-                <span className="eyebrow">RECOMMENDED FOR YOUR NEXT STEP</span>
+                <span className="eyebrow">TRY NEXT</span>
                 <h2>{recommendation.question.topic}</h2>
                 <p>{recommendation.reason}</p>
                 <button
@@ -997,8 +983,7 @@ export function InterviewApp() {
                   Complete Results Form <ArrowUpRight size={18} />
                 </a>
                 <p className="helper">
-                  The results form opens in a new tab. No information is sent
-                  automatically.
+                  Opens a new tab. Nothing is sent automatically.
                 </p>
                 <button
                   className="button secondary"
@@ -1012,10 +997,12 @@ export function InterviewApp() {
           </section>
         ) : null}
       </main>
-      <div className="session-footer">
-        <ShieldCheck size={16} /> Recordings are never saved. Assessment answers
-        and feedback are available to authorized staff.
-      </div>
+      {stage !== "PROFILE" && (
+        <div className="session-footer">
+          <ShieldCheck size={16} /> This app doesn’t store audio. Submitted
+          answers and feedback are saved for authorized staff.
+        </div>
+      )}
     </div>
   );
 }

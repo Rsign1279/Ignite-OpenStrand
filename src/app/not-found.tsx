@@ -6,11 +6,8 @@ export default function NotFound() {
       <Header />
       <main id="main" className="staff-main">
         <section className="focus-card">
-          <span className="eyebrow">A DIFFERENT DIRECTION</span>
           <h1>This page isn’t here.</h1>
-          <p>
-            Your next chapter is still ahead. Return to the studio to begin.
-          </p>
+          <p>Return to the studio to begin.</p>
           <Link href="/" className="button primary">
             Back to IGNITE
           </Link>

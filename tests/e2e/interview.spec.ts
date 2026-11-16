@@ -123,7 +123,7 @@ test("full student text interview and secure reset", async ({ page }) => {
   await expect(
     page.getByRole("heading", { name: "Situation", exact: true }),
   ).toBeVisible();
-  await page.getByRole("button", { name: /I understand STAR/ }).click();
+  await page.getByRole("button", { name: /Try again with STAR/ }).click();
   await page.getByRole("button", { name: "Meet your interviewer" }).click();
   await page
     .getByRole("button", { name: "I’m ready — ask the question" })

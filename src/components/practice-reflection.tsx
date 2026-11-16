@@ -39,7 +39,7 @@ export function PracticeReflection({
           <Target size={22} />
         </span>
         <div>
-          <span className="eyebrow">ONE FOCUSED NEXT STEP</span>
+          <span className="eyebrow">YOUR NEXT STEP</span>
           <h2 id={`${id}-heading`}>{focus.title}</h2>
         </div>
         {!focus.complete && (
@@ -49,17 +49,19 @@ export function PracticeReflection({
         )}
       </div>
       <p className="reflection-action">{revisionGoal.action}</p>
-      <div className="reflection-rehearsal">
-        <NotebookPen size={18} />
-        <p>{focus.rehearsal}</p>
-      </div>
+      <details className="reflection-details">
+        <summary>Rehearse this step</summary>
+        <div className="reflection-rehearsal">
+          <NotebookPen size={18} />
+          <p>{focus.rehearsal}</p>
+        </div>
+      </details>
       {answer && (
         <details className="answer-review">
           <summary>Review the answer you submitted</summary>
           <p>{answer}</p>
           <span>
-            This is the submitted text or transcription. Compare it with the
-            feedback above.
+            Submitted text or transcription. Compare it with the feedback.
           </span>
         </details>
       )}
@@ -89,26 +91,25 @@ export function PracticeReflection({
             <span>{focus.selfCheck}</span>
           </label>
           <p id={`${id}-privacy`} className="reflection-privacy">
-            For your own reflection. This note is not scored or saved, and
-            clears when you leave this review.
+            Private, not scored or saved. Clears when you leave this review.
           </p>
         </div>
       </details>
       <details className="reflection-details reflection-follow-up">
         <summary>
-          Try an interviewer’s follow-up <span>Unscored rehearsal</span>
+          Try an interviewer’s follow-up <span>Unscored</span>
         </summary>
         <div>
           <p>“{interviewFollowUps[getQuestionTopic(question)]}”</p>
           <span>
-            Answer aloud to yourself or think it through. Use a detail from your
-            real experience. This rehearsal is not recorded or evaluated.
+            Rehearse aloud or in thought using a true detail. Nothing is
+            recorded or scored.
           </span>
         </div>
       </details>
       <div className="reflection-footer">
         <span>
-          <Check size={15} /> Keep the story true. Improve how you tell it.
+          <Check size={15} /> Keep it true.
         </span>
         {onRetry && (
           <button
@@ -170,12 +171,11 @@ export function QuestionGrowth({
       </div>
       <p className="growth-note">
         Based on {growth.attempts} comparable scored responses to this question
-        using the same review method in this session.{" "}
+        in this session, using the same review method.{" "}
         {growth.excludedAttempts > 0
-          ? `${growth.excludedAttempts} responses using other review methods are not compared. `
+          ? `${growth.excludedAttempts} responses with other review methods are excluded. `
           : ""}
-        Practice scores describe these answers; they are not a prediction of
-        hiring success.
+        Practice scores do not predict hiring success.
       </p>
     </section>
   );

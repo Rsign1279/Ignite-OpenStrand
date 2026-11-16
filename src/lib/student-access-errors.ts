@@ -14,17 +14,17 @@ export function studentAccessMessage(error: unknown) {
     return "Student sign-in is not ready on this site yet. Your details are still here.";
 
   if (failure?.status === 429 || failure?.code === "over_request_rate_limit")
-    return "Student sign-in is busy. Your details are still here. Please wait a minute and try again.";
+    return "Student sign-in is busy. Your details are still here. Please wait a minute and retry.";
 
   if (failure?.code === "captcha_failed")
-    return "Student sign-in could not complete its verification. Your details are still here. Please try again shortly.";
+    return "Student sign-in could not complete its verification. Your details are still here. Try again.";
 
   if (
     failure?.name === "AuthRetryableFetchError" ||
     failure?.name === "TypeError" ||
     failure?.status === 0
   )
-    return "We couldn't reach student sign-in. Your details are still here. Please try again shortly.";
+    return "We couldn't reach student sign-in. Your details are still here. Try again.";
 
-  return "We couldn't start your student session. Your details are still here. Please try again.";
+  return "We couldn't start your student session. Your details are still here. Try again.";
 }

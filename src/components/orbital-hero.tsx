@@ -503,18 +503,14 @@ export function OrbitalHero() {
               <i />
               <i />
             </span>
-            <p>
-              Step into the room. Find your voice.
-              <br />
-              Build the confidence to be yourself.
-            </p>
+            <p>Practice your story. Find your voice.</p>
           </div>
           <div className="orbital-start">
             <Link href="/interview" className="orbital-start-button">
               Start Student Interview <ArrowUpRight size={21} />
             </Link>
             <span>
-              <Mic size={13} /> Speak or type. Your experience counts.
+              <Mic size={13} /> Speak or type.
             </span>
           </div>
         </div>
@@ -522,9 +518,7 @@ export function OrbitalHero() {
           <a href="#how-it-works" className="orbital-scroll">
             <ArrowDown size={15} />
             <span>
-              {scenePaused
-                ? "Explore the experience"
-                : "Scroll to explore. Watch your world turn."}
+              {scenePaused ? "Explore the experience" : "Scroll to explore"}
             </span>
           </a>
           <button

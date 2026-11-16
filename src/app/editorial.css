@@ -270,6 +270,27 @@
 .scene-copy .scene-disclaimer {
   font-size: 12px;
 }
+.scene-details {
+  margin-top: 14px;
+  border-top: 1px solid #cdd5c7;
+  color: #43594c;
+  font-size: 13px;
+  line-height: 1.6;
+}
+.scene-details > summary {
+  min-height: 44px;
+  padding: 12px 0;
+  cursor: pointer;
+  font-weight: 600;
+}
+.scene-details > summary:focus-visible {
+  outline: 3px solid #034f46;
+  outline-offset: 4px;
+  border-radius: 12px;
+}
+.scene-details > p {
+  margin: 0 0 12px;
+}
 .scene-art-top > span:last-child {
   display: none;
 }
@@ -525,6 +546,9 @@
 }
 .studio .example-card p {
   font-size: 15px;
+}
+.studio details.example-card {
+  padding-block: 12px;
 }
 .story-planner {
   border-radius: 32px;

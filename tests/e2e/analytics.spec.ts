@@ -52,7 +52,7 @@ test("analytics handles 0, 1 and 300 attempts without clipping the mobile viewpo
   for (const count of [0, 1, 300]) {
     await preview(page, "count=" + count);
     await expect(
-      page.getByRole("heading", { name: "See practice turn into progress." }),
+      page.getByRole("heading", { name: "Student practice at a glance." }),
     ).toBeVisible();
     await expect(page.locator("[data-pdf-chart]")).toHaveCount(5);
     if (count === 300)
@@ -156,11 +156,9 @@ test("a changed scoring method is explained and excluded from growth", async ({
   await expect(page.locator(".pilot-evidence")).toContainText(
     "1 repeated question pair is excluded",
   );
-  const row = page
-    .getByRole("row")
-    .filter({
-      has: page.getByRole("link", { name: "Practice Student 1", exact: true }),
-    });
+  const row = page.getByRole("row").filter({
+    has: page.getByRole("link", { name: "Practice Student 1", exact: true }),
+  });
   await expect(row).toContainText("Scoring method changed");
   await expect(row).toContainText("— pts");
   await expect(row).not.toContainText("Latest score higher");
@@ -192,8 +190,16 @@ test("empty and expanded analytics tables remain keyboard accessible at 320px", 
   for (const count of [0, 300]) {
     await preview(page, `count=${count}`);
     await expect(
-      page.getByRole("heading", { name: "See practice turn into progress." }),
+      page.getByRole("heading", { name: "Student practice at a glance." }),
     ).toBeVisible();
+    for (const summary of await page
+      .locator(
+        "details.analytics-method > summary, .pilot-evidence > details > summary",
+      )
+      .all()) {
+      await summary.focus();
+      await page.keyboard.press("Enter");
+    }
     if (count === 300) {
       await expect(page.locator(".chart-data summary")).toHaveCount(5);
       for (const summary of await page.locator(".chart-data summary").all())

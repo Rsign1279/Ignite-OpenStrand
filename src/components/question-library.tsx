@@ -38,8 +38,6 @@ export function QuestionLibrary({
         </div>
         <span className="library-count">
           <strong>10</strong> questions
-          <br />
-          in your strand
         </span>
       </div>
       <div className="library-layout">
@@ -61,8 +59,7 @@ export function QuestionLibrary({
               Meet your interviewer <ArrowRight size={18} />
             </button>
             <p className="helper">
-              You’ll see the question in the room. Answer once, learn STAR, and
-              try it again.
+              See the question after the scene. Answer, learn STAR, then retry.
             </p>
           </div>
         </div>
@@ -108,10 +105,10 @@ export function QuestionLibrary({
             <Shuffle size={16} /> Pick one for me
           </button>
           <div className="library-reassurance">
-            <strong>You already have stories worth telling.</strong>
+            <strong>Your student experiences count.</strong>
             <p>
               Use IGNITE, school, clubs, volunteering, work, or personal
-              projects. Professional experience is not expected.
+              projects. No professional experience needed.
             </p>
           </div>
         </div>

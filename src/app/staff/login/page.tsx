@@ -40,7 +40,7 @@ export default function Staff() {
           </div>
           <span className="eyebrow">ADVISOR ACCESS</span>
           <h1>Welcome back.</h1>
-          <p>Sign in to view registrations and student interview growth.</p>
+          <p>Sign in to review students and practice results.</p>
           <form onSubmit={login}>
             <label htmlFor="email">Staff email</label>
             <input
@@ -82,8 +82,7 @@ export default function Staff() {
             </button>
           </form>
           <p className="privacy-note">
-            If your password was reset, use the new password rather than a saved
-            browser password.
+            After a reset, enter your new password.
           </p>
         </section>
       </main>

@@ -149,7 +149,7 @@ function ActiveAnswerRecorder({
         typeof MediaRecorder === "undefined"
       )
         throw new Error(
-          "Recording is unavailable in this browser. Type your answer below.",
+          "Recording is unavailable here. Type your answer below.",
         );
       const acquiredStream = await navigator.mediaDevices.getUserMedia({
         audio: true,
@@ -178,7 +178,7 @@ function ActiveAnswerRecorder({
         recordingBytes.current += event.data.size;
         if (recordingBytes.current > MAX_RECORDING_BYTES) {
           recover(
-            "Your recording reached the upload limit. Please type your answer or record a shorter response.",
+            "Recording reached the upload limit. Type your answer or record a shorter answer.",
             id,
           );
           return;
@@ -186,10 +186,10 @@ function ActiveAnswerRecorder({
         if (event.data.size) chunks.current.push(event.data);
       };
       current.onerror = () =>
-        recover("Recording failed. Please type your answer.", id);
+        recover("Recording failed. Type your answer below.", id);
       current.onstop = () =>
         recover(
-          "Recording stopped unexpectedly. Please record again or type your answer.",
+          "Recording stopped unexpectedly. Record again or type your answer.",
           id,
         );
       current.start(1000);
@@ -219,7 +219,7 @@ function ActiveAnswerRecorder({
       recover(
         e instanceof Error
           ? e.message
-          : "Microphone access was denied. You can type your answer.",
+          : "Microphone access denied. Type your answer below.",
         id,
       );
     } finally {
@@ -247,11 +247,11 @@ function ActiveAnswerRecorder({
       try {
         if (blob.size < 100)
           throw new Error(
-            "No recording was captured. Please record again or type your answer.",
+            "No recording captured. Record again or type your answer.",
           );
         if (blob.size > MAX_RECORDING_BYTES)
           throw new Error(
-            "Your recording is too large. Please type your answer or record a shorter response.",
+            "Recording is too large. Type your answer or record a shorter answer.",
           );
         const form = new FormData();
         form.append(
@@ -271,9 +271,7 @@ function ActiveAnswerRecorder({
         );
         if (!isCurrent(id)) return;
         if (typeof result.transcript !== "string" || !result.transcript.trim())
-          throw new Error(
-            "No speech was found. Please record again or type your answer.",
-          );
+          throw new Error("No speech found. Record again or type your answer.");
         setText(result.transcript);
         setMode("text");
         onCancel();
@@ -293,7 +291,7 @@ function ActiveAnswerRecorder({
           setError(
             e instanceof Error
               ? e.message
-              : "Transcription failed. Please try again or type your answer.",
+              : "Transcription failed. Try again or type your answer.",
           );
           setMode("text");
           onCancel();
@@ -312,7 +310,7 @@ function ActiveAnswerRecorder({
       releaseMedia();
     } catch {
       recover(
-        "Recording could not finish. Please record again or type your answer.",
+        "Recording could not finish. Record again or type your answer.",
         id,
       );
     }
@@ -349,9 +347,7 @@ function ActiveAnswerRecorder({
       !window.speechSynthesis ||
       typeof SpeechSynthesisUtterance === "undefined"
     ) {
-      setSpeechMessage(
-        "Read aloud is unavailable in this browser. The question is written above.",
-      );
+      setSpeechMessage("Read aloud unavailable. Read the question above.");
       return;
     }
     try {
@@ -365,7 +361,7 @@ function ActiveAnswerRecorder({
         if (!mounted.current || utterance.current !== next) return;
         setSpeaking(false);
         if (event.error !== "canceled" && event.error !== "interrupted")
-          setSpeechMessage("Audio could not play. Read the question above.");
+          setSpeechMessage("Read aloud failed. Read the question above.");
       };
       utterance.current = next;
       setSpeechMessage("");
@@ -373,7 +369,7 @@ function ActiveAnswerRecorder({
       window.speechSynthesis.speak(next);
     } catch {
       stopSpeech();
-      setSpeechMessage("Audio could not play. Read the question above.");
+      setSpeechMessage("Read aloud failed. Read the question above.");
     }
   }
   const disabled = busy || transcribing;
@@ -424,8 +420,7 @@ function ActiveAnswerRecorder({
           )}
           {recording && elapsed > 300 && (
             <p className="helper">
-              Take the time you need. Longer recordings may exceed the upload
-              limit; text mode is also available.
+              Long recordings may hit the upload limit. You can also type.
             </p>
           )}
         </>
@@ -494,7 +489,7 @@ function ActiveAnswerRecorder({
         </p>
       )}
       <p className="privacy-note">
-        Your recording is processed securely and never saved by this app.
+        Audio is transcribed, not stored by this app.
       </p>
     </div>
   );

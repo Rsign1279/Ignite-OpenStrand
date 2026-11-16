@@ -20,7 +20,6 @@ export function Rubric({
         <div className="rubric-row" key={r.key}>
           <div>
             <strong>{r.label}</strong>
-            <span>{r.definition}</span>
           </div>
           <div className="score-track" aria-hidden="true">
             <div style={{ width: `${(value.scores[r.key] / 3) * 100}%` }} />
@@ -42,17 +41,17 @@ export function Assessment({ value }: { value: Evaluation }) {
           {totalScore(value.scores)}
           <span> / 12</span>
         </strong>
-        <p>A starting point for your next step.</p>
+        <p>Your score for this answer.</p>
       </div>
       <Rubric value={value} />
       <RubricGuide />
       <div className="feedback-grid">
         <article>
-          <span className="eyebrow">STRONGEST PART</span>
+          <span className="eyebrow">WHAT WORKED</span>
           <p>{value.strongestPart}</p>
         </article>
         <article>
-          <span className="eyebrow">MOST IMPORTANT IMPROVEMENT</span>
+          <span className="eyebrow">TRY NEXT</span>
           <p>{value.improvementArea}</p>
         </article>
       </div>
@@ -75,7 +74,7 @@ export function Compare({
     <>
       <div className="comparison-hero">
         <div>
-          <span>PRE-ASSESSMENT</span>
+          <span>FIRST ANSWER</span>
           <strong>
             {totalScore(pre.scores)}
             <small> /12</small>
@@ -83,7 +82,7 @@ export function Compare({
         </div>
         <ArrowRight size={30} />
         <div>
-          <span>POST-ASSESSMENT</span>
+          <span>SECOND ANSWER</span>
           <strong>
             {totalScore(post.scores)}
             <small> /12</small>
@@ -99,27 +98,29 @@ export function Compare({
       </div>
       {!comparable && (
         <p className="score-comparability-note">
-          The review settings changed between these answers, so the scores are
-          shown without a gain calculation. Use the current feedback to choose
-          your next step.
+          Review settings changed, so these scores aren’t compared. Use the
+          latest feedback for your next step.
         </p>
       )}
       <Rubric value={post} pre={comparable ? pre : undefined} />
       <RubricGuide />
-      <div className="feedback-grid">
-        <article>
-          <span className="eyebrow">WHAT CHANGED IN YOUR ANSWER</span>
-          <ol>
-            {comparison.improvements.map((s, i) => (
-              <li key={i}>{s}</li>
-            ))}
-          </ol>
-        </article>
-        <article>
-          <span className="eyebrow">YOUR NEXT STEP</span>
-          <p>{comparison.nextStep}</p>
-        </article>
-      </div>
+      <details className="reflection-details comparison-feedback">
+        <summary>What changed in this answer</summary>
+        <div className="feedback-grid">
+          <article>
+            <span className="eyebrow">WHAT CHANGED</span>
+            <ol>
+              {comparison.improvements.map((s, i) => (
+                <li key={i}>{s}</li>
+              ))}
+            </ol>
+          </article>
+          <article>
+            <span className="eyebrow">YOUR NEXT STEP</span>
+            <p>{comparison.nextStep}</p>
+          </article>
+        </div>
+      </details>
     </>
   );
 }
