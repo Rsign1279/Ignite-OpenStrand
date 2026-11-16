@@ -154,7 +154,10 @@ function SceneFilmPlayer({
       setLoading(false);
       return;
     }
-    if (ended) player.currentTime = 0;
+    if (ended) {
+      player.currentTime = 0;
+      setSeconds(0);
+    }
     try {
       const controller = new AbortController();
       preparation.current = controller;
@@ -162,6 +165,7 @@ function SceneFilmPlayer({
       if (failed) {
         setFailed(false);
         player.load();
+        setSeconds(0);
       }
       await waitForMetadata(player, controller.signal);
       if (
@@ -183,7 +187,11 @@ function SceneFilmPlayer({
   }
 
   const chapter =
-    seconds < 4 ? "Arrive" : seconds < 8 ? "Take your seat" : "Find your focus";
+    seconds < 3.5
+      ? { number: 1, title: "Step inside" }
+      : seconds < 10
+        ? { number: 2, title: "Walk to your seat" }
+        : { number: 3, title: "Settle in" };
   return (
     <figure className={`scene-film ${className}`}>
       <div className="scene-film-frame">
@@ -196,7 +204,7 @@ function SceneFilmPlayer({
           controls={started}
           preload="metadata"
           poster={`/films/${strand}.webp`}
-          aria-label={`Silent animated scene: ${scene.place}. Camera approaches a welcoming interview table.`}
+          aria-label={`Silent first-person walk-in: ${scene.place}. You enter through a doorway, walk to the interview table, and settle into your seat.`}
           onPlay={() => setLoading(true)}
           onPlaying={() => {
             setPlaying(true);
@@ -265,11 +273,9 @@ function SceneFilmPlayer({
         )}
         {started && (
           <div className="scene-film-caption" aria-hidden="true">
-            <span>
-              {String(seconds < 4 ? 1 : seconds < 8 ? 2 : 3).padStart(2, "0")}
-            </span>
+            <span>{String(chapter.number).padStart(2, "0")}</span>
             <div>
-              <small>{chapter}</small>
+              <small>{chapter.title}</small>
               <strong>{scene.place}</strong>
             </div>
           </div>

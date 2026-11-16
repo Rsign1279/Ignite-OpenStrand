@@ -1,9 +1,9 @@
 "use client";
 import { useState } from "react";
+import Image from "next/image";
 import { ArrowRight, RotateCcw, MapPin, AudioLines } from "lucide-react";
 import { getStrand, type StrandId } from "@/config/strands";
 import { getInterviewScene } from "@/config/interview-scenes";
-import { InterviewRoom } from "./interview-room";
 
 export function StudioPreview() {
   const [strand, setStrand] = useState<StrandId>("technology");
@@ -23,7 +23,16 @@ export function StudioPreview() {
         <span>01 / {revealed ? "THE QUESTION" : "THE SCENE"}</span>
       </div>
       <div className="preview-room-art">
-        <InterviewRoom strand={strand} />
+        <Image
+          key={strand}
+          src={`/films/${strand}.webp`}
+          className="strand-room-poster"
+          width={960}
+          height={540}
+          alt=""
+          loading="lazy"
+          unoptimized
+        />
         <span className="preview-location">
           <MapPin size={14} />
           {scene.place}
