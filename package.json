@@ -18,6 +18,8 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@fontsource-variable/eb-garamond": "^5.3.0",
+    "@fontsource-variable/figtree": "^5.3.0",
     "@supabase/ssr": "^0.12.7",
     "@supabase/supabase-js": "^2.117.3",
     "@upstash/ratelimit": "^2.2.0",
@@ -25,7 +27,7 @@
     "groq-sdk": "^1.6.0",
     "jspdf": "^4.2.1",
     "lucide-react": "^1.55.0",
-    "next": "^16.4.0",
+    "next": "^16.4.6",
     "react": "^19.3.0",
     "react-dom": "^19.3.0",
     "recharts": "^3.10.1",
@@ -43,7 +45,7 @@
     "@types/react-dom": "^19.3.0",
     "esbuild": "^0.28.2",
     "eslint": "^9.39.5",
-    "eslint-config-next": "^16.4.0",
+    "eslint-config-next": "^16.4.6",
     "prettier": "^3.9.10",
     "supabase": "^2.121.0",
     "tailwindcss": "^4.3.3",
@@ -51,5 +53,10 @@
     "vitest": "^5.0.3"
   },
   "private": true,
-  "type": "module"
+  "type": "module",
+  "overrides": {
+    "@typescript-eslint/typescript-estree": {
+      "minimatch": "11.0.1"
+    }
+  }
 }

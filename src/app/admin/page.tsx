@@ -31,17 +31,5 @@ export default async function Admin() {
     );
     if (data.length < 1000) break;
   }
-  const results = [];
-  for (let offset = 0; ; offset += 1000) {
-    const { data, error } = await client
-      .from("learning_results")
-      .select("*")
-      .order("user_id")
-      .range(offset, offset + 999);
-    if (error)
-      throw new Error("Unable to load learning results. Please refresh.");
-    results.push(...data);
-    if (data.length < 1000) break;
-  }
-  return <AdminDashboard profiles={profiles} results={results} />;
+  return <AdminDashboard profiles={profiles} />;
 }

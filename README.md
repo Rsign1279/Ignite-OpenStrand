@@ -1,10 +1,20 @@
-# IGNITE Interview Coach
+# IGNITE OpenStrand — Interview Studio
 
 A voice-first interview practice application for IGNITE Professional Studies. Students register without email, complete a behavioral pre-assessment, learn STAR, repeat the same question, compare scores, and continue through unlimited scored practice rounds. Advisors see registrations, rubric scores, student/question growth, and saved assessment answers/feedback in protected staff analytics.
 
+## The interview studio
+
+- A textured, scroll-responsive Moon opens the experience. Native WebGL has a static fallback, motion controls, reduced-motion support, adaptive resolution, and offscreen suspension.
+- Every scored round starts with a question-specific story and an optional original strand film. Films are local silent H.264 videos with pause, replay, loading recovery, and still posters. Students reveal the question when ready; finishing the film is never required.
+- All 100 existing bank questions retain their canonical identities. The library exposes ten topics per strand; feedback, side-by-side answer review, optional STAR sketches, same-question retries, interviewer follow-ups, and explained recommendations support deliberate practice.
+- The AI review uses the selected question, verified strand/year, submitted answer, and shared observable rubric anchors. Students can inspect the scoring guide and download a private practice plan without their name or answer text.
+- Student and advisor screens share locally hosted EB Garamond/Figtree typography, warm cream, dark chambers, lavender actions, and IGNITE branding. Mobile, keyboard, reduced-motion, recording recovery, and cross-tab identity flows have automated coverage.
+
+The [showcase notes](docs/SHOWCASE-NOTES.md), [pilot protocol](docs/PILOT-EVALUATION.md), [feedback calibration cases](docs/FEEDBACK-CALIBRATION.md), and [authentication verification](docs/AUTH_VERIFICATION.md) distinguish implemented behavior from evidence still requiring a live pilot or hosted access. Scene production and asset details are in [public/films/README.md](public/films/README.md); Moon attribution is in [public/planet/CREDITS.txt](public/planet/CREDITS.txt). The locally hosted fonts retain their [Figtree](public/fonts/FIGTREE-LICENSE.txt) and [EB Garamond](public/fonts/EB-GARAMOND-LICENSE.txt) licenses.
+
 ## Architecture
 
-Next.js App Router and strict TypeScript power the web application. Supabase anonymous Auth identifies students; password Auth identifies provisioned staff. PostgreSQL stores profiles (`user_id`, `name`, `strand`, `ignite_year`) and a separate server-only `learning_results` table with numeric rubric scores, STAR presence flags, and operational/completion timestamps. The verified server-side email allow-list protects all staff reads before a service-role query. Supabase RLS limits anonymous authenticated students to inserting and reading their own profile. Students have no access to learning_results; only server-generated evaluations are persisted.
+Next.js App Router and strict TypeScript power the web application. Supabase anonymous Auth identifies students; password Auth identifies provisioned staff. PostgreSQL stores profiles (`user_id`, `name`, `strand`, `ignite_year`) and server-only `interview_attempts` with canonical question identity, rubric scores, submitted answer text, feedback, scoring-version metadata, and timestamps. The older `learning_results` table remains a compatibility snapshot; growth reports use matched question attempts, not its singleton PRE/POST values. The verified server-side email allow-list protects all staff reads before a service-role query. Supabase RLS limits anonymous authenticated students to inserting and reading their own profile. Students have no access to learning_results; only server-generated evaluations are persisted.
 
 The deterministic state machine in `src/lib/machine.ts` controls every interview transition. Groq receives server-built instructions and separate, untrusted response data; it cannot navigate the application. Dedicated prompts cover independent pre/post evaluation, comparison, and STAR detection. Transfer wording is selected from the curated strand bank. A provider interface permits replacing Groq. JSON Schema strict output and Zod validate responses; malformed generation gets at most two attempts. Arithmetic is recomputed in code.
 
@@ -14,14 +24,14 @@ Upstash Redis sliding-window counters expire automatically. All costly endpoints
 
 ## Stack and compatibility
 
-Next.js 16.4, React 19.3, Tailwind 4, Supabase JS 2, Supabase SSR, Groq SDK, Zod 4, Lucide icons, Vitest, PGlite PostgreSQL, Playwright, and axe. Exact resolved versions are committed in `package-lock.json`. TypeScript 6 is used because the current Next lint stack does not support TypeScript 7. `skipLibCheck` avoids a Supabase WebAuthn declaration conflict with current DOM types; application code remains strict. ESLint 9 matches the peer requirements of Next's React/accessibility plugins.
+Next.js 16.4, React 19.3, Tailwind 4, Supabase JS 2, Supabase SSR, Groq SDK, Zod 4, Lucide icons, Vitest, PGlite PostgreSQL, Playwright, and axe. Exact resolved versions are committed in `package-lock.json`. TypeScript 6 is used because the current Next lint stack does not support TypeScript 7. `skipLibCheck` avoids a Supabase WebAuthn declaration conflict with current DOM types; application code remains strict. ESLint 9 matches the peer requirements of Next's React/accessibility plugins. A scoped override keeps the TypeScript ESLint parser's `minimatch` dependency at 11.0.1 to address GHSA-g3hv-75wg-m249 until the parent package updates its own range; the parser's used glob API and the full lint/build checks are verified.
 
 ## Local installation
 
 Requires Node.js 22 LTS or newer supported by Next.js, and npm.
 
 ```sh
-cd /Users/rahulviswanath/Ignite-OpenStrand
+cd Ignite-OpenStrand
 npm ci
 cp .env.local.example .env.local
 npm run dev
@@ -79,7 +89,7 @@ Dashboard actions for the hosted project:
 
 1. Authentication → Providers/Sign In: enable anonymous sign-ins. Keep public email signup disabled; staff accounts are provisioned administratively. Enable appropriate signup abuse controls for the classroom. If you enable a CAPTCHA requirement, integrate its widget/token before expecting anonymous access to work; this implementation does not include a CAPTCHA widget.
 2. Authentication → URL Configuration: set Site URL to your production HTTPS origin; add development `http://localhost:3000` and the exact approved preview origins to redirect URLs. Password login does not redirect through OAuth, but these URLs govern recovery/email workflows.
-3. Apply `supabase/migrations/202610110001_profiles.sql` with `db push`. Verify RLS is enabled in Table Editor and only the four intended columns exist.
+3. Apply all committed migrations in `supabase/migrations/` in order with `db push`, including the learning results and interview attempt migrations. Verify RLS is enabled on the resulting tables; `student_profiles` has only the four intended profile columns.
 4. Authentication → Users → Add User: provision each real advisor with their email and a secure password. Add exactly those emails to server-side `ADMIN_EMAILS`. Do not create student email accounts.
 5. Review vendor auth logs/retention and student data policy with the program owner. Do not add response analytics or content logs.
 
@@ -116,6 +126,8 @@ Automated tests never spend Groq usage. Unit and mocked endpoint tests cover sco
 
 Playwright runs Chromium desktop/mobile and WebKit (Safari engine) text onboarding through completion/reset with mocked Auth and AI traffic, plus voice recording with fake browser audio, permission denial fallback, responsive overflow checks, and axe WCAG AA scans. Audio capture must also be manually verified on actual Chromebook/iPad hardware over HTTPS before a classroom rollout.
 
+Set `PLAYWRIGHT_USE_BUILD=1` to run browser tests against a built app through the local HTTPS harness (`scripts/serve-test-build.mjs`); build first. The harness binds to loopback, generates a temporary self-signed certificate, and serves Next directly on HTTPS port 3100 so production Secure cookies and same-origin checks work in WebKit. It requires OpenSSL and is for testing only. For an already-running test server, set `PLAYWRIGHT_EXTERNAL_SERVER=1` and `PLAYWRIGHT_BASE_URL` to its HTTPS localhost URL.
+
 ## Vercel deployment
 
 Run the Vercel CLI without making it an application dependency:
@@ -151,17 +163,21 @@ Vercel's request limit is approximately 4.5 MB; the app rejects multipart reques
 
 ## Privacy and security
 
-No interview audio, student emails, phone numbers, school IDs, or demographics are stored in the application database. Assessment answer text and AI feedback are now stored for staff review, explicitly requested on October 19, 2026. Rubric scores and transfer STAR indicators are now persisted by explicit request (October 19, 2026). Profile creation persists the profile fields and an internal auth UUID. Learning results are linked to that UUID. Each anonymous registration is one session; matching repeat students across sessions is not automatic, and duplicate names must not be assumed to identify the same person. Historical scores cannot be recovered. Anonymous Auth itself maintains operational authentication records. No transcript/audio logging statements are present. Hosting, Supabase, Groq, and Redis have their own operational policies and must be configured/reviewed independently; hosting may retain request metadata such as IPs outside this app's control.
+No interview audio, student emails, phone numbers, school IDs, or demographics are stored in the application database. Assessment answer text and AI feedback are now stored for staff review, explicitly requested on October 19, 2026. Rubric scores and transfer STAR indicators are now persisted by explicit request (October 19, 2026). Profile creation persists the profile fields and an internal auth UUID. Learning results are linked to that UUID. Each anonymous registration is one session; matching repeat students across sessions is not automatic, and duplicate names must not be assumed to identify the same person. Answers or scores that were never retained cannot be reconstructed. Anonymous Auth itself maintains operational authentication records. No transcript/audio logging statements are present. Hosting, Supabase, Groq, and Redis have their own operational policies and must be configured/reviewed independently; hosting may retain request metadata such as IPs outside this app's control.
 
-Interview content exists temporarily in browser memory and server request memory. There are no interview localStorage records, files, storage buckets, or database tables. The official results form opens only after a user clicks; no query parameters or automatic submissions transmit student data.
+Unsubmitted answers, recordings, and optional planning/reflection notes remain in memory. Submitted answer text and AI feedback are stored in the protected `interview_attempts` table for authorized staff review. The app does not put answers, recordings, or notes in localStorage/sessionStorage or upload audio to storage buckets. Student practice-plan downloads contain only goals and scores; authorized staff exports can contain assessment text. The official results form opens only after a user clicks; no query parameters or automatic submissions transmit student data.
+
+Student work is pinned to the identity returned by the profile API (`X-Student-Session`); a stale tab cannot submit a prior student’s answer using a new student’s shared cookies. Cross-tab auth changes clear in-memory answers and cancel active recording/evaluation. The pin is an additional consistency check, not an authorization credential. Supabase SSR refreshes preserve its no-cache headers, and login/logout requires successful cookie writes.
 
 The app validates server authentication on every protected route, verifies the staff allow-list server-side, enforces origin checks on mutations, validates request schemas and bounded bodies, limits AI requests, renders AI text safely, and handles errors without exposing stacks. Profile RLS uses both `auth.uid()` and `is_anonymous` claims. Headers deny framing, disable cameras/geolocation, restrict microphones, prevent MIME sniffing, and set no-referrer and HSTS. CSP permits inline Next runtime scripts/styles; a nonce-based CSP could tighten this further with dynamic rendering. No `dangerouslySetInnerHTML` is used.
 
-CSV exports contain only name, strand, and participation year; formula-like leading characters are escaped. Rate-limit and AI results return `Cache-Control: no-store`. Protected pages are dynamic. No client-controlled admin flag grants privileges.
+Registration CSV exports contain name, strand, and participation year. Authorized staff attempt CSV exports also contain question/answer text, feedback, scores, scoring version, and derived comparison fields. Formula-like text is escaped, including leading whitespace; finite numeric deltas remain numeric. Rate-limit and AI results return `Cache-Control: no-store`. Protected pages are dynamic. No client-controlled admin flag grants privileges.
 
 ## Editing strands, questions, and rubric
 
-Edit `src/config/strands.ts` to change display names, icons, interviewer roles, permitted experiences, contexts, primary questions, transfer instructions, or rubric wording. Edit the contexts/templates in `src/config/question-bank.ts` for the ten-question banks. The selected canonical bank entry is reused for PRE and POST; `primaryQuestion` remains a compatibility fallback for older clients. Education's supplied wording is preserved exactly. UI components need no edits for wording changes. New strands also require matching SQL CHECK constraint and validation updates. This product's rubric is intentionally four categories scored 0–3; altering point ranges/count requires updating validation and arithmetic as well as the rubric. Do not silently change scoring semantics through copy edits.
+Edit `src/config/strands.ts` to change display names, icons, interviewer roles, permitted experiences, contexts, primary questions, transfer instructions, or rubric labels. Edit the contexts/templates in `src/config/question-bank.ts` for the ten-question banks. The selected canonical bank entry is reused for PRE and POST; `primaryQuestion` remains a compatibility fallback for older clients. Education's supplied wording is preserved exactly. New strands also require matching SQL CHECK constraint and validation updates.
+
+`src/config/rubric-anchors.ts` is the single source for criterion-specific 0–3 descriptions and fairness principles used by the AI prompt and optional “How your answer is reviewed” guide. Bump `RUBRIC_SCORING_VERSION` when anchors or scoring policy change; do not silently change scoring semantics through copy edits. The four criteria and point ranges are intentionally fixed; changing them also requires validation and arithmetic updates. See `docs/FEEDBACK-CALIBRATION.md` for synthetic review fixtures and their limits.
 
 ## Troubleshooting
 
@@ -172,7 +188,7 @@ Edit `src/config/strands.ts` to change display names, icons, interviewer roles, 
 - **Microphone denied or unsupported:** use Type my answer. Grant microphone permission in browser settings; use HTTPS. Recordings are explicitly ended with I'm Finished.
 - **Transcription fails:** audio is discarded; type the answer or record again. The app does not retain a retry audio copy.
 - **Refresh during interview:** profile recovers if Auth is valid, but sensitive assessment state was intentionally memory-only; restart the practice.
-- **Reset sign-out fails:** retry Next Student before another student uses the device. Feedback is cleared immediately.
+- **Reset sign-out fails:** retry End session (or Next Student on the completion screen) before another student uses the device. Feedback is cleared immediately.
 - **CSP and self-hosted Supabase:** update `connect-src` in `next.config.ts` for the exact custom Supabase origin.
 
 ## Verification status
@@ -192,21 +208,27 @@ Client requests have a 65-second deadline and do not automatically repeat paid P
 The supplied official PNG is preserved at `public/ignite-logo.png`; the shared Brand component displays it without stretching or recoloring. `public/ignite-bulb.svg` is a small favicon inspired by the logo's lightbulb. The global theme lives in `src/app/globals.css`: `--brand-blue`, `--brand-deep`, `--brand-yellow`, and their soft surface tokens. Blue anchors navigation, controls, scores, and advisor tables; yellow highlights the landing CTA, active recording, STAR cards, and score change. Dark blue text on yellow preserves readable contrast. Keep future strand wording in the strand config and visual colors in the shared theme.
 
 ### Learning tracking rollout
-Apply `supabase db push` before deploying this version. The original learning_results table contains pre/post rubric category scores and transfer booleans. The newly requested interview_attempts table additionally retains assessment answers and feedback. Staff statistics use scored attempts grouped by student and canonical question for growth calculations. Missing results display a dash, not zero. Rollback: revert the app commit; leave the additive table intact to preserve collected results.
 
+Apply `supabase db push` before deploying this version. The original learning_results table contains pre/post rubric category scores and transfer booleans. The newly requested interview_attempts table additionally retains assessment answers and feedback. Staff statistics use scored attempts grouped by student and canonical question for growth calculations. Missing results display a dash, not zero. Rollback: revert the app commit; leave the additive table intact to preserve collected results.
 
 ## Staff analytics (October 19, 2026)
 
 - `/staff/login`: existing email/password staff authentication; successful login lands at `/staff/dashboard`. The staff password was not changed.
 - `/staff/dashboard`: server-rendered KPI cards and leaderboard, five Recharts views, URL-based multi-strand/date/name/minimum-attempt filters.
-- `/staff/student/[id]`: numerical timeline, category-versus-strand radar, mastery, per-question attempts, and verbatim saved answers/feedback.
+- `/staff/student/[id]`: numerical timeline, category-versus-strand radar, best observed responses, per-question attempts, and verbatim saved answers/feedback.
 - `/staff`: paginated raw attempt table (50 rows/page), with CSV export. `/admin` preserves the existing registration table.
 - `GET /api/staff/analytics`: aggregate-only JSON with `strand` (repeated or comma-separated IDs), `student` (name search), `from`/`to` (inclusive UTC dates), and `minAttempts`. Unauthenticated requests return 401; anonymous students and other non-admin accounts return 403. Every server page and data loader independently checks staff authorization. No raw answer or feedback fields are included in analytics JSON or chart props.
 - `GET /api/staff/export-csv`: same filters, optionally `id=<student UUID>`, staff-only attachment containing raw fields and per-student/question first, best, latest, delta, attempts_count. Spreadsheet formula prefixes are neutralized; quotes and line breaks are escaped.
 
 ### Aggregation definitions
 
-Within the selected date range, group attempts by **authenticated student UUID and question ID**, order by timestamp then attempt number/ID, and compute first, best, latest, and best-minus-first. First and best averages are computed across a student's questions; program/strand averages then weight students equally. Minimum attempts and student-name search are applied before every program chart. Empty averages are null, never zero. Best-minus-first is nonnegative by definition; the drilldown exposes latest score so declines are still visible. The practice curve is observational and has different contributors at different attempt counts; it does not establish causation. Weeks start Monday in UTC and gaps are filled with zero. Student strand-comparison averages use the same dates but ignore the selected student's name search and minimum-attempt threshold.
+Within the selected date range, group attempts by **authenticated student UUID and canonical question ID**, ordered by timestamp then attempt number/ID. **Paired latest change** is latest minus first, only when a question has at least two attempts and its first/latest scoring-version tags match. Negative and unchanged changes remain visible. Single attempts have no change estimate; differing scoring methods are explicitly excluded rather than counted as improvement. Repeat denominators show comparable student–question pairs and students with comparable evidence, alongside missing-repeat and changed-method counts.
+
+Average comparable question changes within each student, then weight those students equally for program/strand change. First and best averages still describe all observed questions; best scores and the legacy best-minus-first `delta` are descriptive and may span scoring methods. They are not paired learning estimates. The CSV adds `latest_minus_first`, `has_repeat`, `comparison_status`, and scoring-version tags; filter to `comparison_status=paired` and deduplicate student–question pairs before reproducing dashboard change. Empty averages are null, never zero.
+
+New writes store the rubric-policy version, configured Groq model, and temperature inside the existing `evaluation_json`; retries preserve the recorded tag. Overview queries select only its version field, not full evaluation text. Historical attempts without metadata are grouped as `legacy-unversioned` and compared under the existing continuity assumption; their original configurations cannot be verified. POST responses explicitly flag incomparable scoring methods so the student view can retain feedback without showing a numeric improvement claim. Later in-session practice comparisons use only attempts with the latest scoring method. No schema migration is needed for this metadata.
+
+Minimum attempts, date range, and student-name search are applied before program charts. “Scores by attempt number” is an unpaired descriptive view with different contributors at different attempt counts; it does not establish a learning curve or causation. Weeks start Monday in UTC and gaps are filled with zero. Student strand-comparison averages use the same dates but ignore the selected student's name search and minimum-attempt threshold. See `docs/PILOT-EVALUATION.md` for transfer, independent review, and reporting limits.
 
 The original rubric is retained: **Situation & Task, Personal Actions, Result/Impact, Communication**, each 0–3. There is no fabricated independent Task score. Ongoing practice uses the same /12 rubric and is included in attempt counts and growth analytics.
 
@@ -229,7 +251,6 @@ Tests use mocked AI and a browser-only bundled UI fixture, never a production au
 ### Staff login reliability
 
 Staff sign-in now posts to `/api/staff/login` on the application origin. The server authenticates with Supabase, checks the existing staff allow-list, and installs the session in cookies; no token payload is returned in JSON. Passwords are never logged or persisted by the application. Supabase Auth's sign-in rate limits still apply. `/api/staff/logout` ends the current staff session on the server. This avoids depending on direct browser-to-Supabase connectivity for staff login/logout. Failed submissions preserve the password for correction, a show/hide control supports checking pasted values, and provider/network failures are distinguished from invalid credentials.
-
 
 ## Strand-specific question banks (October 20, 2026)
 

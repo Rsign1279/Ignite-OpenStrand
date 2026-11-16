@@ -6,6 +6,7 @@ export type PdfReport = {
   kpis: { label: string; value: string }[];
   headers: string[];
   rows: string[][];
+  methodology?: string;
   student?: boolean;
 };
 export function ReportExports({

@@ -15,23 +15,28 @@ export function OverviewContent({ data }: { data: Analytics }) {
     { label: "Active students", value: String(data.kpis.activeStudents) },
     { label: "Total attempts", value: String(data.kpis.totalAttempts) },
     { label: "Avg first score /12", value: number(data.kpis.avgFirst) },
-    { label: "Avg best score /12", value: number(data.kpis.avgBest) },
+    { label: "Avg best observed /12", value: number(data.kpis.avgBest) },
     {
-      label: "Avg improvement",
-      value: `${signed(data.kpis.avgImprovement)} pts`,
+      label: "Paired latest change",
+      value: `${signed(data.kpis.avgLatestChange)} pts`,
+    },
+    {
+      label: "Comparable repeat evidence",
+      value: `${data.kpis.pairedStudents} / ${data.kpis.activeStudents}`,
     },
   ];
   const report = {
     title: "IGNITE · Student growth",
     filters: filterLabel(filters),
     kpis,
+    methodology: `Paired latest change uses ${data.kpis.pairedQuestions} comparable repeated student-question pairs from ${data.kpis.pairedStudents} students; ${data.kpis.studentsWithoutRepeat} students have no repeat. ${data.kpis.versionChangedQuestions} pairs excluded because the rubric/model version changed. Compare first and latest within selected dates and the same scoring version, average questions per student, then weight students equally. Higher: ${data.kpis.improvedStudents}; unchanged: ${data.kpis.unchangedStudents}; lower: ${data.kpis.declinedStudents}. Historical unversioned responses are grouped together. Best observed is descriptive. These observations do not establish an app effect or real-world transfer.`,
     headers: [
       "Student",
       "Strand",
       "Attempts",
       "First avg",
-      "Best avg",
-      "Improvement",
+      "Best observed",
+      "Latest change",
     ],
     rows: data.students.map((s) => [
       s.student_name,
@@ -39,7 +44,7 @@ export function OverviewContent({ data }: { data: Analytics }) {
       String(s.total_attempts),
       number(s.avg_first_score),
       number(s.avg_best_score),
-      signed(s.avg_delta),
+      signed(s.avg_latest_change),
     ]),
   };
   return (
@@ -48,7 +53,10 @@ export function OverviewContent({ data }: { data: Analytics }) {
         <div>
           <span className="eyebrow">PROGRAM OVERVIEW</span>
           <h1>See practice turn into progress.</h1>
-          <p>A clear view of student growth across IGNITE.</p>
+          <p>
+            See what changed in students’ answers and where another attempt
+            could help.
+          </p>
         </div>
         <ReportExports
           report={report}
@@ -65,12 +73,66 @@ export function OverviewContent({ data }: { data: Analytics }) {
         ))}
       </div>
       <p className="analytics-method">
-        First and best scores are calculated per student and question within the
-        selected dates, then averaged equally across students. Best-minus-first
-        cannot be negative and can hide a declining latest score. Counts include
-        scored pre-assessment, post-assessment, and ongoing practice responses.
-        Anonymous registrations remain separate identities.
+        Latest change compares the first and most recent response to the same
+        question, using only questions with at least two attempts in the
+        selected dates and the same recorded rubric/model version. Changes are
+        averaged across each student’s comparable questions, then equally across
+        students with comparable repeat evidence. Negative and unchanged results
+        remain visible. Best observed scores are shown separately and may span
+        different scoring methods. Historical responses without a recorded
+        version are compared together; their original scoring configuration
+        cannot be verified. Anonymous registrations remain separate identities.
       </p>
+      <section
+        className="pilot-evidence"
+        aria-labelledby="pilot-evidence-title"
+      >
+        <div>
+          <span className="eyebrow">PILOT EVIDENCE</span>
+          <h2 id="pilot-evidence-title">Growth needs a second observation.</h2>
+          <p>
+            {data.kpis.pairedQuestions} comparable repeated student–question{" "}
+            {data.kpis.pairedQuestions === 1 ? "pair" : "pairs"} from{" "}
+            {data.kpis.pairedStudents}{" "}
+            {data.kpis.pairedStudents === 1 ? "student" : "students"}.{" "}
+            {data.kpis.studentsWithoutRepeat}{" "}
+            {data.kpis.studentsWithoutRepeat === 1
+              ? "student has"
+              : "students have"}{" "}
+            no same-question repeat in this view.
+          </p>
+          {data.kpis.versionChangedQuestions > 0 && (
+            <p className="scoring-method-note">
+              {data.kpis.versionChangedQuestions} repeated question{" "}
+              {data.kpis.versionChangedQuestions === 1
+                ? "pair is"
+                : "pairs are"}{" "}
+              excluded from change estimates because the first and latest
+              answers used different scoring methods.
+            </p>
+          )}
+        </div>
+        <dl>
+          <div>
+            <dt>Latest score higher</dt>
+            <dd>{data.kpis.improvedStudents}</dd>
+          </div>
+          <div>
+            <dt>Latest score unchanged</dt>
+            <dd>{data.kpis.unchangedStudents}</dd>
+          </div>
+          <div>
+            <dt>Latest score lower</dt>
+            <dd>{data.kpis.declinedStudents}</dd>
+          </div>
+        </dl>
+        <p>
+          These are within-practice observations, not proof of real-world
+          transfer or an effect caused by the app. Review the actual answers
+          alongside scores. A new question, a later uncoached attempt, and an
+          advisor’s independent review provide stronger evidence.
+        </p>
+      </section>
       <ProgramCharts data={data} />
       <section className="table-panel">
         <div className="table-heading">
@@ -78,12 +140,18 @@ export function OverviewContent({ data }: { data: Analytics }) {
             <span className="eyebrow">WHO NEEDS A FOLLOW-UP?</span>
             <h2>Student growth</h2>
             <p>
-              Sorted by improvement. Select a name to explore their practice.
+              Sorted by paired latest change. Select a name to review the
+              evidence.
             </p>
           </div>
           <span>{data.students.length} students</span>
         </div>
-        <div className="table-scroll">
+        <div
+          className="table-scroll"
+          tabIndex={0}
+          role="region"
+          aria-label="Student growth table"
+        >
           <table>
             <thead>
               <tr>
@@ -91,9 +159,9 @@ export function OverviewContent({ data }: { data: Analytics }) {
                 <th scope="col">Strand</th>
                 <th scope="col">Attempts</th>
                 <th scope="col">First avg /12</th>
-                <th scope="col">Best avg /12</th>
+                <th scope="col">Best observed /12</th>
                 <th scope="col" aria-sort="descending">
-                  Improvement
+                  Latest change
                 </th>
                 <th scope="col">Follow-up</th>
               </tr>
@@ -117,15 +185,26 @@ export function OverviewContent({ data }: { data: Analytics }) {
                   <td>{number(s.avg_first_score)}</td>
                   <td>{number(s.avg_best_score)}</td>
                   <td>
-                    <strong>{signed(s.avg_delta)} pts</strong>
+                    <strong>{signed(s.avg_latest_change)} pts</strong>
                   </td>
                   <td>
                     {s.total_attempts === 1 ? (
                       <span className="warning-chip">Practiced once</span>
-                    ) : s.avg_delta <= 0 ? (
-                      <span className="warning-chip">No measured growth</span>
+                    ) : s.avg_latest_change === null &&
+                      s.version_changed_questions > 0 ? (
+                      <span className="warning-chip">
+                        Scoring method changed
+                      </span>
+                    ) : s.avg_latest_change === null ? (
+                      <span className="warning-chip">Repeat a question</span>
+                    ) : s.avg_latest_change < 0 ? (
+                      <span className="warning-chip">Latest score lower</span>
+                    ) : s.avg_latest_change === 0 ? (
+                      <span className="warning-chip">
+                        Latest score unchanged
+                      </span>
                     ) : (
-                      <span className="growth-chip">Growing</span>
+                      <span className="growth-chip">Latest score higher</span>
                     )}
                   </td>
                 </StudentGrowthRow>

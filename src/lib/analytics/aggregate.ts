@@ -1,4 +1,5 @@
 import { strands, rubric } from "@/config/strands";
+import { LEGACY_SCORING_VERSION, type QuestionSummary } from "./model";
 import type {
   Analytics,
   Attempt,
@@ -9,6 +10,8 @@ import type {
 } from "./model";
 export const mean = (values: number[]) =>
   values.length ? values.reduce((a, b) => a + b, 0) / values.length : null;
+const meanObserved = (values: (number | null)[]) =>
+  mean(values.filter((value): value is number => value !== null));
 export const chronological = (a: Attempt, b: Attempt) =>
   a.created_at.localeCompare(b.created_at) ||
   a.attempt_number - b.attempt_number ||
@@ -47,7 +50,17 @@ export function studentSummaries(attempts: Attempt[]): StudentSummary[] {
       const questions = [...Map.groupBy(sorted, (a) => a.question_id)].map(
         ([question_id, attempts]) => {
           const first_score = attempts[0].total_score,
-            best_score = Math.max(...attempts.map((a) => a.total_score));
+            best_score = Math.max(...attempts.map((a) => a.total_score)),
+            first_scoring_version =
+              attempts[0].scoring_version ?? LEGACY_SCORING_VERSION,
+            latest_scoring_version =
+              attempts.at(-1)!.scoring_version ?? LEGACY_SCORING_VERSION;
+          const comparison_status: QuestionSummary["comparison_status"] =
+            attempts.length < 2
+              ? "single_attempt"
+              : first_scoring_version === latest_scoring_version
+                ? "paired"
+                : "scoring_version_changed";
           return {
             question_id,
             question_text: attempts[0].question_text,
@@ -55,9 +68,19 @@ export function studentSummaries(attempts: Attempt[]): StudentSummary[] {
             best_score,
             latest_score: attempts.at(-1)!.total_score,
             delta: best_score - first_score,
+            latest_delta:
+              comparison_status === "paired"
+                ? attempts.at(-1)!.total_score - first_score
+                : null,
             attempts_count: attempts.length,
+            comparison_status,
+            first_scoring_version,
+            latest_scoring_version,
           };
         },
+      );
+      const paired = questions.filter(
+        (question) => question.comparison_status === "paired",
       );
       return {
         student_id: id,
@@ -68,13 +91,23 @@ export function studentSummaries(attempts: Attempt[]): StudentSummary[] {
         avg_first_score: mean(questions.map((q) => q.first_score))!,
         avg_best_score: mean(questions.map((q) => q.best_score))!,
         avg_delta: mean(questions.map((q) => q.delta))!,
+        paired_first_score: mean(paired.map((q) => q.first_score)),
+        paired_latest_score: mean(paired.map((q) => q.latest_score)),
+        avg_latest_change: meanObserved(paired.map((q) => q.latest_delta)),
+        repeated_questions: questions.filter((q) => q.attempts_count > 1)
+          .length,
+        comparable_questions: paired.length,
+        version_changed_questions: questions.filter(
+          (q) => q.comparison_status === "scoring_version_changed",
+        ).length,
         last_active: sorted.at(-1)!.created_at,
         questions,
       };
     })
     .sort(
       (a, b) =>
-        b.avg_delta - a.avg_delta ||
+        (b.avg_latest_change ?? -Infinity) -
+          (a.avg_latest_change ?? -Infinity) ||
         a.student_name.localeCompare(b.student_name) ||
         a.student_id.localeCompare(b.student_id),
     );
@@ -100,6 +133,14 @@ export function aggregate(attempts: Attempt[], filters: Filters): Analytics {
       first: mean(group.map((s) => s.avg_first_score)),
       best: mean(group.map((s) => s.avg_best_score)),
       delta: mean(group.map((s) => s.avg_delta)),
+      pairedFirst: meanObserved(group.map((s) => s.paired_first_score)),
+      pairedLatest: meanObserved(group.map((s) => s.paired_latest_score)),
+      latestChange: meanObserved(group.map((s) => s.avg_latest_change)),
+      pairedStudents: group.filter((s) => s.comparable_questions > 0).length,
+      pairedQuestions: group.reduce(
+        (sum, s) => sum + s.comparable_questions,
+        0,
+      ),
       lastActive:
         group
           .map((s) => s.last_active)
@@ -136,6 +177,26 @@ export function aggregate(attempts: Attempt[], filters: Filters): Analytics {
       avgFirst: mean(students.map((s) => s.avg_first_score)),
       avgBest: mean(students.map((s) => s.avg_best_score)),
       avgImprovement: mean(students.map((s) => s.avg_delta)),
+      avgLatestChange: meanObserved(students.map((s) => s.avg_latest_change)),
+      pairedStudents: students.filter((s) => s.comparable_questions > 0).length,
+      pairedQuestions: students.reduce(
+        (sum, s) => sum + s.comparable_questions,
+        0,
+      ),
+      studentsWithoutRepeat: students.filter((s) => s.repeated_questions === 0)
+        .length,
+      versionChangedQuestions: students.reduce(
+        (sum, s) => sum + s.version_changed_questions,
+        0,
+      ),
+      improvedStudents: students.filter(
+        (s) => s.avg_latest_change !== null && s.avg_latest_change > 0,
+      ).length,
+      unchangedStudents: students.filter((s) => s.avg_latest_change === 0)
+        .length,
+      declinedStudents: students.filter(
+        (s) => s.avg_latest_change !== null && s.avg_latest_change < 0,
+      ).length,
     },
     strands: strandStats,
     practice: [1, 2, 3, 4].map((n) => {

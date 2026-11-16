@@ -8,7 +8,7 @@ import { sameOrigin, readJson, json, failure, HttpError } from "@/lib/http";
 export async function POST(request: Request) {
   try {
     sameOrigin(request);
-    const { user, profile } = await requireStudent();
+    const { user, profile } = await requireStudent(request);
     await rateLimit(user.id, "question");
     const { questionId } = z
       .object({ questionId: z.string().min(1).max(100).optional() })

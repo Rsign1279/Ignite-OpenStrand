@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { getStrand } from "../../src/config/strands";
 const pre = {
   scores: {
     situationTask: 2,
@@ -13,8 +14,10 @@ const pre = {
 test("selected bank question stays identical through pre and post, then another round retains the student", async ({
   page,
 }) => {
+  test.setTimeout(60000);
   await page.route("**/api/profile", (route) =>
     route.fulfill({
+      headers: { "X-Student-Session": "11111111-1111-4111-8111-111111111111" },
       json: { name: "Practice Student", strand: "technology", ignite_year: 1 },
     }),
   );
@@ -65,11 +68,16 @@ test("selected bank question stays identical through pre and post, then another 
   );
   await expect(select.locator("option")).toHaveCount(10);
   await select.selectOption("technology-teamwork-v1");
-  const selectedText = await page.locator(".question-preview").innerText();
+  const selectedText = getStrand("technology").questions.find(
+    (question) => question.id === "technology-teamwork-v1",
+  )!.text;
+  await expect(page.locator("main")).not.toContainText(selectedText);
   await page.getByRole("button", { name: "Meet your interviewer" }).click();
-  await expect(page.locator(".question")).toContainText(
-    selectedText.replace(/[“”]/g, ""),
-  );
+  await expect(page.locator("main")).not.toContainText(selectedText);
+  await page
+    .getByRole("button", { name: "I’m ready — ask the question" })
+    .click();
+  await expect(page.locator(".question")).toHaveText(`“${selectedText}”`);
   await page.getByRole("button", { name: "Type my answer" }).click();
   await page
     .getByLabel("Your answer", { exact: true })
@@ -78,10 +86,13 @@ test("selected bank question stays identical through pre and post, then another 
   await page.getByRole("button", { name: /Discover the STAR method/ }).click();
   await page.getByRole("button", { name: /I understand STAR/ }).click();
   await expect(select).toHaveCount(0);
+  await expect(page.locator("main")).not.toContainText(selectedText);
   await page.getByRole("button", { name: "Meet your interviewer" }).click();
-  await expect(page.locator(".question")).toContainText(
-    selectedText.replace(/[“”]/g, ""),
-  );
+  await expect(page.locator("main")).not.toContainText(selectedText);
+  await page
+    .getByRole("button", { name: "I’m ready — ask the question" })
+    .click();
+  await expect(page.locator(".question")).toHaveText(`“${selectedText}”`);
   await page.getByRole("button", { name: "Type my answer" }).click();
   await page
     .getByLabel("Your answer", { exact: true })
@@ -98,6 +109,9 @@ test("selected bank question stays identical through pre and post, then another 
   await page
     .getByRole("button", { name: "Try a New Interview Question" })
     .click();
+  await page
+    .getByRole("button", { name: "I’m ready — ask the question" })
+    .click();
   await page.getByRole("button", { name: "Type my answer" }).click();
   await page
     .getByLabel("Your answer", { exact: true })
@@ -113,6 +127,9 @@ test("selected bank question stays identical through pre and post, then another 
   for (let round = 0; round < 12; round++) {
     await page
       .getByRole("button", { name: "Try a New Question", exact: true })
+      .click();
+    await page
+      .getByRole("button", { name: "I’m ready — ask the question" })
       .click();
     await page.getByRole("button", { name: "Type my answer" }).click();
     await page
@@ -133,6 +150,9 @@ test("selected bank question stays identical through pre and post, then another 
   );
   const previousQuestion = submissions.at(-1)?.questionId;
   await page.getByRole("button", { name: "Retry this question" }).click();
+  await page
+    .getByRole("button", { name: "I’m ready — ask the question" })
+    .click();
   await page.getByRole("button", { name: "Type my answer" }).click();
   await page
     .getByLabel("Your answer", { exact: true })
@@ -160,7 +180,12 @@ test("all ten strand banks have ten questions in the ready screen", async ({
     "digital-media",
   ]) {
     await page.route("**/api/profile", (route) =>
-      route.fulfill({ json: { name: "Bank Student", strand, ignite_year: 1 } }),
+      route.fulfill({
+        headers: {
+          "X-Student-Session": "11111111-1111-4111-8111-111111111111",
+        },
+        json: { name: "Bank Student", strand, ignite_year: 1 },
+      }),
     );
     await page.goto("/interview");
     await expect(

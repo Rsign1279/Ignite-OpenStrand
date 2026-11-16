@@ -38,7 +38,7 @@ export const strands = strandIds.map((id, i) => ({
   icon: definitions[i][2],
   context:
     id === "education"
-      ? "You are a school principal interviewing the student for their first teaching position. The student is a high-school student in the IGNITE Education Innovation program, without assumed full-time teaching experience. Examples may come from IGNITE, classroom observations, work with learners, client projects, team projects, leadership, employment, or volunteering."
+      ? "You are a school principal interviewing the student for a supervised education student learning placement. The student is a high-school student in the IGNITE Education Innovation program, without assumed teaching credentials or full-time teaching experience. Examples may come from IGNITE, classroom observations, work with learners, client projects, team projects, leadership, employment, or volunteering."
       : `Interview a high-school IGNITE ${definitions[i][0]} student, without assuming professional experience. Accept examples from ${experiences}.`,
   primaryQuestion:
     id === "education" ? legacyQuestions.education : legacyQuestions.general,

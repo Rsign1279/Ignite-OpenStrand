@@ -1,0 +1,13 @@
+Lunar surface texture: NASA's Scientific Visualization Studio, CGI Moon Kit.
+Visualization: Ernie Wright (STC). Scientist: Noah Petro (NASA/GSFC).
+Source data: Lunar Reconnaissance Orbiter Camera, Arizona State University.
+Source page: https://svs.gsfc.nasa.gov/4720/
+Desktop 2K texture (2025 map), downloaded unchanged:
+https://svs.gsfc.nasa.gov/vis/a000000/a004700/a004720/lroc_color_2k.jpg
+Compact 1K texture (2019 map), downloaded unchanged:
+https://svs.gsfc.nasa.gov/vis/a000000/a004700/a004720/lroc_color_poles_1k.jpg
+
+Used as a local spherical texture for the OpenStrand interactive Moon.
+The original textures are preserved. Lighting, camera placement, and animation
+are artistic treatments and are not a scientific visualization.
+No NASA endorsement of IGNITE or OpenStrand is implied.

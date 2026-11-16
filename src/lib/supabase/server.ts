@@ -3,7 +3,7 @@ import "server-only";
 import { createServerClient } from "@supabase/ssr";
 import { createClient } from "@supabase/supabase-js";
 import { cookies } from "next/headers";
-export async function serverClient() {
+export async function serverClient({ requireCookieWrites = false } = {}) {
   const jar = await cookies();
   if (
     !process.env.NEXT_PUBLIC_SUPABASE_URL ||
@@ -14,6 +14,10 @@ export async function serverClient() {
     process.env.NEXT_PUBLIC_SUPABASE_URL,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
     {
+      cookieOptions: {
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "lax",
+      },
       cookies: {
         getAll: () => jar.getAll(),
         setAll: (values) => {
@@ -21,8 +25,10 @@ export async function serverClient() {
             values.forEach(({ name, value, options }) =>
               jar.set(name, value, options),
             );
-          } catch {
-            /* Server component cookie writes are handled by proxy. */
+          } catch (error) {
+            // Server Components cannot write cookies; proxy handles refreshes.
+            // Login/logout routes must fail if their session cookies cannot be set.
+            if (requireCookieWrites) throw error;
           }
         },
       },

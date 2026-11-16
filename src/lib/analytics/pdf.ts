@@ -35,6 +35,12 @@ export async function downloadPdf(report: PdfReport) {
     doc.text(k.value, margin + i * cardWidth + 10, y + 37);
   });
   y += 65;
+  if (report.methodology) {
+    doc.setFontSize(8);
+    const note = doc.splitTextToSize(report.methodology, width - 2 * margin);
+    doc.text(note, margin, y);
+    y += note.length * 10 + 12;
+  }
   const charts = [
     ...document.querySelectorAll<HTMLElement>("[data-pdf-chart]"),
   ];
@@ -91,7 +97,10 @@ export async function downloadPdf(report: PdfReport) {
         });
     } else {
       doc.setFontSize(10);
-      doc.text("No practice data in the selected filters.", x, top + 40);
+      const emptyText =
+        chart.querySelector(".chart-empty strong")?.textContent ??
+        "No practice data in the selected filters.";
+      doc.text(emptyText, x, top + 40);
     }
   }
   const gap = 25,
@@ -133,8 +142,8 @@ export async function downloadPdf(report: PdfReport) {
   doc.setFontSize(11);
   doc.text(
     report.student
-      ? "Question mastery and growth"
-      : "Student growth leaderboard",
+      ? "Question evidence and latest change"
+      : "Student practice evidence",
     margin,
     y,
   );
@@ -150,7 +159,7 @@ export async function downloadPdf(report: PdfReport) {
       y = header(
         report.student
           ? "Student question appendix"
-          : "Student growth · continued",
+          : "Student practice evidence · continued",
       );
       tableHeader();
     }

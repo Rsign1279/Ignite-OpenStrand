@@ -33,9 +33,22 @@ export async function rateLimit(userId: string, bucket: string) {
       503,
       "Interview processing is temporarily unavailable. Your typed answer is still here. Please try again.",
     );
-  if (!result.success)
+  if (!result.success) {
+    const retryAfter =
+      typeof result.reset === "number" && Number.isFinite(result.reset)
+        ? Math.max(
+            1,
+            Math.min(600, Math.ceil((result.reset - Date.now()) / 1000)),
+          )
+        : 600;
+    const wait =
+      retryAfter < 60
+        ? `${retryAfter} second${retryAfter === 1 ? "" : "s"}`
+        : `${Math.ceil(retryAfter / 60)} minute${retryAfter > 60 ? "s" : ""}`;
     throw new HttpError(
       429,
-      "You're sending requests too quickly. Please wait a moment and try again.",
+      `Take a short practice break. Please try again in about ${wait}.`,
+      retryAfter,
     );
+  }
 }

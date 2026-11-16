@@ -43,8 +43,31 @@ it.each([
   expect((await POST(recording(type, size))).status).toBe(400);
   expect(mock.transcribe).not.toHaveBeenCalled();
 });
-it("rejects oversized streamed upload even without length", async () => {
-  expect((await POST(recording("audio/webm", 4_000_001))).status).toBe(413);
+it("cancels oversized streamed upload without draining it or invoking the provider", async () => {
+  const cancel = vi.fn();
+  let chunksRead = 0;
+  // Model network chunks directly. Node 24's FormData encoder itself rejects
+  // out-of-band if canceled during File encoding; it is not a network request.
+  const stream = new ReadableStream<Uint8Array>(
+    {
+      pull(controller) {
+        chunksRead++;
+        controller.enqueue(new Uint8Array(1_000_001));
+      },
+      cancel,
+    },
+    { highWaterMark: 0 },
+  );
+  const request = new Request("https://school.test/api/transcribe", {
+    method: "POST",
+    headers: { "content-type": "multipart/form-data; boundary=test" },
+    body: stream,
+    // Node's fetch requires duplex for actual streaming request bodies.
+    duplex: "half",
+  } as RequestInit);
+  expect((await POST(request)).status).toBe(413);
+  expect(chunksRead).toBe(4);
+  expect(cancel).toHaveBeenCalledOnce();
   expect(mock.transcribe).not.toHaveBeenCalled();
 });
 it("rejects oversized declared upload", async () => {

@@ -159,4 +159,12 @@ describe("Configuration and deterministic navigation", () => {
     expect(csv).toContain("Education Innovation");
     expect(csv.split("\r\n")[0]).toBe("name,strand,IGNITE year");
   });
+  it.each(["  =SUM(1)", "\t+SUM(1)", "\r@SUM(1)", " -1+1"])(
+    "neutralizes formula-like profile names even if inserted directly with leading whitespace: %s",
+    (name) => {
+      expect(
+        profilesCsv([{ name, strand: "education", ignite_year: 1 }]),
+      ).toContain(`"'${name}"`);
+    },
+  );
 });

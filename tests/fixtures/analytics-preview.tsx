@@ -48,11 +48,34 @@ const rows: Attempt[] = Array.from({ length: count }, (_, i) => ({
   feedback_text: "A specific observation.",
   is_legacy: false,
 }));
+if (params.get("outcomes") === "mixed") {
+  const patterns = [[6, 12, 3], [6, 9, 6], [3, 6, 9], [6]];
+  rows.forEach((row, i) => {
+    const score = patterns[Math.floor(i / 3) % patterns.length][i % 3] ?? 6;
+    const base = Math.floor(score / 4);
+    const values = Array.from(
+      { length: 4 },
+      (_, part) => base + (part < score % 4 ? 1 : 0),
+    );
+    row.total_score = score;
+    row.scores = {
+      situationTask: values[0],
+      personalActions: values[1],
+      resultImpact: values[2],
+      professionalCommunication: values[3],
+    };
+  });
+}
+if (params.get("versions") === "mixed") {
+  rows.forEach((row, index) => {
+    row.scoring_version = index < 2 ? "previous-method" : "current-method";
+  });
+}
 const data = aggregate(rows, parseFilters(new URLSearchParams()));
 const detail = studentDetail(rows, id(1000), data.filters);
 function App() {
   return (
-    <>
+    <div className="studio staff-studio">
       <header className="header">
         <Link href="/" className="brand">
           IGNITE Interview Coach
@@ -84,7 +107,7 @@ function App() {
           <OverviewContent data={data} />
         )}
       </div>
-    </>
+    </div>
   );
 }
 createRoot(document.getElementById("root")!).render(<App />);

@@ -36,3 +36,23 @@ it("preserves a specific safe server error", async () => {
     "Staff email sign-in is unavailable",
   );
 });
+
+it.each([
+  ["HTML", () => new Response("<html>Login gateway</html>")],
+  ["missing confirmation", () => Response.json({})],
+  ["false confirmation", () => Response.json({ success: false })],
+  ["server failure", () => Response.json({ success: true }, { status: 503 })],
+])("does not report logout success for %s", async (_name, response) => {
+  const { signOutStaff } = await import("@/lib/staff-login-client");
+  fetchMock.mockResolvedValue(response());
+  await expect(signOutStaff()).rejects.toThrow("before leaving this device");
+});
+it("confirms successful logout without caching the response", async () => {
+  const { signOutStaff } = await import("@/lib/staff-login-client");
+  fetchMock.mockResolvedValue(Response.json({ success: true }));
+  await expect(signOutStaff()).resolves.toBeUndefined();
+  expect(fetchMock).toHaveBeenCalledWith(
+    "/api/staff/logout",
+    expect.objectContaining({ method: "POST", cache: "no-store" }),
+  );
+});

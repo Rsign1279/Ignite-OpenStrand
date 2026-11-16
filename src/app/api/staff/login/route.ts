@@ -30,7 +30,7 @@ export async function POST(request: Request) {
       if (error.code === "invalid_credentials")
         throw new HttpError(
           401,
-          "Email or password wasn’t accepted. Use the new password from your private password file.",
+          "Email or password wasn’t accepted. Check your staff email and password, then try again.",
         );
       if (error.status === 429 || error.code?.includes("rate_limit"))
         throw new HttpError(
@@ -59,12 +59,16 @@ export async function POST(request: Request) {
         "This account does not have staff access. Use your authorized staff email.",
       );
     }
-    const client = await serverClient();
-    const { error: sessionError } = await client.auth.setSession({
-      access_token: data.session.access_token,
-      refresh_token: data.session.refresh_token,
-    });
-    if (sessionError) {
+    try {
+      const client = await serverClient({ requireCookieWrites: true });
+      const { error: sessionError } = await client.auth.setSession({
+        access_token: data.session.access_token,
+        refresh_token: data.session.refresh_token,
+      });
+      if (sessionError) throw sessionError;
+    } catch {
+      // A rejected or failed cookie write must not leave a fresh verified
+      // session usable after reporting login failure.
       await verifier.auth.signOut({ scope: "local" });
       throw new HttpError(
         503,

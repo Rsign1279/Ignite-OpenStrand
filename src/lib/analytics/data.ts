@@ -29,8 +29,8 @@ export const loadAttempts = cache(
         .from("interview_attempts")
         .select(
           includeText
-            ? "*"
-            : "id,student_id,question_id,question_text,stage,attempt_number,total_score,situation_task,personal_actions,result_impact,communication,created_at,is_legacy",
+            ? "*,scoring_version:evaluation_json->>scoring_version"
+            : "id,student_id,question_id,question_text,stage,attempt_number,total_score,situation_task,personal_actions,result_impact,communication,created_at,is_legacy,scoring_version:evaluation_json->>scoring_version",
         )
         .order("created_at")
         .order("id");
@@ -39,7 +39,9 @@ export const loadAttempts = cache(
         .range(offset, offset + 999)
         .returns<
           (Omit<AttemptRow, "answer_text" | "feedback_text"> &
-            Partial<Pick<AttemptRow, "answer_text" | "feedback_text">>)[]
+            Partial<Pick<AttemptRow, "answer_text" | "feedback_text">> & {
+              scoring_version?: string | null;
+            })[]
         >();
       if (error)
         throw new HttpError(

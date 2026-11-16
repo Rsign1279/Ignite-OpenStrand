@@ -1,10 +1,16 @@
 import { getStrand } from "@/config/strands";
 import { filterAttempts, studentSummaries } from "./aggregate";
 import type { Attempt, Filters } from "./model";
-export const csvCell = (value: unknown) =>
-  `"${String(value ?? "")
-    .replace(/^[\s]*[=+@\-\t\r]/, "'$&")
-    .replaceAll('"', '""')}"`;
+import { LEGACY_SCORING_VERSION } from "./model";
+export const csvCell = (value: unknown) => {
+  const text = String(value ?? "");
+  // Derived negative scores remain numbers; untrusted text is formula-escaped.
+  const safe =
+    typeof value === "number" && Number.isFinite(value)
+      ? text
+      : text.replace(/^[\s]*[=+@\-\t\r]/, "'$&");
+  return `"${safe.replaceAll('"', '""')}"`;
+};
 export function attemptsCsv(attempts: Attempt[], filters: Filters) {
   const rows = filterAttempts(attempts, filters);
   const derived = new Map(
@@ -13,7 +19,7 @@ export function attemptsCsv(attempts: Attempt[], filters: Filters) {
     ),
   );
   return [
-    "id,student_id,student_name,strand,question_id,question_text,stage,attempt_number,total_score,situation_task,personal_actions,result_impact,communication,created_at,answer_text,feedback_text,first_score,best_score,latest_score,delta,attempts_count,is_legacy",
+    "id,student_id,student_name,strand,question_id,question_text,stage,attempt_number,total_score,situation_task,personal_actions,result_impact,communication,created_at,answer_text,feedback_text,first_score,best_score,latest_score,delta,attempts_count,is_legacy,latest_minus_first,has_repeat,scoring_version,comparison_status,first_scoring_version,latest_scoring_version",
     ...rows.map((a) => {
       const q = derived.get(a.student_id + ":" + a.question_id)!;
       return [
@@ -36,6 +42,12 @@ export function attemptsCsv(attempts: Attempt[], filters: Filters) {
         q.delta,
         q.attempts_count,
         a.is_legacy,
+        q.latest_delta,
+        q.attempts_count > 1,
+        a.scoring_version ?? LEGACY_SCORING_VERSION,
+        q.comparison_status,
+        q.first_scoring_version,
+        q.latest_scoring_version,
       ]
         .map(csvCell)
         .join(",");

@@ -1,6 +1,8 @@
 import { z } from "zod";
 import { strandIds } from "@/config/strands";
 import { evaluationSchema } from "@/lib/validation";
+import { LEGACY_SCORING_VERSION } from "@/config/rubric-anchors";
+export { LEGACY_SCORING_VERSION };
 export const attemptSchema = z.object({
   id: z.uuid(),
   student_id: z.uuid(),
@@ -16,8 +18,16 @@ export const attemptSchema = z.object({
   answer_text: z.string().nullable().optional(),
   feedback_text: z.string().nullable().optional(),
   is_legacy: z.boolean().default(false),
+  scoring_version: z
+    .string()
+    .min(1)
+    .max(300)
+    .nullish()
+    .transform((value) => value ?? LEGACY_SCORING_VERSION),
 });
-export type Attempt = z.infer<typeof attemptSchema>;
+export type Attempt = Omit<z.infer<typeof attemptSchema>, "scoring_version"> & {
+  scoring_version?: string;
+};
 export type Filters = {
   strand: string[];
   student: string;
@@ -66,7 +76,11 @@ export type QuestionSummary = {
   best_score: number;
   latest_score: number;
   delta: number;
+  latest_delta: number | null;
   attempts_count: number;
+  comparison_status: "paired" | "single_attempt" | "scoring_version_changed";
+  first_scoring_version: string;
+  latest_scoring_version: string;
 };
 export type StudentSummary = {
   student_id: string;
@@ -77,6 +91,12 @@ export type StudentSummary = {
   avg_first_score: number;
   avg_best_score: number;
   avg_delta: number;
+  paired_first_score: number | null;
+  paired_latest_score: number | null;
+  avg_latest_change: number | null;
+  repeated_questions: number;
+  comparable_questions: number;
+  version_changed_questions: number;
   last_active: string;
   questions: QuestionSummary[];
 };
@@ -95,6 +115,14 @@ export type Analytics = {
     avgFirst: number | null;
     avgBest: number | null;
     avgImprovement: number | null;
+    avgLatestChange: number | null;
+    pairedStudents: number;
+    pairedQuestions: number;
+    studentsWithoutRepeat: number;
+    versionChangedQuestions: number;
+    improvedStudents: number;
+    unchangedStudents: number;
+    declinedStudents: number;
   };
   strands: {
     id: string;
@@ -105,6 +133,11 @@ export type Analytics = {
     first: number | null;
     best: number | null;
     delta: number | null;
+    pairedFirst: number | null;
+    pairedLatest: number | null;
+    latestChange: number | null;
+    pairedStudents: number;
+    pairedQuestions: number;
     lastActive: string | null;
   }[];
   practice: { attempt: string; score: number | null; count: number }[];

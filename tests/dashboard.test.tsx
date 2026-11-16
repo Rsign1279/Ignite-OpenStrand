@@ -5,53 +5,28 @@ vi.mock("next/navigation", () => ({
   useRouter: () => ({ replace: vi.fn(), refresh: vi.fn() }),
 }));
 import { AdminDashboard } from "@/components/admin-dashboard";
-it("shows paired growth and category details without treating missing scores as zero", () => {
+it("shows every registration and directs growth analysis to matched question attempts", () => {
   const html = renderToStaticMarkup(
     <AdminDashboard
       profiles={[
         {
-          user_id: "one",
+          user_id: "11111111-1111-4111-8111-111111111111",
           name: "Student One",
           strand: "education",
           ignite_year: 1,
         },
-        {
-          user_id: "two",
-          name: "Student Two",
-          strand: "technology",
-          ignite_year: 2,
-        },
-      ]}
-      results={[
-        {
-          user_id: "one",
-          pre_scores: {
-            situationTask: 1,
-            personalActions: 2,
-            resultImpact: 1,
-            professionalCommunication: 2,
-          },
-          post_scores: {
-            situationTask: 2,
-            personalActions: 3,
-            resultImpact: 2,
-            professionalCommunication: 3,
-          },
-          transfer_star: {
-            situation: true,
-            task: false,
-            action: true,
-            result: false,
-          },
-          updated_at: "2026-10-19T12:00:00Z",
-          completed_at: "2026-10-19T12:00:00Z",
-        },
+        { name: "Student Two", strand: "technology", ignite_year: 2 },
       ]}
     />,
   );
-  expect(html).toContain("+4.0");
-  expect(html).toContain("+4");
-  expect(html).toContain("No saved assessment");
-  expect(html).toContain("task: Missing");
-  expect(html).toContain("Situation &amp; Task");
+  expect(html).toContain("Student One");
+  expect(html).toContain("Student Two");
+  expect(html).toContain("Registered Students");
+  expect(html).toContain("No linked session");
+  expect(html).toContain("/staff/student/11111111-1111-4111-8111-111111111111");
+  expect(html).toContain("compares repeated answers to the same question");
+  expect(html).toContain('href="/staff/dashboard"');
+  expect(html).not.toContain("Average score change");
+  expect(html).not.toContain("Completed interviews");
+  expect(html).not.toContain("Pre / 12");
 });

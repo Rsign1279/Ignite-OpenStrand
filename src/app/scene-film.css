@@ -1,0 +1,196 @@
+.scene-film {
+  margin: 0;
+  background: #142c3b;
+  color: #ffffeb;
+  border: 2px solid #172d39;
+  border-radius: 32px;
+  overflow: hidden;
+  width: 100%;
+}
+.scene-film-frame {
+  position: relative;
+  aspect-ratio: 16 / 10;
+  overflow: hidden;
+  isolation: isolate;
+}
+.scene-film-video {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  background: #142c3b;
+}
+.scene-film-topline {
+  position: absolute;
+  top: 24px;
+  left: 24px;
+  right: 24px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  pointer-events: none;
+  color: #ffffeb;
+  text-shadow: 0 1px 6px #142c3b;
+  font-size: 10px;
+  letter-spacing: 0.13em;
+  font-weight: 600;
+}
+.scene-film-topline > span:first-child {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.scene-film-topline > span {
+  background: #142c3bee;
+  border: 1px solid #758990;
+  padding: 8px 10px;
+  border-radius: 100px;
+  text-shadow: none;
+}
+.scene-film-start {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  display: grid;
+  place-items: center;
+  width: 76px;
+  height: 76px;
+  border-radius: 50%;
+  border: 2px solid #142c3b;
+  background: #f0d7ff;
+  color: #142c3b;
+  cursor: pointer;
+}
+.scene-film-start > svg {
+  margin-left: 4px;
+}
+.scene-film-start:hover {
+  background: #ffffeb;
+}
+.scene-film-caption {
+  position: absolute;
+  bottom: 75px;
+  left: 25px;
+  display: flex;
+  gap: 13px;
+  align-items: center;
+  pointer-events: none;
+  padding: 12px 17px;
+  border-radius: 16px;
+  background: #142c3be8;
+  color: #ffffeb;
+}
+.scene-film-caption > span {
+  font-size: 12px;
+  color: #ebcf7b;
+}
+.scene-film-caption small {
+  display: block;
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #e8dfea;
+}
+.scene-film-caption strong {
+  display: block;
+  font-family: var(--font-studio-serif), Georgia, serif;
+  font-size: 25px;
+  font-weight: 400;
+  margin-top: 3px;
+  line-height: 1.1;
+}
+.scene-film-controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 23px;
+  border-top: 1px solid #435963;
+}
+.scene-film-controls > span {
+  font-size: 12px;
+  line-height: 1.55;
+  color: #e4e5d9;
+}
+.scene-film-controls button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-height: 44px;
+  padding: 10px 14px;
+  border: 1px solid #87989b;
+  border-radius: 100px;
+  background: transparent;
+  color: #ffffeb;
+  font-size: 12px;
+  cursor: pointer;
+}
+.scene-film-controls button:hover {
+  background: #2c4653;
+}
+.scene-film :focus-visible {
+  outline: 3px solid #f0d7ff;
+  outline-offset: 3px;
+}
+@media (max-width: 760px) {
+  .scene-film {
+    border-radius: 25px;
+  }
+  .scene-film-frame {
+    aspect-ratio: 4/3;
+  }
+  .scene-film-topline {
+    top: 17px;
+    left: 17px;
+    right: 17px;
+    font-size: 8px;
+  }
+  .scene-film-topline > span:last-child {
+    display: none;
+  }
+  .scene-film-caption {
+    left: 16px;
+    bottom: 65px;
+    padding: 10px 13px;
+  }
+  .scene-film-caption strong {
+    font-size: 22px;
+  }
+  .scene-film-controls {
+    padding: 11px 17px;
+    gap: 10px;
+  }
+  .scene-film-controls > span {
+    font-size: 11px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .scene-film *,
+  .scene-film *::before,
+  .scene-film *::after {
+    transition: none !important;
+    animation: none !important;
+  }
+}
+@media (max-width: 480px) {
+  .scene-film-frame {
+    min-height: 240px;
+  }
+  /* The location is already in the scene text and the video's accessible
+     name. Keep the narrow screen's play target and native controls clear. */
+  .scene-film-caption {
+    display: none;
+  }
+  .scene-film-start {
+    width: 64px;
+    height: 64px;
+  }
+  .scene-film-topline {
+    left: 12px;
+    right: 12px;
+    top: 13px;
+  }
+}

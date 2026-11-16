@@ -30,6 +30,12 @@ it("append-only attempts enforce isolation, recomputed totals, retry IDs and seq
         "utf8",
       ),
     );
+    await db.exec(
+      readFileSync(
+        "supabase/migrations/202611160001_attempt_retry_integrity.sql",
+        "utf8",
+      ),
+    );
     const legacy = await db.query<{
       total_score: number;
       answer_text: null;
@@ -62,12 +68,41 @@ it("append-only attempts enforce isolation, recomputed totals, retry IDs and seq
         total: 8,
         strongestPart: "Strong",
         improvementArea: "Improve",
+        scoring_version: "original-rubric|original-model",
       }),
     ];
     const call =
       "select public.record_interview_attempt($1::uuid,$2::uuid,$3::text,$4::text,$5::text,$6::jsonb,$7::text,$8::text,$9::jsonb)";
     await db.query(call, args);
     await db.query(call, args);
+    for (const [position, changed] of [
+      [0, second],
+      [2, "q2"],
+      [3, "Different question"],
+      [4, "practice"],
+      [6, "Changed answer"],
+    ] as const) {
+      const conflict = [...args];
+      conflict[position] = changed;
+      await expect(db.query(call, conflict)).rejects.toThrow(
+        /Request ID conflict/,
+      );
+    }
+    // Same submission with a different AI response must keep its original score.
+    const retry = [...args];
+    retry[5] = JSON.stringify({ ...scores, personalActions: 3 });
+    retry[8] = JSON.stringify({
+      ...JSON.parse(String(args[8])),
+      scoring_version: "later-rubric|later-model",
+    });
+    await db.query(call, retry);
+    const version = await db.query<{ scoring_version: string }>(
+      "select evaluation_json->>'scoring_version' as scoring_version from interview_attempts where id=$1",
+      [request],
+    );
+    expect(version.rows[0].scoring_version).toBe(
+      "original-rubric|original-model",
+    );
     await db.query(call, [
       first,
       "44444444-4444-4444-8444-444444444444",

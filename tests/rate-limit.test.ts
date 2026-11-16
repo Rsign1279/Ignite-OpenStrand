@@ -8,8 +8,10 @@ vi.mock("@upstash/ratelimit", () => ({
   },
 }));
 import { rateLimit } from "@/lib/rate-limit";
+import { failure } from "@/lib/http";
 beforeEach(() => {
   mock.limit.mockReset();
+  vi.restoreAllMocks();
   process.env.UPSTASH_REDIS_REST_URL = "test";
   process.env.UPSTASH_REDIS_REST_TOKEN = "test";
 });
@@ -24,6 +26,34 @@ it("returns 429 when quota exhausted", async () => {
     status: 429,
   });
 });
+it("reports the actual quota reset instead of encouraging repeated early retries", async () => {
+  const now = 1_800_000_000_000;
+  vi.spyOn(Date, "now").mockReturnValue(now);
+  mock.limit.mockResolvedValue({ success: false, reset: now + 245_000 });
+  try {
+    await rateLimit("uuid", "assessment");
+    throw new Error("Expected a quota rejection");
+  } catch (error) {
+    const response = failure(error);
+    expect(response.status).toBe(429);
+    expect(response.headers.get("Retry-After")).toBe("245");
+    expect(await response.json()).toEqual({
+      error:
+        "Take a short practice break. Please try again in about 5 minutes.",
+    });
+  }
+});
+it.each([NaN, Infinity, undefined])(
+  "uses a bounded full-window wait for an invalid reset %s",
+  async (reset) => {
+    mock.limit.mockResolvedValue({ success: false, reset });
+    await expect(rateLimit("uuid", "assessment")).rejects.toMatchObject({
+      status: 429,
+      retryAfterSeconds: 600,
+      message: expect.stringContaining("10 minutes"),
+    });
+  },
+);
 it("fails closed with safe advisor message for read-only credentials", async () => {
   mock.limit.mockRejectedValue(new Error("NOPERM evalsha PRIVATE"));
   await expect(rateLimit("uuid", "assessment")).rejects.toMatchObject({

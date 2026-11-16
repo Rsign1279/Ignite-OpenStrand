@@ -1,196 +1,187 @@
 import Link from "next/link";
 import {
   ArrowRight,
-  Mic,
   ShieldCheck,
-  Check,
-  AudioLines,
-  Lightbulb,
-  Target,
   ArrowUpRight,
+  MessageCircle,
+  BookOpen,
+  Compass,
 } from "lucide-react";
 import { Header, Brand } from "@/components/brand";
+import { OrbitalHero } from "@/components/orbital-hero";
+import { StudioPreview } from "@/components/studio-preview";
 import { strands } from "@/config/strands";
 import { StrandIcon } from "@/components/strand-icon";
+
 export default function Home() {
   return (
-    <>
+    <div className="studio landing">
       <Header />
-      <main id="main">
-        <section className="hero">
-          <div className="hero-copy">
-            <div className="eyebrow">
-              <span className="live-dot" /> BUILT FOR IGNITE PROFESSIONAL
-              STUDIES
-            </div>
-            <h1>
-              Your next chapter
+      <main id="main" className="landing-main">
+        <OrbitalHero />
+        <section className="landing-metrics" aria-label="Practice at a glance">
+          <div>
+            <strong>10</strong>
+            <span>career pathways</span>
+          </div>
+          <div>
+            <strong>100</strong>
+            <span>strand-specific questions</span>
+          </div>
+          <div>
+            <strong>1</strong>
+            <span>story only you can tell</span>
+          </div>
+          <p>
+            Made for where you are.
+            <br />
+            <em>And where you’re going.</em>
+          </p>
+        </section>
+        <section
+          className="experience-preview-section"
+          aria-labelledby="preview-title"
+        >
+          <div>
+            <span className="eyebrow">THE MOMENT BEFORE YOUR ANSWER</span>
+            <h2 id="preview-title">
+              Make the room
               <br />
-              starts with a<br />
-              <em>stronger story.</em>
-            </h1>
-            <p className="hero-description">
-              You have the experiences. Learn how to share them.
-              <br className="desktop-break" /> Build interview confidence with
-              practice that feels real.
+              <em>feel familiar.</em>
+            </h2>
+            <p>
+              Step into a setting from your strand. Meet your interviewer, take
+              a breath, and practice turning your own experience into a story
+              someone can follow.
             </p>
-            <div className="hero-actions">
-              <Link href="/interview" className="button primary">
-                Start Student Interview <ArrowRight size={19} />
-              </Link>
-              <span className="time-note">
-                3 interviews. One confident you.
-              </span>
-            </div>
-            <div className="hero-trust">
-              <span>
-                <ShieldCheck size={17} /> No student email needed
-              </span>
-              <span>
-                <Mic size={17} /> Voice or text answers
-              </span>
-            </div>
+            <Link className="button secondary" href="/interview">
+              Choose your practice <ArrowRight size={18} />
+            </Link>
           </div>
-          <div
-            className="hero-visual"
-            aria-label="Preview of the interview experience"
-          >
-            <div className="preview-label">
-              <span className="live-dot" /> YOUR PRACTICE SPACE
-            </div>
-            <div className="preview-card">
-              <div className="preview-top">
-                <div className="persona-icon">
-                  <BriefcaseIcon />
-                </div>
-                <div>
-                  <strong>Your interviewer</strong>
-                  <span>Real questions. Room to grow.</span>
-                </div>
-                <span className="pill">PRE-ASSESSMENT</span>
-              </div>
-              <div className="preview-question">
-                “Tell me about a time when a project or plan didn’t go as
-                expected. What did you do?”
-              </div>
-              <div className="preview-mic">
-                <div className="mic-ring">
-                  <Mic size={34} />
-                </div>
-                <div className="waveform" aria-hidden="true">
-                  {Array.from({ length: 25 }, (_, i) => (
-                    <i
-                      key={i}
-                      style={{
-                        height: `${[9, 16, 26, 12, 35, 22, 43, 18, 29, 49, 24, 39, 55, 27, 44, 20, 35, 47, 19, 31, 14, 26, 18, 12, 7][i]}px`,
-                      }}
-                    />
-                  ))}
-                </div>
-                <span>Your story deserves to be heard.</span>
-              </div>
-              <div className="preview-bottom">
-                <span>
-                  <span className="live-dot" /> A space to practice, not perform
-                </span>
-                <AudioLines size={19} />
-              </div>
-            </div>
-            <div className="growth-card">
-              <span className="growth-icon">
-                <Lightbulb size={21} />
-              </span>
-              <div>
-                <strong>A little practice. A lot of possibility.</strong>
-                <span>Find your voice, one answer at a time.</span>
-              </div>
-            </div>
-            <div className="orbit orbit-one" />
-            <div className="orbit orbit-two" />
-          </div>
+          <StudioPreview />
         </section>
-        <section className="strand-section">
-          <div className="section-line">
-            <span>YOUR STRAND. YOUR FUTURE.</span>
-            <span>10 pathways. Endless possibilities.</span>
-          </div>
-          <div className="strand-strip">
-            {strands.map((s) => (
-              <Link href={`/interview?strand=${s.id}`} key={s.id}>
-                <StrandIcon name={s.icon} />
-                <span>{s.shortName}</span>
-              </Link>
-            ))}
-          </div>
-        </section>
-        <section id="how-it-works" className="how-section">
-          <div className="section-heading">
+        <section
+          id="how-it-works"
+          className="landing-method"
+          aria-labelledby="method-title"
+        >
+          <div className="landing-section-heading">
             <div>
-              <div className="eyebrow">CONFIDENCE IS A SKILL</div>
-              <h2>
-                Practice. Reflect. <em>Improve.</em>
+              <span className="eyebrow">CONFIDENCE COMES FROM DOING</span>
+              <h2 id="method-title">
+                Practice the moment.
+                <br />
+                <em>Not just the answer.</em>
               </h2>
             </div>
             <p>
-              A focused experience that turns your everyday
-              <br /> experiences into stronger interview answers.
+              The room. The pause. The question.
+              <br />
+              Make it familiar, one story at a time.
             </p>
           </div>
-          <div className="steps-grid">
+          <div className="method-grid">
             {[
               {
-                icon: Mic,
+                icon: Compass,
                 n: "01",
-                title: "Meet your interviewer",
-                text: "Answer a realistic question tailored to your IGNITE strand. Speak naturally, or type your response.",
+                title: "Enter the scene",
+                text: "A studio, a school, a workshop. Meet your practice interviewer in an imagined setting connected to your strand.",
+                note: "Get a feel for the conversation",
               },
               {
-                icon: Target,
+                icon: MessageCircle,
                 n: "02",
-                title: "Build a stronger answer",
-                text: "Get thoughtful feedback, discover the STAR method, and try the same question with a fresh perspective.",
+                title: "Tell your story",
+                text: "Answer a question from the actual IGNITE bank. Speak or type, then see feedback across four clear rubric categories.",
+                note: "Find what’s already working",
               },
               {
-                icon: Lightbulb,
+                icon: BookOpen,
                 n: "03",
-                title: "Put it into practice",
-                text: "See your progress. Take on a new question. Walk away with a framework you can use anywhere.",
+                title: "Make it stronger",
+                text: "Learn STAR, sketch your story, and answer the same question again. Then carry the skill into a new scene.",
+                note: "Take something useful with you",
               },
-            ].map((s) => (
-              <article key={s.n} className="step-card">
-                <div className="step-top">
-                  <s.icon size={25} />
-                  <span>{s.n}</span>
+            ].map((step) => (
+              <article key={step.n}>
+                <div className="method-card-top">
+                  <step.icon size={23} strokeWidth={1.5} />
+                  <span>{step.n}</span>
                 </div>
-                <h3>{s.title}</h3>
-                <p>{s.text}</p>
+                <h3>{step.title}</h3>
+                <p>{step.text}</p>
+                <span className="method-card-note">
+                  {step.note} <ArrowUpRight size={14} />
+                </span>
               </article>
             ))}
           </div>
         </section>
-        <section className="privacy-banner">
-          <ShieldCheck size={26} />
-          <div>
-            <strong>Your practice stays yours.</strong>
+        <section className="landing-pathways" aria-labelledby="pathways-title">
+          <div className="landing-section-heading">
+            <div>
+              <span className="eyebrow">YOUR STRAND. YOUR STARTING POINT.</span>
+              <h2 id="pathways-title">
+                A room for <em>your ambition.</em>
+              </h2>
+            </div>
             <p>
-              We save your name, strand, IGNITE year, rubric scores, STAR indicators,
-              assessment answers, and feedback for authorized staff review.
-              Recordings are never saved.
+              Ten questions in every pathway.
+              <br />
+              Examples from your own student experience.
             </p>
           </div>
-          <Check size={22} />
+          <div className="pathway-grid">
+            {strands.map((s, i) => (
+              <Link key={s.id} href={`/interview?strand=${s.id}`}>
+                <span className="pathway-icon">
+                  <StrandIcon name={s.icon} size={21} />
+                </span>
+                <div>
+                  <strong>{s.name}</strong>
+                  <span>{s.interviewerTitle}</span>
+                </div>
+                <span className="pathway-index">
+                  {String(i + 1).padStart(2, "0")}
+                </span>
+                <ArrowUpRight size={17} />
+              </Link>
+            ))}
+          </div>
+        </section>
+        <section className="landing-manifesto">
+          <span className="eyebrow">SMALL EXPERIENCES. REAL POTENTIAL.</span>
+          <p>
+            You don’t need years of experience.
+            <br />
+            You need a way to share <em>what you’ve learned.</em>
+          </p>
+          <Link href="/interview" className="button primary">
+            Find your first scene <ArrowRight size={18} />
+          </Link>
+          <span>School. IGNITE. Clubs. Volunteering. Your story counts.</span>
+        </section>
+        <section className="landing-privacy">
+          <ShieldCheck size={24} strokeWidth={1.5} />
+          <div>
+            <strong>A practice space with clear boundaries.</strong>
+            <p>
+              Your name, strand, IGNITE year, rubric scores, STAR indicators,
+              assessment answers, and feedback are saved for authorized staff
+              review. Your recordings are processed for transcription and never
+              saved by this app.
+            </p>
+          </div>
         </section>
       </main>
-      <footer>
+      <footer className="landing-footer">
         <Brand />
-        <span>Built for the next generation of professionals.</span>
+        <span>Real, relevant learning. A future that’s yours.</span>
         <Link href="/staff/login">
           Advisor access <ArrowUpRight size={14} />
         </Link>
       </footer>
-    </>
+    </div>
   );
-}
-function BriefcaseIcon() {
-  return <Target size={24} />;
 }

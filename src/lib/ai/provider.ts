@@ -2,6 +2,7 @@ import "server-only";
 import Groq from "groq-sdk";
 import { z } from "zod";
 import { HttpError } from "@/lib/http";
+import { getScoringModel, SCORING_TEMPERATURE } from "./scoring-config";
 export interface AIProvider {
   structured<T>(
     name: string,
@@ -29,8 +30,8 @@ export class GroqProvider implements AIProvider {
     for (let attempt = 0; attempt < 2; attempt++) {
       try {
         const result = await this.client().chat.completions.create({
-          model: process.env.GROQ_MODEL || "openai/gpt-oss-120b",
-          temperature: 0.1,
+          model: getScoringModel(),
+          temperature: SCORING_TEMPERATURE,
           max_completion_tokens: 4096,
           ...(process.env.GROQ_MODEL?.startsWith("openai/gpt-oss-") ||
           !process.env.GROQ_MODEL

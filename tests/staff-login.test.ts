@@ -122,3 +122,12 @@ it("does not claim success if the browser session cannot be established", async 
       .status,
   ).toBe(503);
 });
+it("revokes the verifier session when cookie installation throws", async () => {
+  mocks.setSession.mockRejectedValue(new Error("PRIVATE COOKIE ERROR"));
+  const response = await POST(
+    request({ email: "staff@example.org", password: "password" }),
+  );
+  expect(response.status).toBe(503);
+  expect(await response.text()).not.toContain("PRIVATE");
+  expect(mocks.signOut).toHaveBeenCalledWith({ scope: "local" });
+});

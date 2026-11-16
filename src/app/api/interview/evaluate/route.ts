@@ -2,7 +2,7 @@ import { getPracticeQuestion } from "@/config/strands";
 import {
   saveAssessment,
   recordAttempt,
-  findRecordedAssessment,
+  findRecordedAssessmentWithMetadata,
   validatePreQuestion,
 } from "@/lib/learning";
 import { requireStudent } from "@/lib/auth";
@@ -21,12 +21,15 @@ import {
   buildPostAssessmentPrompt,
   buildComparisonPrompt,
 } from "@/lib/ai/prompts";
+import { getScoringVersion } from "@/lib/ai/scoring-config";
+import { LEGACY_SCORING_VERSION } from "@/config/rubric-anchors";
 import { sameOrigin, readJson, json, failure, HttpError } from "@/lib/http";
 export async function POST(request: Request) {
   try {
     sameOrigin(request);
-    const { user, profile } = await requireStudent();
-    const id = profileSchema.parse(profile).strand;
+    const { user, profile } = await requireStudent(request);
+    const studentProfile = profileSchema.parse(profile);
+    const id = studentProfile.strand;
     await rateLimit(user.id, "assessment");
     const answer = answerSchema.parse(await readJson(request));
     try {
@@ -38,44 +41,49 @@ export async function POST(request: Request) {
       );
     }
     const practiceQuestion = getPracticeQuestion(id, answer.questionId);
-    if (answer.stage === "post" && answer.questionId)
-      await validatePreQuestion(
-        user.id,
-        answer.preRequestId,
-        practiceQuestion.id,
-        answer.preTranscript,
-      );
-    const recorded = await findRecordedAssessment(
+    // Legacy callers may omit questionId, but may never invent a PRE response.
+    const preScoringVersion =
+      answer.stage === "post"
+        ? await validatePreQuestion(
+            user.id,
+            answer.preRequestId,
+            practiceQuestion.id,
+            answer.preTranscript,
+          )
+        : undefined;
+    const recorded = await findRecordedAssessmentWithMetadata(
       user.id,
       answer.requestId,
       answer.transcript,
       practiceQuestion.id,
+      answer.stage,
     );
     const evaluation =
-      recorded ??
+      recorded?.evaluation ??
       parseEvaluation(
         await ai.structured(
           "assessment",
           answer.stage === "pre"
-            ? buildPreAssessmentPrompt(id, answer.questionId)
+            ? buildPreAssessmentPrompt(
+                id,
+                answer.questionId,
+                studentProfile.ignite_year,
+              )
             : answer.stage === "practice"
-              ? buildPracticeAssessmentPrompt(id, answer.questionId)
-              : buildPostAssessmentPrompt(id, answer.questionId),
+              ? buildPracticeAssessmentPrompt(
+                  id,
+                  answer.questionId,
+                  studentProfile.ignite_year,
+                )
+              : buildPostAssessmentPrompt(
+                  id,
+                  answer.questionId,
+                  studentProfile.ignite_year,
+                ),
           { transcript: answer.transcript },
           evaluationSchema,
         ),
       );
-    const comparison =
-      answer.stage === "post"
-        ? await ai.structured(
-            "comparison",
-            buildComparisonPrompt(id, answer.questionId),
-            { pre: answer.preTranscript, post: answer.transcript },
-            comparisonSchema,
-          )
-        : undefined;
-    if (answer.stage !== "practice")
-      await saveAssessment(user.id, answer.stage, evaluation);
     await recordAttempt(
       user.id,
       id,
@@ -84,8 +92,51 @@ export async function POST(request: Request) {
       answer.transcript,
       answer.requestId,
       answer.questionId,
+      recorded?.scoringVersion,
     );
-    return json({ evaluation, comparison });
+    // Two simultaneous identical submissions can both reach the provider.
+    // The database accepts only one. Return and summarize that saved score.
+    const saved = answer.requestId
+      ? await findRecordedAssessmentWithMetadata(
+          user.id,
+          answer.requestId,
+          answer.transcript,
+          practiceQuestion.id,
+          answer.stage,
+        )
+      : { evaluation, scoringVersion: getScoringVersion() };
+    if (!saved)
+      throw new HttpError(
+        503,
+        "Your saved results could not be confirmed. Please try again.",
+      );
+    const comparison =
+      answer.stage === "post"
+        ? {
+            ...(await ai.structured(
+              "comparison",
+              buildComparisonPrompt(id, answer.questionId),
+              { pre: answer.preTranscript, post: answer.transcript },
+              comparisonSchema,
+            )),
+            // One coaching goal, bound to the saved assessment even after retries.
+            nextStep: saved.evaluation.improvementArea,
+          }
+        : undefined;
+    if (answer.stage !== "practice")
+      await saveAssessment(user.id, answer.stage, saved.evaluation);
+    return json({
+      evaluation: saved.evaluation,
+      scoringVersion: saved.scoringVersion,
+      comparison,
+      ...(answer.stage === "post"
+        ? {
+            comparisonComparable:
+              (preScoringVersion ?? LEGACY_SCORING_VERSION) ===
+              saved.scoringVersion,
+          }
+        : {}),
+    });
   } catch (e) {
     return failure(e);
   }

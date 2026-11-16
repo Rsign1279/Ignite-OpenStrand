@@ -1,10 +1,17 @@
 import "server-only";
 import { randomUUID } from "node:crypto";
+import { z } from "zod";
 import { getPracticeQuestion, type StrandId } from "@/config/strands";
 import { adminClient } from "@/lib/supabase/server";
-import { parseEvaluation } from "@/lib/validation";
+import { evaluationSchema, parseEvaluation } from "@/lib/validation";
 import type { Evaluation, Transfer } from "@/lib/validation";
 import { HttpError } from "@/lib/http";
+import { getScoringVersion } from "@/lib/ai/scoring-config";
+import { LEGACY_SCORING_VERSION } from "@/config/rubric-anchors";
+
+const storedEvaluationSchema = evaluationSchema.extend({
+  scoring_version: z.string().min(1).max(300).optional(),
+});
 export async function saveAssessment(
   userId: string,
   stage: "pre" | "post",
@@ -51,6 +58,7 @@ export async function recordAttempt(
   transcript: string,
   requestId: string = randomUUID(),
   questionId?: string,
+  scoringVersion: string = getScoringVersion(),
 ) {
   const { error } = await adminClient().rpc("record_interview_attempt", {
     p_student_id: userId,
@@ -60,26 +68,29 @@ export async function recordAttempt(
     p_stage: stage,
     p_scores: evaluation.scores,
     p_answer: transcript,
-    p_evaluation: evaluation,
+    p_evaluation: { ...evaluation, scoring_version: scoringVersion },
     p_feedback: `Strongest part: ${evaluation.strongestPart}\nMost important improvement: ${evaluation.improvementArea}`,
   });
   if (error)
     throw new HttpError(
-      503,
-      "Your interview results could not be saved. Your answer is still here; please try again.",
+      error.code === "23505" ? 409 : 503,
+      error.code === "23505"
+        ? "This submission was already saved with different details. Start a new attempt before submitting another answer."
+        : "Your interview results could not be saved. Your answer is still here; please try again.",
     );
 }
 
-export async function findRecordedAssessment(
+export async function findRecordedAssessmentWithMetadata(
   userId: string,
   requestId: string | undefined,
   transcript: string,
-  questionId?: string,
-): Promise<Evaluation | null> {
+  questionId: string,
+  stage: "pre" | "post" | "practice",
+): Promise<{ evaluation: Evaluation; scoringVersion: string } | null> {
   if (!requestId) return null;
   const { data, error } = await adminClient()
     .from("interview_attempts")
-    .select("evaluation_json,answer_text,question_id")
+    .select("evaluation_json,answer_text,question_id,stage")
     .eq("id", requestId)
     .eq("student_id", userId)
     .maybeSingle();
@@ -91,13 +102,33 @@ export async function findRecordedAssessment(
   if (!data) return null;
   if (
     data.answer_text !== transcript ||
-    (questionId && data.question_id !== questionId)
+    data.question_id !== questionId ||
+    data.stage !== stage
   )
     throw new HttpError(
       409,
       "This answer changed. Please refresh your interview before submitting a new response.",
     );
-  return data.evaluation_json ? parseEvaluation(data.evaluation_json) : null;
+  if (!data.evaluation_json) return null;
+  const stored = storedEvaluationSchema.parse(data.evaluation_json);
+  // Metadata belongs to storage; the public AI evaluation schema is unchanged.
+  return {
+    evaluation: parseEvaluation({
+      scores: stored.scores,
+      total: stored.total,
+      strongestPart: stored.strongestPart,
+      improvementArea: stored.improvementArea,
+    }),
+    scoringVersion: stored.scoring_version ?? LEGACY_SCORING_VERSION,
+  };
+}
+
+export async function findRecordedAssessment(
+  ...args: Parameters<typeof findRecordedAssessmentWithMetadata>
+): Promise<Evaluation | null> {
+  return (
+    (await findRecordedAssessmentWithMetadata(...args))?.evaluation ?? null
+  );
 }
 
 export async function validatePreQuestion(
@@ -113,7 +144,9 @@ export async function validatePreQuestion(
     );
   const { data, error } = await adminClient()
     .from("interview_attempts")
-    .select("question_id,stage,answer_text")
+    .select(
+      "question_id,stage,answer_text,scoring_version:evaluation_json->>scoring_version",
+    )
     .eq("id", requestId)
     .eq("student_id", userId)
     .maybeSingle();
@@ -132,4 +165,5 @@ export async function validatePreQuestion(
       409,
       "Pre- and post-assessments must use the same practice question and session. Start a new practice round to choose a different question.",
     );
+  return data.scoring_version ?? LEGACY_SCORING_VERSION;
 }
