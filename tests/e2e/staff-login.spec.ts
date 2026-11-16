@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-test("staff login preserves failed password and allows checking it without another reset", async ({
+test("staff login waits for hydration and preserves failed password without another reset", async ({
   page,
 }) => {
   await page.route("**/api/staff/login", (route) =>
@@ -12,7 +12,25 @@ test("staff login preserves failed password and allows checking it without anoth
       }),
     }),
   );
-  await page.goto("/staff/login");
+  let release!: () => void;
+  const pending = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  await page.route("**/_next/static/**/*.js", async (route) => {
+    await pending;
+    await route.continue();
+  });
+  await page.goto("/staff/login", { waitUntil: "commit" });
+  try {
+    await expect(page.getByLabel("Staff email")).toBeDisabled();
+    await expect(page.getByLabel("Password", { exact: true })).toBeDisabled();
+    await expect(
+      page.getByRole("button", { name: "Preparing sign-in…", exact: true }),
+    ).toBeDisabled();
+    await expect(page.locator("form")).toHaveAttribute("method", "post");
+  } finally {
+    release();
+  }
   await page.getByLabel("Staff email").fill("staff@example.org");
   await page.getByLabel("Password", { exact: true }).fill("test-password-only");
   await page.getByRole("button", { name: "Staff Login", exact: true }).click();

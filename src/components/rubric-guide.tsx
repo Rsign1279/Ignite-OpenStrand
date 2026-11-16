@@ -13,14 +13,14 @@ export function RubricGuide() {
       </summary>
       <div className="rubric-guide-content">
         <p className="rubric-guide-intro">
-          Four categories, 0–3 points each. These same descriptions guide the AI
-          review and help you interpret its feedback. A score describes this
-          answer; it is not a judgment of you or a prediction of hiring success.
+          Four categories, 0–3 points each, guide the AI review. Scores describe
+          this answer and cannot judge your worth or predict hiring success.
         </p>
         <div className="rubric-guide-grid">
           {rubricScoringGuide.map((criterion) => (
             <section key={criterion.key} className="rubric-guide-criterion">
               <h3>{criterion.label}</h3>
+              <p>{criterion.definition}</p>
               <dl aria-label={`${criterion.label} scoring anchors`}>
                 {criterion.levels.map((level) => (
                   <div key={level.score}>
@@ -36,16 +36,15 @@ export function RubricGuide() {
           ))}
         </div>
         <div className="rubric-guide-principles">
-          <h3>Bring your experience. Keep it true.</h3>
+          <h3>What counts as evidence</h3>
           <ul>
             {rubricReviewPrinciples.map((principle) => (
               <li key={principle}>{principle}</li>
             ))}
           </ul>
           <p>
-            AI feedback can miss context. Compare its observations with what you
-            actually said, and discuss a score with your advisor if it does not
-            fit the evidence.
+            AI can miss context. Check the feedback against your answer; discuss
+            any mismatch with your advisor.
           </p>
         </div>
       </div>

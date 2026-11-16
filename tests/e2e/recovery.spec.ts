@@ -134,7 +134,7 @@ test("post and transfer evaluation failures preserve current answer and stage", 
   await typed(page);
   await finish(page);
   await page.getByRole("button", { name: "Discover the STAR method" }).click();
-  await page.getByRole("button", { name: /I understand STAR/ }).click();
+  await page.getByRole("button", { name: /Try again with STAR/ }).click();
   await page.getByRole("button", { name: "Meet your interviewer" }).click();
   await page
     .getByRole("button", { name: "I’m ready — ask the question" })
@@ -144,9 +144,7 @@ test("post and transfer evaluation failures preserve current answer and stage", 
   await expect(page.getByLabel("Your answer", { exact: true })).toHaveValue(
     answer,
   );
-  await expect(
-    page.getByText("POST-ASSESSMENT", { exact: true }),
-  ).toBeVisible();
+  await expect(page.getByText("SECOND TAKE", { exact: true })).toBeVisible();
   await finish(page);
   await page
     .getByRole("button", { name: "Try a New Interview Question" })

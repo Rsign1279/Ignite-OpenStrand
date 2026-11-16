@@ -31,8 +31,8 @@ export function StudioPreview() {
         <div className="preview-seat-tag">
           <span className="seat-dot" />
           <div>
-            <strong>Your next chapter</strong>
-            <span>There’s a seat for you.</span>
+            <strong>Your seat</strong>
+            <span>Take a breath.</span>
           </div>
         </div>
       </div>

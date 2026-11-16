@@ -24,41 +24,36 @@ export const practiceSkills: Record<
   situationTask: {
     title: "Make your role clear",
     action:
-      "Name one specific moment, the goal, and what you were responsible for before describing your actions.",
-    selfCheck:
-      "Could someone who was not there explain what was happening and what my responsibility was?",
+      "Name the moment, your goal, and your responsibility before your actions.",
+    selfCheck: "Could a new listener explain the situation and my role?",
     rehearsal:
-      "Say your opening aloud in two sentences: what was happening, then what was yours to do.",
+      "Open with two sentences: what happened, then what was yours to do.",
     nextTopics: ["priorities", "adaptability", "challenge"],
   },
   personalActions: {
     title: "Show your own contribution",
     action:
-      "Choose an action you personally took. Explain how or why you took it, while giving others fair credit.",
-    selfCheck:
-      "Can I point to specific things I did, beyond describing what the team did?",
-    rehearsal:
-      "Complete “I decided to…” and “I did that by…” using details that actually happened.",
+      "Explain one action you took and how or why. Give teammates fair credit.",
+    selfCheck: "Is my own contribution clear, beyond the team’s work?",
+    rehearsal: "Finish “I decided to…” and “I did that by…” with true details.",
     nextTopics: ["teamwork", "initiative", "achievement"],
   },
   resultImpact: {
     title: "Finish with an outcome",
     action:
-      "Add what happened after your actions: an observable outcome, feedback, or a lesson you learned. A number is optional.",
-    selfCheck:
-      "Does my ending tell the interviewer what changed or what I learned?",
+      "Connect your actions to an observed outcome, feedback, or lesson. A number is optional.",
+    selfCheck: "Does my ending show what changed or what I learned?",
     rehearsal:
-      "Say one honest sentence beginning “As a result…” or “What I learned was…”. Do not invent a success.",
+      "Finish “As a result…” or “I learned…” honestly. A setback is valid.",
     nextTopics: ["achievement", "feedback", "mistake"],
   },
   professionalCommunication: {
     title: "Help the listener follow",
     action:
-      "Keep one relevant example, put events in a clear order, and explain unfamiliar terms. Sound like yourself.",
-    selfCheck:
-      "Does each part help answer the actual question, without making the listener guess?",
+      "Use one relevant example, a clear order, and explain unfamiliar terms. Sound like yourself.",
+    selfCheck: "Can the listener follow how each part answers the question?",
     rehearsal:
-      "Tell the story to an imagined listener who has never seen your project. Notice where they would need context.",
+      "Imagine a listener new to your project. Add the context they need.",
     nextTopics: ["perspectives", "learning", "teamwork"],
   },
 };
@@ -85,11 +80,11 @@ export function getPracticeFocus(evaluation: Evaluation) {
       ? {
           title: "Carry the skill into a new story",
           action:
-            "This answer met all four rubric criteria. Try a different question using a different experience, with fewer notes.",
+            "This answer met all four criteria. Try a different question and experience with fewer notes.",
           selfCheck:
-            "Can I use the same structure with an unfamiliar question and a fresh example?",
+            "Can I use this structure with a new question and experience?",
           rehearsal:
-            "Put your notes aside and choose a second experience. Keep the structure; use your own words.",
+            "Put notes aside. Keep the structure; use a fresh experience and your own words.",
         }
       : {}),
   };
@@ -148,8 +143,8 @@ export function recommendPracticeQuestion(
     focus,
     fresh,
     reason: focus.complete
-      ? `${fresh ? "A new topic" : "Another topic"} to practice the same skills with a different experience.`
-      : `${question.topic} gives you another opportunity to practice ${focus.label.toLowerCase()}.${fresh ? " You have not reviewed this topic in this session yet." : " Return to it with your current improvement goal."}`,
+      ? `${fresh ? "New topic" : "Another topic"}: practice the same skills with a different experience.`
+      : `${question.topic} practices ${focus.label.toLowerCase()}.${fresh ? " New in this session." : " Use your current improvement goal."}`,
   };
 }
 
@@ -190,13 +185,13 @@ export function summarizeQuestionGrowth(
         ? "More of your story came through."
         : change < 0
           ? "A useful moment to regroup."
-          : "The same score. A new chance to reflect.",
+          : "Same score. Keep refining.",
     explanation:
       change > 0
-        ? "Your latest response earned a higher score on this question. Notice the details that made the difference, then try using the skill in a new story."
+        ? "Your latest response scored higher on this question. Apply the same approach to a new experience."
         : change < 0
-          ? "Your latest response scored lower on this question. Compare the category feedback, keep what worked, and choose one detail to strengthen next time."
-          : "Your total is unchanged on this question. Check each category: a total can stay the same while individual skills change.",
+          ? "Your latest response scored lower on this question. Check category feedback; keep what worked and strengthen one detail."
+          : "Your total is unchanged. Check each category: a total can stay the same while individual skills change.",
     categories: rubric.map((category) => ({
       key: category.key,
       label: category.label,

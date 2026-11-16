@@ -16,9 +16,7 @@ export function RevisionGoalReminder({
       <div className="revision-goal-label">
         <Target size={17} aria-hidden="true" />
         <span className="eyebrow">
-          {goal.complete
-            ? "KEEP PRACTICING THE SKILL"
-            : "YOUR FOCUS FOR THIS TAKE"}
+          {goal.complete ? "NEXT CHALLENGE" : "YOUR NEXT STEP"}
         </span>
       </div>
       {!compact && <strong>{goal.title}</strong>}

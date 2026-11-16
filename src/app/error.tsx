@@ -7,11 +7,8 @@ export default function ErrorPage({ reset }: { reset: () => void }) {
       <Header />
       <main id="main" className="staff-main">
         <section className="focus-card">
-          <span className="eyebrow">LET’S GET YOU BACK</span>
           <h1>We couldn’t load this page.</h1>
-          <p>
-            Try loading it again, or return to IGNITE to find your next step.
-          </p>
+          <p>Try again or return to IGNITE.</p>
           <button className="button primary" onClick={reset}>
             Try again
           </button>

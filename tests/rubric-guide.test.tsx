@@ -43,21 +43,22 @@ it("gives every assessment stage the complete student-visible scoring anchors", 
   }
 });
 
-it("exposes optional native disclosure and explains score limits without requiring extra interaction", () => {
+it("keeps optional native disclosure, complete anchors, and score limits", () => {
   const html = renderToStaticMarkup(<RubricGuide />);
   expect(html).toContain('<details class="rubric-guide">');
   expect(html).not.toContain("<details open");
   expect(html).toContain("How your answer is reviewed");
-  expect(html).toContain(
-    "not a judgment of you or a prediction of hiring success",
-  );
-  expect(html).toContain("AI feedback can miss context");
+  expect(html).toContain("cannot judge your worth or predict hiring success");
+  expect(html).toContain("AI can miss context");
   expect(html).toContain("Numbers and successful outcomes are optional");
   expect(html).toContain("one clear personal action can be sufficient");
   for (const criterion of rubricScoringGuide) {
+    expect(html).toContain(criterion.definition);
     expect(html).toContain(
       `aria-label="${criterion.label.replaceAll("&", "&amp;")} scoring anchors"`,
     );
+    for (const level of criterion.levels)
+      expect(html).toContain(renderToStaticMarkup(<>{level.description}</>));
   }
 });
 

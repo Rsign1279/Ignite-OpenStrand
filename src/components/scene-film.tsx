@@ -245,8 +245,7 @@ function SceneFilmPlayer({
             setLoading(false);
           }}
         >
-          Your browser cannot play this scene. The complete scene is available
-          as text beside it.
+          Video unavailable. Read the scene beside it.
         </video>
         <div className="scene-film-topline" aria-hidden="true">
           <span>
@@ -281,10 +280,10 @@ function SceneFilmPlayer({
           {failed
             ? "Scene unavailable. Your written scene is ready."
             : loading
-              ? "Loading your scene. You can continue whenever you’re ready."
+              ? "Loading scene. You can continue."
               : ended
-                ? "You’re here. Take the next step when you’re ready."
-                : "Let the room become familiar."}
+                ? "Scene complete. Continue when ready."
+                : "Play the scene or continue."}
         </span>
         <button
           type="button"

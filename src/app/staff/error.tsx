@@ -6,8 +6,8 @@ export default function StaffError({ reset }: { reset: () => void }) {
       <main id="main" className="analytics-main">
         <h1>We couldn’t load this staff view.</h1>
         <p>
-          Check the date range and connection, then try again. Interview data is
-          available only to authorized staff.
+          Check your filters and connection, then retry. Staff access is
+          required.
         </p>
         <button className="button primary" onClick={reset}>
           Try again

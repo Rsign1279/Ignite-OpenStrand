@@ -24,9 +24,7 @@ export function ReadAloud({
   );
   function toggle() {
     if (!("speechSynthesis" in window)) {
-      setMessage(
-        "Read aloud is unavailable in this browser. The full scene is written above.",
-      );
+      setMessage("Read aloud unavailable. Read the scene above.");
       return;
     }
     window.speechSynthesis.cancel();
@@ -41,7 +39,7 @@ export function ReadAloud({
     next.onerror = (event) => {
       setSpeaking(false);
       if (event.error !== "interrupted" && event.error !== "canceled")
-        setMessage("Audio could not play. You can read the full scene above.");
+        setMessage("Read aloud failed. Read the scene above.");
     };
     utterance.current = next;
     setMessage("");

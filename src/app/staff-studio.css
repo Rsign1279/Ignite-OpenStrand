@@ -98,6 +98,25 @@
 .staff-studio .pilot-evidence p {
   color: #e1e4d5;
 }
+.staff-studio details.analytics-method > summary,
+.staff-studio .pilot-evidence details > summary {
+  min-height: 44px;
+  padding: 10px 0;
+  cursor: pointer;
+  font-weight: 600;
+}
+.staff-studio details.analytics-method > summary:focus-visible,
+.staff-studio .pilot-evidence details > summary:focus-visible {
+  outline: 3px solid #034f46;
+  outline-offset: 4px;
+  border-radius: 12px;
+}
+.staff-studio .pilot-evidence details > summary {
+  color: #f0d7ff;
+}
+.staff-studio .pilot-evidence details > summary:focus-visible {
+  outline-color: #f0d7ff;
+}
 .staff-studio .pilot-evidence h2 {
   color: #ffffeb;
   font-size: 38px;

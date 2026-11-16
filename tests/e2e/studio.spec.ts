@@ -178,7 +178,7 @@ test("every assessment, new question, and retry begins with an explicit scene", 
   const submissions = await prepare(page);
   const originalQuestion = await selectedQuestion(page);
   await reachLesson(page, originalQuestion);
-  await page.getByRole("button", { name: /I understand STAR/ }).click();
+  await page.getByRole("button", { name: /Try again with STAR/ }).click();
   await expect(page.locator("main")).not.toContainText(originalQuestion);
   await page.getByRole("button", { name: "Meet your interviewer" }).click();
   await expect(page.locator("main")).not.toContainText(originalQuestion);
@@ -230,6 +230,15 @@ test("scene navigation is keyboard usable and never requests the microphone", as
   });
   await page.keyboard.press("Tab");
   await expect(ready).toBeFocused();
+  const sceneDetail = page.getByText("More scene detail", { exact: true });
+  await sceneDetail.focus();
+  await page.keyboard.press("Enter");
+  const detailParagraph = page.locator(".scene-details > p");
+  await expect(detailParagraph).toBeVisible();
+  await expect(detailParagraph).toHaveText(/\S/);
+  await page.keyboard.press("Enter");
+  await expect(detailParagraph).not.toBeVisible();
+  await ready.focus();
   await page.keyboard.press("Enter");
   await expect(
     page.getByRole("button", { name: "Type my answer" }),
@@ -249,7 +258,7 @@ test("post-comparison retry keeps the canonical question and includes all same-q
   const submissions = await prepare(page);
   const originalQuestion = await selectedQuestion(page);
   await reachLesson(page);
-  await page.getByRole("button", { name: /I understand STAR/ }).click();
+  await page.getByRole("button", { name: /Try again with STAR/ }).click();
   await page.getByRole("button", { name: "Meet your interviewer" }).click();
   await enterScene(page);
   await submitAnswer(page);
@@ -281,7 +290,7 @@ test("students can inspect both submitted answers and reset clears the compariso
   await page.emulateMedia({ reducedMotion: "reduce" });
   await prepare(page);
   await reachLesson(page);
-  await page.getByRole("button", { name: /I understand STAR/ }).click();
+  await page.getByRole("button", { name: /Try again with STAR/ }).click();
   await page.getByRole("button", { name: "Meet your interviewer" }).click();
   await enterScene(page);
   const secondAnswer =
@@ -334,6 +343,13 @@ test("students can inspect both submitted answers and reset clears the compariso
   await expect(comparison.locator("article").nth(1)).toContainText(
     secondAnswer,
   );
+  await page.locator(".comparison-feedback > summary").focus();
+  await page.keyboard.press("Enter");
+  await expect(
+    page
+      .locator(".comparison-feedback")
+      .getByText("Describe a specific outcome."),
+  ).toBeVisible();
   expect(
     await page.evaluate(() => document.documentElement.scrollWidth),
   ).toBeLessThanOrEqual(320);
@@ -389,7 +405,7 @@ test("the latest feedback goal follows the same question and clears for a new to
   const focus = page.getByRole("region", { name: "Your focus for this take" });
   await expect(focus).toHaveCount(0);
   await reachLesson(page);
-  await page.getByRole("button", { name: /I understand STAR/ }).click();
+  await page.getByRole("button", { name: /Try again with STAR/ }).click();
   await expect(focus).toContainText(goals.pre);
   await page.getByRole("button", { name: "Meet your interviewer" }).click();
   await expect(focus).toContainText(goals.pre);
@@ -436,7 +452,7 @@ test("feedback recommends a targeted topic and reports lower retry scores honest
     .getByLabel("Choose a practice question · 10 in your strand")
     .selectOption({ label: "1. Teamwork" });
   await reachLesson(page);
-  await page.getByRole("button", { name: /I understand STAR/ }).click();
+  await page.getByRole("button", { name: /Try again with STAR/ }).click();
   await page.getByRole("button", { name: "Meet your interviewer" }).click();
   await enterScene(page);
   await submitAnswer(page);
@@ -519,7 +535,7 @@ test("story notes survive the coached retry but never enter requests or browser 
   const privateNote = "PRIVATE STORY SKETCH 7381 — just my practice notes";
   await page.locator(".story-planner summary").click();
   await page.locator("#story-S").fill(privateNote);
-  await page.getByRole("button", { name: /I understand STAR/ }).click();
+  await page.getByRole("button", { name: /Try again with STAR/ }).click();
   await page.locator(".story-notes-panel summary").click();
   await expect(page.getByText(privateNote, { exact: true })).toBeVisible();
   await page.getByRole("button", { name: "Meet your interviewer" }).click();
@@ -587,7 +603,7 @@ test("long feedback tokens stay within the mobile review and lesson", async ({
   ).toBe(true);
   await lesson.click();
   await expect(
-    page.getByRole("button", { name: /I understand STAR/ }),
+    page.getByRole("button", { name: /Try again with STAR/ }),
   ).toBeVisible();
   expect(
     await page.evaluate(
@@ -639,7 +655,16 @@ for (const width of [320, 390, 768]) {
       .getByRole("button", { name: /Discover the STAR method/ })
       .click();
     await audit("STAR lesson");
-    await page.getByRole("button", { name: /I understand STAR/ }).click();
+    await page.locator(".example-card > summary").focus();
+    await page.keyboard.press("Enter");
+    await expect(
+      page.getByRole("heading", {
+        name: "A story you can follow",
+        exact: true,
+      }),
+    ).toBeVisible();
+    await audit("STAR example");
+    await page.getByRole("button", { name: /Try again with STAR/ }).click();
     await audit("retry preparation");
   });
 }
@@ -969,9 +994,7 @@ test("a stalled scene offers recovery without delaying the interview", async ({
     await prepare(page, "technology");
     await page.getByRole("button", { name: "Meet your interviewer" }).click();
     await expect(
-      page.getByText(
-        "Loading your scene. You can continue whenever you’re ready.",
-      ),
+      page.getByText("Loading scene. You can continue."),
     ).toBeVisible();
     await page.clock.fastForward(16000);
     await expect(

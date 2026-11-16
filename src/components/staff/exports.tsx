@@ -33,9 +33,7 @@ export function ReportExports({
             const { downloadPdf } = await import("@/lib/analytics/pdf");
             await downloadPdf(report);
           } catch {
-            setError(
-              "PDF export failed. Please wait for charts to load and try again.",
-            );
+            setError("PDF export failed. Let the charts load, then retry.");
           } finally {
             setBusy(false);
           }

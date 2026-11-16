@@ -29,7 +29,7 @@ export function PracticePlan({
       "IGNITE OPENSTRAND — MY NEXT INTERVIEW",
       "",
       selected.name,
-      `${attempts.length} reviewed answers across ${explored.length} topics in this session.`,
+      `${attempts.length} answers across ${explored.length} topics this session.`,
       "",
       "MY NEXT PRACTICE GOAL",
       focus.title,
@@ -60,12 +60,12 @@ export function PracticePlan({
     lines.push(
       "",
       "BEFORE MY NEXT REAL INTERVIEW",
-      "1. Choose two honest experiences relevant to the role.",
+      "1. Choose two honest, role-relevant experiences.",
       "2. Rehearse Situation, Task, Action, Result in my own words.",
-      "3. Practice one unfamiliar question with fewer notes.",
-      "4. Ask a teacher or partner what they understood and what needs detail.",
+      "3. Practice an unfamiliar question with fewer notes.",
+      "4. Ask a teacher or partner what was clear and what needs detail.",
       "",
-      "These are practice scores, not a prediction of hiring success. Compare repeated attempts on the same question under the same review settings; different questions can have different difficulty. This plan contains no name, recording, or answer transcript.",
+      "Practice scores are not a prediction of hiring success. Compare repeats of the same question with the same review settings; question difficulty varies. No name, recording, or answer transcript is included.",
     );
     const url = URL.createObjectURL(
       new Blob([lines.join("\n")], { type: "text/plain;charset=utf-8" }),
@@ -83,31 +83,35 @@ export function PracticePlan({
     <section className="practice-plan" aria-labelledby="practice-plan-title">
       <div className="practice-plan-heading">
         <Compass size={25} />
-        <span className="eyebrow">TAKE THE SKILL WITH YOU</span>
+        <span className="eyebrow">YOUR TAKEAWAY</span>
       </div>
-      <h2 id="practice-plan-title">Your next interview starts here.</h2>
+      <h2 id="practice-plan-title">Your practice plan.</h2>
       <p>
-        You reviewed <strong>{attempts.length} answers</strong> across{" "}
-        <strong>{explored.length} topics</strong>. Keep one clear goal for your
-        next conversation.
+        <strong>{attempts.length} answers</strong> across{" "}
+        <strong>{explored.length} topics</strong> this session.
       </p>
       <div className="practice-plan-focus">
         <strong>{focus.title}</strong>
-        <p>{focus.action}</p>
       </div>
-      <ol>
-        <li>Choose a real experience that fits the question.</li>
-        <li>Explain your own actions and what happened afterward.</li>
-        <li>Rehearse a new question with fewer notes.</li>
-      </ol>
+      <details className="reflection-details">
+        <summary>Practice tips</summary>
+        <div>
+          <p>{focus.action}</p>
+          <ol>
+            <li>Choose a real experience that fits the question.</li>
+            <li>Explain your actions and what happened afterward.</li>
+            <li>Rehearse a new question with fewer notes.</li>
+          </ol>
+        </div>
+      </details>
       <button type="button" className="button secondary" onClick={download}>
         {downloaded ? <Check size={18} /> : <Download size={18} />} Download my
         practice plan
       </button>
       <p className="helper" role="status">
         {downloaded
-          ? "Your plan is ready in your downloads. It includes your goals and scores, with no name or answer transcript."
-          : "A text file with your next step and session scores. No name, recording, or answer transcript included."}
+          ? "Plan downloaded: goals and scores, with no name, audio, or answer text."
+          : "Goals and session scores. No name, audio, or answer text."}
       </p>
     </section>
   );

@@ -41,7 +41,7 @@ export default async function Student({
       <StaffShell>
         <main id="main" className="analytics-main">
           <h1>No matching student attempts</h1>
-          <p>This student has no scored attempts in the selected filters.</p>
+          <p>No scored attempts match these filters.</p>
           <AnalyticsFilters filters={filters} action={`/staff/student/${id}`} />
           <Link href="/staff/dashboard">Return to overview</Link>
         </main>
@@ -150,15 +150,21 @@ export default async function Student({
           />
         </section>
         <p className="analytics-method">
-          Paired latest change uses {s.comparable_questions} comparable repeated
-          questions within these filters. {s.version_changed_questions} question
-          pairs are excluded because the scoring method changed. A single
-          attempt has no change estimate. Historical unversioned responses are
-          compared together. A 12/12 records a complete response under this
-          rubric; it does not establish lasting mastery or predict interview
-          success. Compare the saved answers and review transfer to an
-          unfamiliar question.
+          {s.comparable_questions} comparable repeated questions;{" "}
+          {s.version_changed_questions} pairs excluded for changed scoring
+          methods. A 12/12 describes a complete answer, not lasting mastery.
         </p>
+        <details className="analytics-method">
+          <summary>How to read this progress</summary>
+          <p>
+            Within these filters, paired latest change averages first-to-latest
+            changes across same-question repeats with matching scoring versions.
+            Single attempts have no change estimate. Historical unversioned
+            responses are compared together. Best observed is descriptive.
+            Scores do not predict interview success; review saved answers and
+            performance on an unfamiliar question.
+          </p>
+        </details>
         <StudentCharts data={chartData} />
         <section className="question-history">
           <span className="eyebrow">THE STORY BEHIND THE SCORES</span>
@@ -188,9 +194,8 @@ export default async function Student({
               </p>
               {q.comparison_status === "scoring_version_changed" && (
                 <p className="scoring-method-note">
-                  The first and latest answers were reviewed with different
-                  rubric/model versions. Their scores are shown descriptively;
-                  the difference is excluded from growth estimates.
+                  Different rubric/model versions: scores are descriptive; their
+                  difference is excluded from growth estimates.
                 </p>
               )}
               {q.attempts.map((a) => (
@@ -217,13 +222,12 @@ export default async function Student({
                   </dl>
                   <h3>Student answer</h3>
                   <p className="verbatim">
-                    {a.answer_text ??
-                      "Not retained for this historical attempt."}
+                    {a.answer_text ?? "Not saved for this historical attempt."}
                   </p>
                   <h3>AI feedback</h3>
                   <p className="verbatim">
                     {a.feedback_text ??
-                      "Not retained for this historical attempt."}
+                      "Not saved for this historical attempt."}
                   </p>
                 </details>
               ))}

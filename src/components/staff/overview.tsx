@@ -52,11 +52,8 @@ export function OverviewContent({ data }: { data: Analytics }) {
       <div className="analytics-heading">
         <div>
           <span className="eyebrow">PROGRAM OVERVIEW</span>
-          <h1>See practice turn into progress.</h1>
-          <p>
-            See what changed in students’ answers and where another attempt
-            could help.
-          </p>
+          <h1>Student practice at a glance.</h1>
+          <p>Review answers, repeat scores, and follow-up needs.</p>
         </div>
         <ReportExports
           report={report}
@@ -73,23 +70,31 @@ export function OverviewContent({ data }: { data: Analytics }) {
         ))}
       </div>
       <p className="analytics-method">
-        Latest change compares the first and most recent response to the same
-        question, using only questions with at least two attempts in the
-        selected dates and the same recorded rubric/model version. Changes are
-        averaged across each student’s comparable questions, then equally across
-        students with comparable repeat evidence. Negative and unchanged results
-        remain visible. Best observed scores are shown separately and may span
-        different scoring methods. Historical responses without a recorded
-        version are compared together; their original scoring configuration
-        cannot be verified. Anonymous registrations remain separate identities.
+        Latest change compares repeat answers to the same question. Best
+        observed is a separate, descriptive score.
       </p>
+      <details className="analytics-method">
+        <summary>How scores are compared</summary>
+        <p>
+          First and latest attempts must fall within the selected dates and use
+          the same recorded rubric/model version. We average comparable
+          questions for each student, then weight those students equally. Lower
+          and unchanged results count too. Best observed may span scoring
+          methods.
+        </p>
+        <p>
+          Historical unversioned responses are grouped together; their original
+          scoring configuration is unknown. Each anonymous registration remains
+          a separate identity.
+        </p>
+      </details>
       <section
         className="pilot-evidence"
         aria-labelledby="pilot-evidence-title"
       >
         <div>
           <span className="eyebrow">PILOT EVIDENCE</span>
-          <h2 id="pilot-evidence-title">Growth needs a second observation.</h2>
+          <h2 id="pilot-evidence-title">Evidence from repeat answers.</h2>
           <p>
             {data.kpis.pairedQuestions} comparable repeated student–question{" "}
             {data.kpis.pairedQuestions === 1 ? "pair" : "pairs"} from{" "}
@@ -107,8 +112,8 @@ export function OverviewContent({ data }: { data: Analytics }) {
               {data.kpis.versionChangedQuestions === 1
                 ? "pair is"
                 : "pairs are"}{" "}
-              excluded from change estimates because the first and latest
-              answers used different scoring methods.
+              excluded from change estimates because their scoring methods
+              changed.
             </p>
           )}
         </div>
@@ -127,11 +132,16 @@ export function OverviewContent({ data }: { data: Analytics }) {
           </div>
         </dl>
         <p>
-          These are within-practice observations, not proof of real-world
-          transfer or an effect caused by the app. Review the actual answers
-          alongside scores. A new question, a later uncoached attempt, and an
-          advisor’s independent review provide stronger evidence.
+          Practice scores do not prove real-world transfer or an effect caused
+          by the app. Review the saved answers too.
         </p>
+        <details>
+          <summary>Stronger evidence of learning</summary>
+          <p>
+            Use a new question, a later uncoached attempt, and an advisor’s
+            independent review alongside these scores.
+          </p>
+        </details>
       </section>
       <ProgramCharts data={data} />
       <section className="table-panel">
@@ -139,10 +149,7 @@ export function OverviewContent({ data }: { data: Analytics }) {
           <div>
             <span className="eyebrow">WHO NEEDS A FOLLOW-UP?</span>
             <h2>Student growth</h2>
-            <p>
-              Sorted by paired latest change. Select a name to review the
-              evidence.
-            </p>
+            <p>Sorted by paired latest change. Select a student to review.</p>
           </div>
           <span>{data.students.length} students</span>
         </div>
@@ -215,16 +222,13 @@ export function OverviewContent({ data }: { data: Analytics }) {
         {!data.students.length && (
           <div className="chart-empty">
             <h3>No matching assessments yet</h3>
-            <p>
-              Broaden your filters or invite students to complete their first
-              practice.
-            </p>
+            <p>Broaden the filters or invite a first practice attempt.</p>
           </div>
         )}
       </section>
       <p className="privacy-note">
-        Confidential staff view. Historical answers that were never stored are
-        unavailable. Legacy timestamps indicate the last saved session update.
+        Staff only. Unsaved historical answers are unavailable. Legacy dates
+        show the last session update.
       </p>
     </main>
   );

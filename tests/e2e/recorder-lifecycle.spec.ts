@@ -354,9 +354,7 @@ test("read aloud explains unsupported audio and leaves the question available", 
   await enter(page);
   await page.getByRole("button", { name: "Read question aloud" }).click();
   await expect(
-    page.getByText(
-      "Read aloud is unavailable in this browser. The question is written above.",
-    ),
+    page.getByText("Read aloud unavailable. Read the question above."),
   ).toBeVisible();
   await expect(page.locator("h1.question")).toBeVisible();
 });

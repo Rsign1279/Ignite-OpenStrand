@@ -28,7 +28,7 @@ export function InterviewScene({
 }) {
   const scene = getInterviewScene(strand, question, round);
   if (retry)
-    scene.opening = `You return to ${scene.place.toLowerCase()} for another take. The interviewer gives you a moment to remember your feedback. This is the same question: keep your experience true and try the improvement you chose.`;
+    scene.opening = `Back in ${scene.place.toLowerCase()}, you have another take at the same question. Keep your story true and use your feedback.`;
   const selected = getStrand(strand);
   const visibleGoal =
     round !== "PRE" && revisionGoal?.questionId === question.id
@@ -63,7 +63,6 @@ export function InterviewScene({
           <span>.</span>
         </h1>
         <p className="scene-opening">{scene.opening}</p>
-        {round === "PRE" && <p>{scene.detail}</p>}
         <p>{scene.beat}</p>
         <div className="scene-person">
           <span className="interviewer-avatar" aria-hidden="true">
@@ -75,15 +74,13 @@ export function InterviewScene({
           </span>
           <div>
             <strong>{selected.interviewerTitle}</strong>
-            <span>Practice interviewer · {scene.opportunity}</span>
+            <span>{scene.opportunity}</span>
           </div>
         </div>
         <div className="scene-invitation">
           <span className="scene-invitation-line" />
           <p>
-            You take a breath. The interviewer looks up.
-            <br />
-            <strong>This is your space to practice.</strong>
+            <strong>Take a breath. Begin when ready.</strong>
           </p>
         </div>
         {visibleGoal && <RevisionGoalReminder goal={visibleGoal} compact />}
@@ -92,13 +89,18 @@ export function InterviewScene({
             I’m ready — ask the question <ArrowRight size={18} />
           </button>
           <ReadAloud
-            text={`${scene.opening} ${round === "PRE" ? scene.detail : ""} ${scene.beat} ${visibleGoal ? `Your focus for this take: ${visibleGoal.action}` : ""} Take a breath. This is your space to practice.`}
+            text={`${scene.opening} ${scene.beat} ${visibleGoal ? `Your focus for this take: ${visibleGoal.action}` : ""} Take a breath. Begin when ready.`}
           />
         </div>
         <p className="scene-disclaimer">
-          An imagined setting for a real skill. No professional experience
-          needed.
+          Fictional practice setting. No professional experience needed.
         </p>
+        {round === "PRE" && (
+          <details className="scene-details">
+            <summary>More scene detail</summary>
+            <p>{scene.detail}</p>
+          </details>
+        )}
       </div>
     </section>
   );

@@ -31,10 +31,12 @@ it("renders submitted text safely and labels reflection as unscored", () => {
   expect(html).toContain("&lt;script&gt;");
   expect(html).not.toContain('<script>alert("x")</script>');
   expect(html).toContain("not scored or saved");
-  expect(html).toContain("Unscored rehearsal");
+  expect(html).toContain("Unscored");
+  expect(html).toContain("Nothing is recorded or scored");
   expect(html).toContain("Finish with an outcome");
   expect(html).toContain("Explain the result.");
-  expect(html).toContain("Do not invent a success");
+  expect(html).toContain("honestly");
+  expect(html).toContain("A setback is valid");
 });
 it("does not invent a submitted transcript or a growth result", () => {
   expect(

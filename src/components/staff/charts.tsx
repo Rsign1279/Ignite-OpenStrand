@@ -50,7 +50,7 @@ function Card({
   children,
   table,
   emptyTitle = "No practice data yet",
-  emptyDescription = "Complete an assessment or broaden the filters to see this chart.",
+  emptyDescription = "Complete an assessment or broaden the filters.",
 }: {
   title: string;
   subtitle: string;
@@ -82,7 +82,7 @@ function Card({
             <div className="chart-canvas">{children}</div>
           </div>
           <p className="chart-scroll-hint">
-            Scroll sideways to explore the chart, or open the data table below.
+            Scroll sideways or view the table below.
           </p>
           <details className="chart-data">
             <summary>View chart data</summary>
@@ -147,7 +147,7 @@ export function ProgramCharts({ data }: { data: Analytics }) {
     <div className="analytics-chart-grid">
       <Card
         title="First to latest, matched by question"
-        subtitle="Same-question repeats with matching scoring versions, averaged per student and then per strand. Scale: 0–12."
+        subtitle="Same question and scoring version; averaged per student, then strand. Scores /12."
         empty={data.kpis.pairedStudents === 0}
         emptyTitle={
           empty
@@ -156,7 +156,7 @@ export function ProgramCharts({ data }: { data: Analytics }) {
               ? "No comparable repeats yet"
               : "No repeated questions yet"
         }
-        emptyDescription="Two responses to the same question using the same scoring version are needed. A changed scoring method is not counted as student growth."
+        emptyDescription="Needs two same-question responses with the same scoring version. Changed methods do not count as growth."
         table={
           <DataTable
             headers={[
@@ -213,7 +213,7 @@ export function ProgramCharts({ data }: { data: Analytics }) {
       </Card>
       <Card
         title="Scores by attempt number"
-        subtitle="Descriptive averages at attempt 1, 2, 3, and 4+. Different students and questions may contribute; this is not a matched growth measure."
+        subtitle="Different students and questions may contribute. These averages do not measure matched growth."
         empty={empty}
         table={
           <DataTable
@@ -243,7 +243,7 @@ export function ProgramCharts({ data }: { data: Analytics }) {
       </Card>
       <Card
         title="Which skills need attention?"
-        subtitle="The assessment’s four rubric categories, scored 0–3. Situation and Task are one category."
+        subtitle="Four criteria, scored 0–3. Situation and Task form one criterion."
         empty={empty}
         table={
           <DataTable
@@ -275,7 +275,7 @@ export function ProgramCharts({ data }: { data: Analytics }) {
       </Card>
       <Card
         title="Score distribution"
-        subtitle="Number of scored attempts in each band, by strand."
+        subtitle="Scored attempts by score band and strand."
         empty={empty}
         table={
           <DataTable
@@ -324,7 +324,7 @@ export function ProgramCharts({ data }: { data: Analytics }) {
       </Card>
       <Card
         title="Practice over time"
-        subtitle="Scored attempts per week, starting Monday (UTC). Quiet weeks are included."
+        subtitle="Weekly attempts from Monday (UTC), including quiet weeks."
         empty={empty}
         table={
           <DataTable
@@ -365,7 +365,7 @@ export function StudentCharts({ data }: { data: StudentDetail }) {
     <div className="analytics-chart-grid student-chart-grid">
       <Card
         title="Every attempt, in order"
-        subtitle="Each point is a scored response. Point labels and colors identify the question."
+        subtitle="One scored response per point; labels and colors identify its question."
         empty={!points.length}
         table={
           <DataTable
@@ -430,7 +430,7 @@ export function StudentCharts({ data }: { data: StudentDetail }) {
       </Card>
       <Card
         title="Your student and their strand"
-        subtitle="Rubric averages /3. Strand comparison uses the same date range and includes this student."
+        subtitle="Averages /3, within the same dates. Strand results include this student."
         empty={!points.length}
         table={
           <DataTable

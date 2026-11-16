@@ -50,9 +50,8 @@ export default function Home() {
               <em>feel familiar.</em>
             </h2>
             <p>
-              Step into a setting from your strand. Meet your interviewer, take
-              a breath, and practice turning your own experience into a story
-              someone can follow.
+              Meet your practice interviewer. Turn your experience into a clear
+              story.
             </p>
             <Link className="button secondary" href="/interview">
               Choose your practice <ArrowRight size={18} />
@@ -74,11 +73,7 @@ export default function Home() {
                 <em>Not just the answer.</em>
               </h2>
             </div>
-            <p>
-              The room. The pause. The question.
-              <br />
-              Make it familiar, one story at a time.
-            </p>
+            <p>Answer. Get feedback. Try again.</p>
           </div>
           <div className="method-grid">
             {[
@@ -86,22 +81,22 @@ export default function Home() {
                 icon: Compass,
                 n: "01",
                 title: "Enter the scene",
-                text: "A studio, a school, a workshop. Meet your practice interviewer in an imagined setting connected to your strand.",
-                note: "Get a feel for the conversation",
+                text: "Settle into a fictional interview setting from your strand.",
+                note: "Get comfortable",
               },
               {
                 icon: MessageCircle,
                 n: "02",
                 title: "Tell your story",
-                text: "Answer a question from the actual IGNITE bank. Speak or type, then see feedback across four clear rubric categories.",
-                note: "Find what’s already working",
+                text: "Answer an IGNITE question by voice or text. Get feedback on four criteria.",
+                note: "Find your strengths",
               },
               {
                 icon: BookOpen,
                 n: "03",
                 title: "Make it stronger",
-                text: "Learn STAR, sketch your story, and answer the same question again. Then carry the skill into a new scene.",
-                note: "Take something useful with you",
+                text: "Learn STAR, plan a revision, retry, then practice a new question.",
+                note: "Choose your next step",
               },
             ].map((step) => (
               <article key={step.n}>
@@ -126,11 +121,7 @@ export default function Home() {
                 A room for <em>your ambition.</em>
               </h2>
             </div>
-            <p>
-              Ten questions in every pathway.
-              <br />
-              Examples from your own student experience.
-            </p>
+            <p>Ten questions per pathway. Your student experiences count.</p>
           </div>
           <div className="pathway-grid">
             {strands.map((s, i) => (
@@ -153,31 +144,30 @@ export default function Home() {
         <section className="landing-manifesto">
           <span className="eyebrow">SMALL EXPERIENCES. REAL POTENTIAL.</span>
           <p>
-            You don’t need years of experience.
-            <br />
-            You need a way to share <em>what you’ve learned.</em>
+            Share <em>what you’ve learned.</em>
           </p>
           <Link href="/interview" className="button primary">
             Find your first scene <ArrowRight size={18} />
           </Link>
-          <span>School. IGNITE. Clubs. Volunteering. Your story counts.</span>
+          <span>
+            School. IGNITE. Clubs. Volunteering. No work experience needed.
+          </span>
         </section>
         <section className="landing-privacy">
           <ShieldCheck size={24} strokeWidth={1.5} />
           <div>
-            <strong>A practice space with clear boundaries.</strong>
+            <strong>Your practice, your privacy.</strong>
             <p>
-              Your name, strand, IGNITE year, rubric scores, STAR indicators,
-              assessment answers, and feedback are saved for authorized staff
-              review. Your recordings are processed for transcription and never
-              saved by this app.
+              We save your name, strand, IGNITE year, answers, feedback, scores,
+              and STAR indicators for authorized staff review. Audio is
+              transcribed, never saved by this app.
             </p>
           </div>
         </section>
       </main>
       <footer className="landing-footer">
         <Brand />
-        <span>Real, relevant learning. A future that’s yours.</span>
+        <span>Real, relevant learning.</span>
         <Link href="/staff/login">
           Advisor access <ArrowUpRight size={14} />
         </Link>

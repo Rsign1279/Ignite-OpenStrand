@@ -1,10 +1,16 @@
 "use client";
-import { useRef, useState } from "react";
+import { useRef, useState, useSyncExternalStore } from "react";
 import { useRouter } from "next/navigation";
 import { Header } from "@/components/brand";
 import { signInStaff } from "@/lib/staff-login-client";
 import { LockKeyhole, ArrowRight, Eye, EyeOff } from "lucide-react";
+const subscribeToClientReady = () => () => {};
 export default function Staff() {
+  const clientReady = useSyncExternalStore(
+    subscribeToClientReady,
+    () => true,
+    () => false,
+  );
   const router = useRouter();
   const lock = useRef(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -40,14 +46,15 @@ export default function Staff() {
           </div>
           <span className="eyebrow">ADVISOR ACCESS</span>
           <h1>Welcome back.</h1>
-          <p>Sign in to view registrations and student interview growth.</p>
-          <form onSubmit={login}>
+          <p>Sign in to review students and practice results.</p>
+          <form method="post" onSubmit={login} aria-busy={!clientReady || busy}>
             <label htmlFor="email">Staff email</label>
             <input
               id="email"
               type="email"
               name="email"
               autoComplete="username"
+              disabled={!clientReady}
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
@@ -58,6 +65,7 @@ export default function Staff() {
               type={showPassword ? "text" : "password"}
               name="password"
               autoComplete="current-password"
+              disabled={!clientReady}
               required
               value={password}
               onChange={(e) => setPassword(e.target.value)}
@@ -66,6 +74,7 @@ export default function Staff() {
               type="button"
               className="password-visibility"
               aria-pressed={showPassword}
+              disabled={!clientReady}
               onClick={() => setShowPassword((value) => !value)}
             >
               {showPassword ? <EyeOff size={17} /> : <Eye size={17} />}
@@ -76,14 +85,17 @@ export default function Staff() {
                 {error}
               </p>
             )}
-            <button className="button primary" disabled={busy}>
-              {busy ? "Signing in…" : "Staff Login"}
+            <button className="button primary" disabled={busy || !clientReady}>
+              {!clientReady
+                ? "Preparing sign-in…"
+                : busy
+                  ? "Signing in…"
+                  : "Staff Login"}
               <ArrowRight size={18} />
             </button>
           </form>
           <p className="privacy-note">
-            If your password was reset, use the new password rather than a saved
-            browser password.
+            After a reset, enter your new password.
           </p>
         </section>
       </main>

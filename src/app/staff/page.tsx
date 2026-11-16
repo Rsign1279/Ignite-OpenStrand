@@ -39,10 +39,7 @@ export default async function RawData({
           <div>
             <span className="eyebrow">RAW DATA</span>
             <h1>Every scored attempt.</h1>
-            <p>
-              Audit the numbers behind your dashboard. CSV includes answers,
-              feedback, and per-question derived columns.
-            </p>
+            <p>CSV includes answers, feedback, and per-question summaries.</p>
           </div>
           <a
             className="button secondary"
@@ -123,12 +120,12 @@ export default async function RawData({
                           <h3>Answer</h3>
                           <p className="verbatim">
                             {a.answer_text ??
-                              "Not retained for this historical attempt."}
+                              "Not saved for this historical attempt."}
                           </p>
                           <h3>Feedback</h3>
                           <p className="verbatim">
                             {a.feedback_text ??
-                              "Not retained for this historical attempt."}
+                              "Not saved for this historical attempt."}
                           </p>
                         </details>
                       </td>
