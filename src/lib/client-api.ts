@@ -1,15 +1,47 @@
-export async function api<T>(path: string, body?: unknown): Promise<T> {
+export class ApiError extends Error {
+  constructor(
+    public status: number,
+    message: string,
+  ) {
+    super(message);
+    this.name = "ApiError";
+  }
+}
+
+type RequestContext = {
+  studentSessionId?: string;
+  onResponse?: (response: Response) => void;
+};
+
+export async function api<T>(
+  path: string,
+  body?: unknown,
+  signal?: AbortSignal,
+  context?: RequestContext,
+): Promise<T> {
   const controller = new AbortController();
+  const cancel = () => controller.abort(signal?.reason);
+  if (signal?.aborted) cancel();
+  else signal?.addEventListener("abort", cancel, { once: true });
   const timeout = setTimeout(() => controller.abort(), 65000);
   try {
+    if (signal?.aborted)
+      throw new DOMException("Request canceled.", "AbortError");
     let response: Response;
     try {
       response = await fetch(path, {
         method: body === undefined ? "GET" : "POST",
         headers:
           body instanceof FormData || body === undefined
-            ? undefined
-            : { "Content-Type": "application/json" },
+            ? context?.studentSessionId
+              ? { "X-Student-Session": context.studentSessionId }
+              : undefined
+            : {
+                "Content-Type": "application/json",
+                ...(context?.studentSessionId
+                  ? { "X-Student-Session": context.studentSessionId }
+                  : {}),
+              },
         body:
           body instanceof FormData
             ? body
@@ -20,6 +52,8 @@ export async function api<T>(path: string, body?: unknown): Promise<T> {
         signal: controller.signal,
       });
     } catch {
+      if (signal?.aborted)
+        throw new DOMException("Request canceled.", "AbortError");
       throw new Error(
         controller.signal.aborted
           ? "Processing took too long. Your typed answer is still here. Please try again."
@@ -30,6 +64,8 @@ export async function api<T>(path: string, body?: unknown): Promise<T> {
     try {
       result = await response.json();
     } catch {
+      if (signal?.aborted)
+        throw new DOMException("Request canceled.", "AbortError");
       throw new Error(
         "Processing is temporarily unavailable. Your typed answer is still here. Please try again.",
       );
@@ -42,7 +78,8 @@ export async function api<T>(path: string, body?: unknown): Promise<T> {
         typeof result.error === "string"
           ? result.error
           : undefined;
-      throw new Error(
+      throw new ApiError(
+        response.status,
         message ??
           (response.status === 401
             ? "Your session expired. Refresh this page to reconnect."
@@ -51,8 +88,10 @@ export async function api<T>(path: string, body?: unknown): Promise<T> {
               : "Processing is temporarily unavailable. Please try again."),
       );
     }
+    context?.onResponse?.(response);
     return result as T;
   } finally {
     clearTimeout(timeout);
+    signal?.removeEventListener("abort", cancel);
   }
 }

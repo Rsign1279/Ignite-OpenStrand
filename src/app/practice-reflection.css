@@ -1,0 +1,327 @@
+.practice-reflection {
+  background: var(--surface, #ffffeb);
+  border: 2px solid var(--ink, #1a1a1a);
+  border-radius: 32px;
+  padding: 28px;
+  margin-top: 28px;
+  text-align: left;
+}
+.reflection-heading {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+.reflection-mark {
+  width: 45px;
+  height: 45px;
+  display: grid;
+  place-items: center;
+  border: 1px solid currentColor;
+  border-radius: 50%;
+  color: #034f46;
+  flex-shrink: 0;
+}
+.reflection-heading > div {
+  flex: 1;
+  min-width: 180px;
+}
+.reflection-heading h2 {
+  font-family: var(--font-studio-serif), Georgia, serif;
+  font-size: 30px;
+  font-weight: 400;
+  line-height: 1.05;
+  margin-top: 7px;
+  letter-spacing: -0.025em;
+}
+.reflection-score {
+  display: flex;
+  gap: 8px;
+  font-size: 12px;
+  align-items: center;
+  color: #485d56;
+}
+.reflection-score b {
+  border: 1px solid #9eaba3;
+  padding: 5px 8px;
+  border-radius: 999px;
+  color: #034f46;
+}
+.reflection-action {
+  font-size: 15px;
+  line-height: 1.7;
+  color: #314c43;
+  margin-top: 20px;
+}
+.reflection-rehearsal {
+  display: flex;
+  gap: 12px;
+  padding: 18px;
+  margin: 18px 0;
+  background: #e9eedf;
+  border-radius: 16px;
+  color: #034f46;
+}
+.reflection-rehearsal p {
+  color: #314c43;
+  font-size: 14px;
+  line-height: 1.7;
+}
+.reflection-rehearsal svg {
+  margin-top: 3px;
+}
+.answer-review,
+.reflection-details {
+  border-top: 1px solid #cdd5c7;
+}
+.answer-review summary,
+.reflection-details summary {
+  min-height: 48px;
+  cursor: pointer;
+  padding: 15px 0;
+  font-size: 14px;
+  color: #1d3f35;
+  font-weight: 600;
+}
+.reflection-details summary span {
+  color: #556651;
+  font-size: 11px;
+  margin-left: 10px;
+  font-weight: 400;
+}
+.answer-review > p {
+  background: #f2f3e7;
+  border-radius: 16px;
+  padding: 20px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font-size: 14px;
+  line-height: 1.85;
+  color: #30483c;
+}
+.answer-review > span {
+  display: block;
+  font-size: 12px;
+  color: #52664e;
+  line-height: 1.7;
+  margin: 12px 0 20px;
+}
+.reflection-details > div {
+  padding-bottom: 20px;
+}
+.reflection-details label {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  color: #2f4d3d;
+  margin-bottom: 10px;
+}
+.reflection-details textarea {
+  font-size: 14px;
+  background: transparent;
+}
+.reflection-details .reflection-check {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 15px 0 0;
+  font-weight: 400;
+  font-size: 13px;
+  line-height: 1.65;
+  cursor: pointer;
+}
+.reflection-check input {
+  width: 20px;
+  height: 20px;
+  min-height: 20px;
+  accent-color: #034f46;
+  flex-shrink: 0;
+  margin: 1px 0 0;
+}
+.reflection-details .reflection-privacy {
+  color: #52664e;
+  font-size: 11px;
+  line-height: 1.7;
+}
+.reflection-follow-up > div > p {
+  font-family: var(--font-studio-serif), Georgia, serif;
+  font-size: 25px;
+  color: #234b3c;
+  line-height: 1.25;
+  margin: 0 0 14px;
+}
+.reflection-follow-up > div > span {
+  font-size: 12px;
+  line-height: 1.75;
+  color: #52664e;
+  display: block;
+}
+.reflection-footer {
+  border-top: 1px solid #cdd5c7;
+  padding-top: 18px;
+  display: flex;
+  justify-content: space-between;
+  gap: 15px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+.reflection-footer > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 12px;
+  color: #365e46;
+}
+.question-growth {
+  background: #edf0e5;
+  border: 1px solid #c8d2c1;
+  padding: 24px;
+  border-radius: 24px;
+  margin-top: 26px;
+  text-align: left;
+}
+.question-growth h2 {
+  font-family: var(--font-studio-serif), Georgia, serif;
+  font-size: 30px;
+  font-weight: 400;
+  letter-spacing: -0.025em;
+  line-height: 1.1;
+  margin: 9px 0 13px;
+}
+.question-growth p {
+  font-size: 14px;
+  line-height: 1.7;
+  color: #3e5748;
+}
+.growth-comparison {
+  display: flex;
+  align-items: center;
+  gap: 25px;
+  margin: 23px 0;
+}
+.growth-comparison > span {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.growth-comparison small {
+  font-size: 12px;
+  font-weight: 400;
+  color: #4d664e;
+}
+.growth-comparison strong {
+  font-size: 36px;
+  letter-spacing: -0.04em;
+  font-weight: 500;
+  color: #193e2f;
+}
+.growth-comparison strong small {
+  font-size: 16px;
+  margin-left: 4px;
+}
+.growth-comparison > b {
+  margin-left: auto;
+  font-size: 26px;
+  font-weight: 500;
+  color: #193e2f;
+}
+.growth-comparison > b small {
+  display: block;
+}
+.question-growth .growth-note {
+  font-size: 11px;
+  line-height: 1.7;
+}
+.question-growth.growth-down {
+  background: #f4eee0;
+  border-color: #ddd0b3;
+}
+@media (max-width: 600px) {
+  .practice-reflection {
+    padding: 22px;
+  }
+  .reflection-heading {
+    gap: 11px;
+  }
+  .reflection-heading h2 {
+    font-size: 27px;
+  }
+  .reflection-score {
+    width: 100%;
+  }
+  .reflection-details summary span {
+    display: block;
+    margin: 4px 0 0;
+  }
+  .reflection-rehearsal {
+    padding: 15px;
+  }
+  .reflection-footer > .button {
+    width: 100%;
+  }
+}
+
+.studio .score-comparability-note {
+  background: #e6eee0;
+  color: #034f46;
+  border: 1px solid #849c88;
+  border-radius: 24px;
+  padding: 18px 22px;
+  font-size: 14px;
+  line-height: 1.65;
+  text-align: left;
+}
+.revision-goal-reminder {
+  margin: 20px 0;
+  padding: 22px;
+  border: 2px solid #034f46;
+  border-radius: 32px;
+  background: #f2f3e7;
+  color: #1a1a1a;
+  text-align: left;
+}
+.revision-goal-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #034f46;
+}
+.revision-goal-label .eyebrow {
+  color: inherit;
+  font-size: 10px;
+  line-height: 1.5;
+}
+.revision-goal-reminder > strong {
+  display: block;
+  font-size: 16px;
+  margin-top: 12px;
+}
+.revision-goal-reminder > p,
+.revision-goal-reminder details p {
+  color: #26483e;
+  font-size: 14px;
+  line-height: 1.7;
+  margin: 10px 0 0;
+  overflow-wrap: anywhere;
+}
+.revision-goal-reminder summary {
+  cursor: pointer;
+  min-height: 44px;
+  padding-top: 14px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #034f46;
+}
+.revision-goal-reminder summary:focus-visible {
+  outline: 2px solid #034f46;
+  outline-offset: 3px;
+  border-radius: 8px;
+}
+.revision-goal-reminder.compact {
+  padding: 16px 20px;
+}
+@media (max-width: 600px) {
+  .revision-goal-reminder {
+    padding: 18px;
+  }
+}

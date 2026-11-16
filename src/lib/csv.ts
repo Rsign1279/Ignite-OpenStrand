@@ -2,7 +2,7 @@ import { getStrand } from "@/config/strands";
 import type { Profile } from "@/lib/validation";
 export function profilesCsv(profiles: Profile[]) {
   const escape = (value: string) =>
-    `"${value.replace(/^[=+@\-\t\r]/, "'$&").replaceAll('"', '""')}"`;
+    `"${value.replace(/^\s*[=+@\-\t\r]/, "'$&").replaceAll('"', '""')}"`;
   return [
     "name,strand,IGNITE year",
     ...profiles.map((p) =>

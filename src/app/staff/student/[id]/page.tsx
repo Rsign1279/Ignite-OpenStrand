@@ -61,9 +61,12 @@ export default async function Student({
     kpis = [
       { label: "Scored attempts", value: String(s.total_attempts) },
       { label: "Questions practiced", value: String(s.unique_questions) },
-      { label: "Avg improvement", value: `${signed(s.avg_delta)} pts` },
       {
-        label: "Questions mastered",
+        label: "Paired latest change",
+        value: `${signed(s.avg_latest_change)} pts`,
+      },
+      {
+        label: "Questions ever reaching 12/12",
         value: `${data.mastery.count} / ${data.mastery.total}`,
       },
     ],
@@ -72,13 +75,14 @@ export default async function Student({
     title: `IGNITE · ${s.student_name}`,
     filters: filterLabel(filters),
     kpis,
+    methodology: `Paired latest change averages first-to-latest changes across ${s.comparable_questions} comparable repeated questions within these filters. ${s.version_changed_questions} pairs are excluded because their scoring version changed. Single attempts have no change estimate. Historical unversioned responses are grouped together. Best observed is descriptive, not evidence of lasting mastery. Review actual answers and unfamiliar questions alongside scores.`,
     headers: [
       "Question",
       "Attempts",
       "First /12",
-      "Best /12",
+      "Best observed /12",
       "Latest /12",
-      "Improvement",
+      "Latest change",
     ],
     rows: data.questions.map((q, i) => [
       `Q${i + 1}: ${q.question_text}`,
@@ -86,7 +90,9 @@ export default async function Student({
       String(q.first_score),
       String(q.best_score),
       String(q.latest_score),
-      signed(q.delta),
+      q.comparison_status === "scoring_version_changed"
+        ? "Method changed"
+        : signed(q.latest_delta),
     ]),
     student: true,
   };
@@ -131,7 +137,7 @@ export default async function Student({
         </div>
         <section className="mastery-strip">
           <div>
-            <span className="eyebrow">MASTERY</span>
+            <span className="eyebrow">BEST OBSERVED RESPONSES</span>
             <h2>
               {data.mastery.count} of {data.mastery.total} questions reached
               12/12
@@ -143,6 +149,16 @@ export default async function Student({
             value={data.mastery.count}
           />
         </section>
+        <p className="analytics-method">
+          Paired latest change uses {s.comparable_questions} comparable repeated
+          questions within these filters. {s.version_changed_questions} question
+          pairs are excluded because the scoring method changed. A single
+          attempt has no change estimate. Historical unversioned responses are
+          compared together. A 12/12 records a complete response under this
+          rubric; it does not establish lasting mastery or predict interview
+          success. Compare the saved answers and review transfer to an
+          unfamiliar question.
+        </p>
         <StudentCharts data={chartData} />
         <section className="question-history">
           <span className="eyebrow">THE STORY BEHIND THE SCORES</span>
@@ -158,13 +174,25 @@ export default async function Student({
                   Q{i + 1} · {q.question_text}
                 </span>
                 <span>
-                  {q.attempts_count} attempts · {signed(q.delta)} pts
+                  {q.attempts_count} attempts ·{" "}
+                  {q.comparison_status === "scoring_version_changed"
+                    ? "Scoring method changed · no change estimate"
+                    : q.latest_delta === null
+                      ? "No repeat yet"
+                      : `${signed(q.latest_delta)} pts first to latest`}
                 </span>
               </summary>
               <p>
-                First {q.first_score}/12 · Best {q.best_score}/12 · Latest{" "}
-                {q.latest_score}/12
+                First {q.first_score}/12 · Best observed {q.best_score}/12 ·
+                Latest {q.latest_score}/12
               </p>
+              {q.comparison_status === "scoring_version_changed" && (
+                <p className="scoring-method-note">
+                  The first and latest answers were reviewed with different
+                  rubric/model versions. Their scores are shown descriptively;
+                  the difference is excluded from growth estimates.
+                </p>
+              )}
               {q.attempts.map((a) => (
                 <details className="attempt-accordion" key={a.id}>
                   <summary>

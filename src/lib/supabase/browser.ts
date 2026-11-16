@@ -8,5 +8,10 @@ export function browserClient() {
     throw new Error(
       "Student access is not configured yet. Please contact your advisor.",
     );
-  return createBrowserClient<Database>(url, key);
+  return createBrowserClient<Database>(url, key, {
+    cookieOptions: {
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+    },
+  });
 }

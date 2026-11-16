@@ -9,7 +9,7 @@ export function StaffShell({
   active?: "overview" | "raw" | "registrations";
 }) {
   return (
-    <>
+    <div className="studio staff-studio">
       <header className="header">
         <Brand />
         <StaffLogout />
@@ -37,6 +37,6 @@ export function StaffShell({
         </nav>
         {children}
       </div>
-    </>
+    </div>
   );
 }

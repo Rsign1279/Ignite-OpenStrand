@@ -6,6 +6,7 @@ import { filterQuery } from "@/lib/analytics/model";
 import { StaffShell } from "@/components/staff/shell";
 import { AnalyticsFilters } from "@/components/staff/filters";
 import { getStrand } from "@/config/strands";
+import { signed } from "@/components/staff/report-utils";
 export const dynamic = "force-dynamic";
 export default async function RawData({
   searchParams,
@@ -58,7 +59,12 @@ export default async function RawData({
               View dashboard & PDF export
             </Link>
           </div>
-          <div className="table-scroll">
+          <div
+            className="table-scroll"
+            tabIndex={0}
+            role="region"
+            aria-label="Scored interview attempts table"
+          >
             <table>
               <thead>
                 <tr>
@@ -69,9 +75,9 @@ export default async function RawData({
                     "Attempt",
                     "Score /12",
                     "First",
-                    "Best",
+                    "Best observed",
                     "Latest",
-                    "Delta",
+                    "Latest − first",
                     "Count",
                     "Date (UTC)",
                     "Answer & feedback",
@@ -101,7 +107,11 @@ export default async function RawData({
                       <td>{d.first_score}</td>
                       <td>{d.best_score}</td>
                       <td>{d.latest_score}</td>
-                      <td>+{d.delta}</td>
+                      <td>
+                        {d.comparison_status === "scoring_version_changed"
+                          ? "Scoring method changed"
+                          : signed(d.latest_delta)}
+                      </td>
                       <td>{d.attempts_count}</td>
                       <td>
                         {a.created_at}

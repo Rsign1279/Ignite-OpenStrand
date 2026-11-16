@@ -49,12 +49,16 @@ function Card({
   empty,
   children,
   table,
+  emptyTitle = "No practice data yet",
+  emptyDescription = "Complete an assessment or broaden the filters to see this chart.",
 }: {
   title: string;
   subtitle: string;
   empty: boolean;
   children: React.ReactNode;
   table: React.ReactNode;
+  emptyTitle?: string;
+  emptyDescription?: string;
 }) {
   return (
     <section className="analytics-chart" data-pdf-chart>
@@ -64,10 +68,8 @@ function Card({
       </header>
       {empty ? (
         <div className="chart-empty">
-          <strong>No practice data yet</strong>
-          <p>
-            Complete an assessment or broaden the filters to see this chart.
-          </p>
+          <strong>{emptyTitle}</strong>
+          <p>{emptyDescription}</p>
         </div>
       ) : (
         <>
@@ -79,6 +81,9 @@ function Card({
           >
             <div className="chart-canvas">{children}</div>
           </div>
+          <p className="chart-scroll-hint">
+            Scroll sideways to explore the chart, or open the data table below.
+          </p>
           <details className="chart-data">
             <summary>View chart data</summary>
             {table}
@@ -96,7 +101,12 @@ function DataTable({
   rows: (string | number | null)[][];
 }) {
   return (
-    <div className="table-scroll">
+    <div
+      className="table-scroll"
+      tabIndex={0}
+      role="region"
+      aria-label="Chart data table"
+    >
       <table>
         <thead>
           <tr>
@@ -136,17 +146,32 @@ export function ProgramCharts({ data }: { data: Analytics }) {
   return (
     <div className="analytics-chart-grid">
       <Card
-        title="Growth across IGNITE"
-        subtitle="First and best scores, averaged equally across students. Scale: 0–12."
-        empty={empty}
+        title="First to latest, matched by question"
+        subtitle="Same-question repeats with matching scoring versions, averaged per student and then per strand. Scale: 0–12."
+        empty={data.kpis.pairedStudents === 0}
+        emptyTitle={
+          empty
+            ? "No practice data yet"
+            : data.kpis.versionChangedQuestions > 0
+              ? "No comparable repeats yet"
+              : "No repeated questions yet"
+        }
+        emptyDescription="Two responses to the same question using the same scoring version are needed. A changed scoring method is not counted as student growth."
         table={
           <DataTable
-            headers={["Strand", "First", "Best", "Students"]}
+            headers={[
+              "Strand",
+              "Paired first",
+              "Paired latest",
+              "Students with repeats",
+              "Repeated question pairs",
+            ]}
             rows={data.strands.map((s) => [
               s.name,
-              s.first,
-              s.best,
-              s.students,
+              s.pairedFirst,
+              s.pairedLatest,
+              s.pairedStudents,
+              s.pairedQuestions,
             ])}
           />
         }
@@ -171,15 +196,15 @@ export function ProgramCharts({ data }: { data: Analytics }) {
             <Tooltip />
             <Legend verticalAlign="top" />
             <Bar
-              dataKey="first"
-              name="First score"
+              dataKey="pairedFirst"
+              name="Paired first score"
               fill={gold}
               stroke="#886a00"
               isAnimationActive={false}
             />
             <Bar
-              dataKey="best"
-              name="Best score"
+              dataKey="pairedLatest"
+              name="Paired latest score"
               fill={blue}
               isAnimationActive={false}
             />
@@ -187,8 +212,8 @@ export function ProgramCharts({ data }: { data: Analytics }) {
         </ResponsiveContainer>
       </Card>
       <Card
-        title="The practice curve"
-        subtitle="Average score at attempt 1, 2, 3, and 4+. Different students may contribute at each step."
+        title="Scores by attempt number"
+        subtitle="Descriptive averages at attempt 1, 2, 3, and 4+. Different students and questions may contribute; this is not a matched growth measure."
         empty={empty}
         table={
           <DataTable

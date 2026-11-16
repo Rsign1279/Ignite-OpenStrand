@@ -15,11 +15,15 @@ const evaluation = {
 async function enter(page: Page) {
   await page.route("**/api/profile", (r) =>
     r.fulfill({
+      headers: { "X-Student-Session": "11111111-1111-4111-8111-111111111111" },
       json: { name: "Recovery Student", strand: "technology", ignite_year: 1 },
     }),
   );
   await page.goto("/interview");
   await page.getByRole("button", { name: "Meet your interviewer" }).click();
+  await page
+    .getByRole("button", { name: "I’m ready — ask the question" })
+    .click();
 }
 async function typed(page: Page) {
   await page.getByRole("button", { name: "Type my answer" }).click();
@@ -132,6 +136,9 @@ test("post and transfer evaluation failures preserve current answer and stage", 
   await page.getByRole("button", { name: "Discover the STAR method" }).click();
   await page.getByRole("button", { name: /I understand STAR/ }).click();
   await page.getByRole("button", { name: "Meet your interviewer" }).click();
+  await page
+    .getByRole("button", { name: "I’m ready — ask the question" })
+    .click();
   await typed(page);
   await finish(page);
   await expect(page.getByLabel("Your answer", { exact: true })).toHaveValue(
@@ -143,6 +150,9 @@ test("post and transfer evaluation failures preserve current answer and stage", 
   await finish(page);
   await page
     .getByRole("button", { name: "Try a New Interview Question" })
+    .click();
+  await page
+    .getByRole("button", { name: "I’m ready — ask the question" })
     .click();
   await typed(page);
   await finish(page);

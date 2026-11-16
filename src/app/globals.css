@@ -1943,7 +1943,7 @@ button.selected {
 }
 .analytics-kpis {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 14px;
   margin: 22px 0 14px;
 }
@@ -2172,9 +2172,6 @@ button.selected {
   .analytics-kpis {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
-  .analytics-kpis article:last-child {
-    grid-column: 1/-1;
-  }
   .analytics-chart-grid {
     grid-template-columns: 1fr;
   }
@@ -2273,4 +2270,60 @@ button.selected {
   color: var(--ink);
   font-size: 18px;
   line-height: 1.6;
+}
+
+/* Pilot evidence separates repeated-question change from best observed scores. */
+.pilot-evidence {
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  padding: 26px;
+  background: #fff;
+  margin: 20px 0 28px;
+}
+.pilot-evidence h2 {
+  font-size: 25px;
+  margin: 10px 0;
+}
+.pilot-evidence p {
+  font-size: 13px;
+  line-height: 1.8;
+}
+.pilot-evidence dl {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 18px;
+  margin: 22px 0;
+}
+.pilot-evidence dl > div {
+  border-left: 3px solid #b7cad5;
+  padding-left: 15px;
+}
+.pilot-evidence dt {
+  font-size: 12px;
+  color: var(--muted);
+}
+.pilot-evidence dd {
+  margin: 5px 0 0;
+  font-size: 30px;
+  color: var(--ink);
+}
+@media (max-width: 600px) {
+  .pilot-evidence {
+    padding: 22px;
+  }
+  .pilot-evidence dl {
+    grid-template-columns: 1fr;
+    gap: 15px;
+  }
+}
+
+.registration-evidence-note {
+  max-width: 850px;
+  font-size: 14px;
+  line-height: 1.65;
+  margin: 24px 0;
+}
+.registration-evidence-note a {
+  text-decoration: underline;
+  text-underline-offset: 3px;
 }

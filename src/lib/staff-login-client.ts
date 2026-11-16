@@ -1,3 +1,4 @@
+import { announceSessionChange } from "@/lib/session-events";
 export async function signInStaff(email: string, password: string) {
   let response: Response;
   try {
@@ -40,12 +41,29 @@ export async function signInStaff(email: string, password: string) {
     throw new Error(
       "Your staff session could not be confirmed. Please try again.",
     );
+  announceSessionChange();
 }
 
 export async function signOutStaff() {
-  const response = await fetch("/api/staff/logout", {
-    method: "POST",
-    signal: AbortSignal.timeout(20000),
-  });
-  if (!response.ok) throw new Error("Unable to sign out. Please try again.");
+  try {
+    const response = await fetch("/api/staff/logout", {
+      method: "POST",
+      signal: AbortSignal.timeout(20000),
+      cache: "no-store",
+    });
+    const data: unknown = await response.json();
+    if (
+      !response.ok ||
+      typeof data !== "object" ||
+      data === null ||
+      !("success" in data) ||
+      data.success !== true
+    )
+      throw new Error("Unconfirmed logout");
+    announceSessionChange();
+  } catch {
+    throw new Error(
+      "Unable to confirm sign-out. Please retry before leaving this device.",
+    );
+  }
 }

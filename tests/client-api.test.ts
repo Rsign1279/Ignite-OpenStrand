@@ -66,3 +66,65 @@ it("does not override browser multipart boundaries", async () => {
   expect(fetch.mock.calls[0][1].headers).toBeUndefined();
   expect(fetch.mock.calls[0][1].body).toBe(f);
 });
+it("aborts transcription when its recorder session ends", async () => {
+  const controller = new AbortController();
+  let requestSignal: AbortSignal | undefined;
+  const fetch = vi.fn(
+    (_path, options: { signal: AbortSignal }) =>
+      new Promise((_resolve, reject) => {
+        requestSignal = options.signal;
+        options.signal.addEventListener("abort", () =>
+          reject(new Error("Abort")),
+        );
+      }),
+  );
+  vi.stubGlobal("fetch", fetch);
+  const pending = expect(
+    api("/api/transcribe", new FormData(), controller.signal),
+  ).rejects.toMatchObject({ name: "AbortError", message: "Request canceled." });
+  controller.abort();
+  await pending;
+  expect(requestSignal?.aborted).toBe(true);
+  expect(fetch).toHaveBeenCalledOnce();
+});
+it("never sends a request for an already canceled session", async () => {
+  const controller = new AbortController();
+  controller.abort();
+  const fetch = vi.fn();
+  vi.stubGlobal("fetch", fetch);
+  await expect(api("/api", {}, controller.signal)).rejects.toMatchObject({
+    name: "AbortError",
+  });
+  expect(fetch).not.toHaveBeenCalled();
+});
+it("removes the session abort listener when a request completes", async () => {
+  const controller = new AbortController();
+  const remove = vi.spyOn(controller.signal, "removeEventListener");
+  vi.stubGlobal(
+    "fetch",
+    vi.fn().mockResolvedValue(Response.json({ ok: true })),
+  );
+  await api("/api", undefined, controller.signal);
+  expect(remove).toHaveBeenCalledWith("abort", expect.any(Function));
+});
+it("pins JSON and audio requests to the initiating student's identity", async () => {
+  const fetch = vi
+    .fn()
+    .mockImplementation(() => Promise.resolve(Response.json({ ok: true })));
+  vi.stubGlobal("fetch", fetch);
+  const context = { studentSessionId: "student-A" };
+  await api(
+    "/api/interview/evaluate",
+    { transcript: "A's answer" },
+    undefined,
+    context,
+  );
+  await api("/api/transcribe", new FormData(), undefined, context);
+  expect(fetch.mock.calls[0][1].headers).toEqual({
+    "Content-Type": "application/json",
+    "X-Student-Session": "student-A",
+  });
+  expect(fetch.mock.calls[1][1].headers).toEqual({
+    "X-Student-Session": "student-A",
+  });
+});

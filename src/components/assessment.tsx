@@ -6,6 +6,7 @@ import {
   type Comparison,
 } from "@/lib/validation";
 import { ArrowRight } from "lucide-react";
+import { RubricGuide } from "./rubric-guide";
 export function Rubric({
   value,
   pre,
@@ -21,7 +22,7 @@ export function Rubric({
             <strong>{r.label}</strong>
             <span>{r.definition}</span>
           </div>
-          <div className="score-track">
+          <div className="score-track" aria-hidden="true">
             <div style={{ width: `${(value.scores[r.key] / 3) * 100}%` }} />
           </div>
           <strong>
@@ -44,6 +45,7 @@ export function Assessment({ value }: { value: Evaluation }) {
         <p>A starting point for your next step.</p>
       </div>
       <Rubric value={value} />
+      <RubricGuide />
       <div className="feedback-grid">
         <article>
           <span className="eyebrow">STRONGEST PART</span>
@@ -61,10 +63,12 @@ export function Compare({
   pre,
   post,
   comparison,
+  comparable = true,
 }: {
   pre: Evaluation;
   post: Evaluation;
   comparison: Comparison;
+  comparable?: boolean;
 }) {
   const change = scoreChange(pre, post);
   return (
@@ -85,16 +89,26 @@ export function Compare({
             <small> /12</small>
           </strong>
         </div>
-        <div className="change-badge">
-          {change > 0 ? "+" : ""}
-          {change}
-          <small>point{Math.abs(change) !== 1 ? "s" : ""}</small>
-        </div>
+        {comparable && (
+          <div className="change-badge">
+            {change > 0 ? "+" : ""}
+            {change}
+            <small>point{Math.abs(change) !== 1 ? "s" : ""}</small>
+          </div>
+        )}
       </div>
-      <Rubric value={post} pre={pre} />
+      {!comparable && (
+        <p className="score-comparability-note">
+          The review settings changed between these answers, so the scores are
+          shown without a gain calculation. Use the current feedback to choose
+          your next step.
+        </p>
+      )}
+      <Rubric value={post} pre={comparable ? pre : undefined} />
+      <RubricGuide />
       <div className="feedback-grid">
         <article>
-          <span className="eyebrow">TWO IMPROVEMENTS WE NOTICED</span>
+          <span className="eyebrow">WHAT CHANGED IN YOUR ANSWER</span>
           <ol>
             {comparison.improvements.map((s, i) => (
               <li key={i}>{s}</li>

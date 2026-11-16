@@ -15,6 +15,8 @@ import {
   saveTransfer,
   recordAttempt,
   validatePreQuestion,
+  findRecordedAssessment,
+  findRecordedAssessmentWithMetadata,
 } from "@/lib/learning";
 beforeEach(() => {
   vi.clearAllMocks();
@@ -24,6 +26,69 @@ beforeEach(() => {
   mocks.from.mockReturnValue({ upsert: mocks.upsert, select: mocks.select });
   mocks.rpc.mockResolvedValue({ error: null });
   mocks.upsert.mockResolvedValue({ error: null });
+});
+
+it.each([
+  ["practice", "technology-teamwork-v1", "Pre answer"],
+  ["pre", "technology-feedback-v1", "Pre answer"],
+  ["pre", "technology-teamwork-v1", "Changed answer"],
+] as const)(
+  "rejects reuse of a saved request for different stage, question or answer (%s)",
+  async (stage, question, answer) => {
+    mocks.single.mockResolvedValue({
+      error: null,
+      data: {
+        stage: "pre",
+        question_id: "technology-teamwork-v1",
+        answer_text: "Pre answer",
+        evaluation_json: {
+          scores: {
+            situationTask: 2,
+            personalActions: 2,
+            resultImpact: 2,
+            professionalCommunication: 2,
+          },
+          total: 8,
+          strongestPart: "Specific",
+          improvementArea: "Outcome",
+        },
+      },
+    });
+    await expect(
+      findRecordedAssessment("student", "request", answer, question, stage),
+    ).rejects.toThrow("This answer changed");
+    expect(mocks.eq).toHaveBeenCalledWith("student_id", "student");
+  },
+);
+
+it("recomputes totals when returning a matching saved evaluation", async () => {
+  mocks.single.mockResolvedValue({
+    error: null,
+    data: {
+      stage: "pre",
+      question_id: "technology-teamwork-v1",
+      answer_text: "Pre answer",
+      evaluation_json: {
+        scores: {
+          situationTask: 2,
+          personalActions: 2,
+          resultImpact: 2,
+          professionalCommunication: 2,
+        },
+        total: 12,
+        strongestPart: "Specific",
+        improvementArea: "Outcome",
+      },
+    },
+  });
+  const result = await findRecordedAssessment(
+    "student",
+    "request",
+    "Pre answer",
+    "technology-teamwork-v1",
+    "pre",
+  );
+  expect(result?.total).toBe(8);
 });
 it("stores rubric values only, omitting free-text feedback", async () => {
   const scores = {
@@ -106,7 +171,59 @@ it("persists canonical selected question metadata instead of the legacy default"
     expect.objectContaining({
       p_question_id: "technology-teamwork-v1",
       p_question_text: expect.stringContaining("worked with a team"),
+      p_evaluation: expect.objectContaining({
+        scoring_version: expect.stringMatching(
+          /^ignite-rubric-anchors-v1\|groq:/,
+        ),
+      }),
     }),
+  );
+});
+it("reads stored scoring metadata internally while preserving the public evaluation schema", async () => {
+  mocks.single.mockResolvedValue({
+    error: null,
+    data: {
+      stage: "pre",
+      question_id: "technology-teamwork-v1",
+      answer_text: "Answer",
+      evaluation_json: {
+        scores: {
+          situationTask: 2,
+          personalActions: 2,
+          resultImpact: 2,
+          professionalCommunication: 2,
+        },
+        total: 12,
+        strongestPart: "Specific",
+        improvementArea: "Outcome",
+        scoring_version: "original-method",
+      },
+    },
+  });
+  const stored = await findRecordedAssessmentWithMetadata(
+    "student",
+    "request",
+    "Answer",
+    "technology-teamwork-v1",
+    "pre",
+  );
+  expect(stored).toMatchObject({
+    scoringVersion: "original-method",
+    evaluation: { total: 8 },
+  });
+  expect(stored?.evaluation).not.toHaveProperty("scoring_version");
+  await recordAttempt(
+    "student",
+    "technology",
+    "pre",
+    stored!.evaluation,
+    "Answer",
+    "request",
+    "technology-teamwork-v1",
+    stored!.scoringVersion,
+  );
+  expect(mocks.rpc.mock.calls[0][1].p_evaluation.scoring_version).toBe(
+    "original-method",
   );
 });
 it("requires the saved pre answer and question to match before scoring post", async () => {
@@ -125,7 +242,7 @@ it("requires the saved pre answer and question to match before scoring post", as
       "technology-teamwork-v1",
       "Pre answer",
     ),
-  ).resolves.toBeUndefined();
+  ).resolves.toBe("legacy-unversioned");
   expect(mocks.eq).toHaveBeenCalledWith("student_id", "student");
   await expect(
     validatePreQuestion(

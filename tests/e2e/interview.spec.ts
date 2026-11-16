@@ -19,6 +19,7 @@ test("full student text interview and secure reset", async ({ page }) => {
             access_token: "test-access-token",
             token_type: "bearer",
             expires_in: 3600,
+            expires_at: Math.floor(Date.now() / 1000) + 3600,
             refresh_token: "test-refresh",
             user,
           }
@@ -28,9 +29,15 @@ test("full student text interview and secure reset", async ({ page }) => {
   await page.route("**/api/profile", (route) => {
     if (route.request().method() === "POST") {
       registered = true;
-      return route.fulfill({ json: route.request().postDataJSON() });
+      return route.fulfill({
+        headers: {
+          "X-Student-Session": "11111111-1111-4111-8111-111111111111",
+        },
+        json: route.request().postDataJSON(),
+      });
     }
     return route.fulfill({
+      headers: { "X-Student-Session": "11111111-1111-4111-8111-111111111111" },
       json: registered
         ? { name: "Test Student", strand: "education", ignite_year: 1 }
         : null,
@@ -96,6 +103,9 @@ test("full student text interview and secure reset", async ({ page }) => {
     page.getByRole("heading", { name: "Ready, Test Student?" }),
   ).toBeVisible();
   await page.getByRole("button", { name: "Meet your interviewer" }).click();
+  await page
+    .getByRole("button", { name: "I’m ready — ask the question" })
+    .click();
   const exact =
     "Tell me about a time when a lesson, activity, project, or plan did not go as expected. What did you do?";
   await expect(page.getByRole("heading", { name: `“${exact}”` })).toBeVisible();
@@ -115,6 +125,9 @@ test("full student text interview and secure reset", async ({ page }) => {
   ).toBeVisible();
   await page.getByRole("button", { name: /I understand STAR/ }).click();
   await page.getByRole("button", { name: "Meet your interviewer" }).click();
+  await page
+    .getByRole("button", { name: "I’m ready — ask the question" })
+    .click();
   await expect(page.getByRole("heading", { name: `“${exact}”` })).toBeVisible();
   await page.getByRole("button", { name: "Type my answer" }).click();
   await page
@@ -129,6 +142,9 @@ test("full student text interview and secure reset", async ({ page }) => {
   await expect(page.getByText("+3", { exact: false })).toBeVisible();
   await page
     .getByRole("button", { name: "Try a New Interview Question" })
+    .click();
+  await page
+    .getByRole("button", { name: "I’m ready — ask the question" })
     .click();
   await expect(
     page.getByRole("heading", { name: /Tell me about an accomplishment/ }),
@@ -182,6 +198,7 @@ test("voice recording waits for explicit finish and transcribes securely", async
   await context.grantPermissions(["microphone"]);
   await page.route("**/api/profile", (r) =>
     r.fulfill({
+      headers: { "X-Student-Session": "11111111-1111-4111-8111-111111111111" },
       json: { name: "Voice Student", strand: "education", ignite_year: 2 },
     }),
   );
@@ -215,6 +232,9 @@ test("voice recording waits for explicit finish and transcribes securely", async
   await page.goto("/interview");
   await page.getByRole("button", { name: "Meet your interviewer" }).click();
   await page
+    .getByRole("button", { name: "I’m ready — ask the question" })
+    .click();
+  await page
     .getByRole("button", { name: "Begin Answer", exact: true })
     .first()
     .click();
@@ -240,11 +260,15 @@ test("microphone denial offers text fallback without skipping assessment", async
   });
   await page.route("**/api/profile", (r) =>
     r.fulfill({
+      headers: { "X-Student-Session": "11111111-1111-4111-8111-111111111111" },
       json: { name: "Student", strand: "education", ignite_year: 1 },
     }),
   );
   await page.goto("/interview");
   await page.getByRole("button", { name: "Meet your interviewer" }).click();
+  await page
+    .getByRole("button", { name: "I’m ready — ask the question" })
+    .click();
   await page
     .getByRole("button", { name: "Begin Answer", exact: true })
     .first()
@@ -260,7 +284,12 @@ test("onboarding and staff login pass accessibility and reduced-motion layout ch
 }) => {
   const { default: AxeBuilder } = await import("@axe-core/playwright");
   await page.emulateMedia({ reducedMotion: "reduce" });
-  await page.route("**/api/profile", (r) => r.fulfill({ json: null }));
+  await page.route("**/api/profile", (r) =>
+    r.fulfill({
+      headers: { "X-Student-Session": "11111111-1111-4111-8111-111111111111" },
+      json: null,
+    }),
+  );
   for (const path of ["/interview", "/staff/login"]) {
     await page.goto(path);
     const result = await new AxeBuilder({ page })

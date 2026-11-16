@@ -1,4 +1,5 @@
-import { requireUser } from "@/lib/auth";
+import { requireUser, requireStudentIdentity } from "@/lib/auth";
+import { STUDENT_SESSION_HEADER } from "@/lib/student-session";
 import { profileSchema } from "@/lib/validation";
 import { sameOrigin, readJson, failure, json, HttpError } from "@/lib/http";
 export async function POST(request: Request) {
@@ -7,6 +8,7 @@ export async function POST(request: Request) {
     const { client, user } = await requireUser();
     if (!user.is_anonymous)
       throw new HttpError(403, "Use student access to register.");
+    requireStudentIdentity(request, user.id);
     const profile = profileSchema.parse(await readJson(request, 2000));
     const { error } = await client
       .from("student_profiles")
@@ -16,7 +18,9 @@ export async function POST(request: Request) {
         400,
         "Unable to register. A profile may already exist for this session.",
       );
-    return json(profile);
+    const response = json(profile);
+    response.headers.set(STUDENT_SESSION_HEADER, user.id);
+    return response;
   } catch (e) {
     return failure(e);
   }
@@ -30,7 +34,9 @@ export async function GET() {
       .eq("user_id", user.id)
       .maybeSingle();
     if (error) throw error;
-    return json(data);
+    const response = json(data);
+    response.headers.set(STUDENT_SESSION_HEADER, user.id);
+    return response;
   } catch (e) {
     return failure(e);
   }

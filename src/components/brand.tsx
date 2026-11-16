@@ -15,9 +15,9 @@ export function Brand() {
         />
       </span>
       <span className="brand-sub">
-        INTERVIEW
+        OPENSTRAND
         <br />
-        COACH
+        INTERVIEW STUDIO
       </span>
     </Link>
   );

@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import Link from "next/link";
 import {
   ArrowRight,
@@ -7,21 +7,60 @@ import {
   ShieldCheck,
   ArrowUpRight,
   Target,
+  MapPin,
+  ArrowLeft,
 } from "lucide-react";
 import { Brand } from "@/components/brand";
 import { StrandIcon } from "@/components/strand-icon";
 import { AnswerRecorder } from "@/components/answer-recorder";
 import { Assessment, Compare } from "@/components/assessment";
+import { InterviewScene } from "@/components/interview-scene";
+import { QuestionLibrary } from "@/components/question-library";
+import {
+  StarLesson,
+  StoryNotesPanel,
+  emptyStoryNotes,
+  type StoryNotes,
+} from "@/components/star-lesson";
+import { InterviewRoom } from "@/components/interview-room";
+import {
+  interviewSettings,
+  getQuestionTopic,
+  topicStories,
+} from "@/config/interview-scenes";
 import { strands, getStrand, type StrandId } from "@/config/strands";
 import {
   profileSchema,
   type Profile,
   type Evaluation,
   type Comparison,
+  scoreChange,
 } from "@/lib/validation";
 import { transition, type Stage } from "@/lib/machine";
 import { browserClient } from "@/lib/supabase/browser";
 import { api } from "@/lib/client-api";
+import { onSessionChange } from "@/lib/session-events";
+import {
+  SESSION_CHANGED_MESSAGE,
+  STUDENT_SESSION_HEADER,
+} from "@/lib/student-session";
+import { PracticePlan } from "@/components/practice-plan";
+import { RevisionGoalReminder } from "@/components/revision-goal-reminder";
+import {
+  readSessionMarker,
+  writeSessionMarker,
+  clearSessionMarkers,
+} from "@/lib/session-markers";
+import {
+  PracticeReflection,
+  QuestionGrowth,
+} from "@/components/practice-reflection";
+import {
+  createRevisionGoal,
+  recommendPracticeQuestion,
+  type PracticeAttempt,
+  type PracticeRevisionGoal,
+} from "@/lib/practice-learning";
 export function InterviewApp() {
   const [stage, setStage] = useState<Stage>("PROFILE");
   const stageRef = useRef<Stage>("PROFILE");
@@ -30,33 +69,132 @@ export function InterviewApp() {
   const [strand, setStrand] = useState<StrandId | "">("");
   const [year, setYear] = useState<1 | 2 | undefined>();
   const [busy, setBusy] = useState(false);
+  const [endingSession, setEndingSession] = useState(false);
   const lock = useRef(false);
   const [error, setError] = useState("");
   const [pre, setPre] = useState<Evaluation>();
   const [post, setPost] = useState<Evaluation>();
   const [comparison, setComparison] = useState<Comparison>();
+  const [comparisonComparable, setComparisonComparable] = useState(true);
   const [transfer, setTransfer] = useState<Evaluation>();
   const [question, setQuestion] = useState("");
   const [practiceQuestionId, setPracticeQuestionId] = useState("");
+  const [storyNotes, setStoryNotes] = useState<StoryNotes>(emptyStoryNotes);
+  const [completedQuestions, setCompletedQuestions] = useState<string[]>([]);
+  const [answerCount, setAnswerCount] = useState(0);
+  const [attemptHistory, setAttemptHistory] = useState<PracticeAttempt[]>([]);
+  const [submittedAnswer, setSubmittedAnswer] = useState("");
+  const [practiceRetry, setPracticeRetry] = useState(false);
+  const [revisionGoal, setRevisionGoal] = useState<PracticeRevisionGoal>();
+  const main = useRef<HTMLElement>(null);
+  const lastStage = useRef<Stage>("PROFILE");
+  const authEpoch = useRef(0);
+  const studentSessionId = useRef<string | null>(null);
+  const [sessionIdentity, setSessionIdentity] = useState<string>();
+  const authMutation = useRef(false);
+  const evaluationRequest = useRef<AbortController | null>(null);
   const preTranscript = useRef("");
   const attemptRequests = useRef<
     Record<string, { id: string; answer: string }>
   >({});
+  const clearStudentState = useCallback((message = "") => {
+    authEpoch.current++;
+    studentSessionId.current = null;
+    setSessionIdentity(undefined);
+    evaluationRequest.current?.abort();
+    evaluationRequest.current = null;
+    preTranscript.current = "";
+    attemptRequests.current = {};
+    clearSessionMarkers();
+    setPre(undefined);
+    setPost(undefined);
+    setComparison(undefined);
+    setTransfer(undefined);
+    setQuestion("");
+    setPracticeQuestionId("");
+    setStoryNotes(emptyStoryNotes);
+    setCompletedQuestions([]);
+    setAnswerCount(0);
+    setAttemptHistory([]);
+    setSubmittedAnswer("");
+    setPracticeRetry(false);
+    setRevisionGoal(undefined);
+    setProfile(null);
+    setName("");
+    setStrand("");
+    setYear(undefined);
+    stageRef.current = "PROFILE";
+    setStage("PROFILE");
+    lock.current = false;
+    setBusy(false);
+    setEndingSession(false);
+    setError(message);
+    window.speechSynthesis?.cancel();
+  }, []);
   useEffect(() => {
     const selected = new URLSearchParams(window.location.search).get("strand");
     let active = true;
+    const initialEpoch = authEpoch.current;
+    const controller = new AbortController();
+    let unsubscribe: (() => void) | undefined;
+    let observedIdentity: string | null | undefined;
+    const stopSessionNotices = onSessionChange(() => {
+      if (active && !authMutation.current)
+        clearStudentState(SESSION_CHANGED_MESSAGE);
+    });
     Promise.resolve().then(() => {
       if (active && strands.some((s) => s.id === selected))
         setStrand(selected as StrandId);
     });
-    api<Profile | null>("/api/profile")
+    try {
+      const client = browserClient();
+      const { data } = client.auth.onAuthStateChange((event, session) => {
+        // Register/reset intentionally changes this tab's identity. Its profile
+        // write is independently pinned to the newly authenticated student.
+        if (!active || authMutation.current || event === "INITIAL_SESSION")
+          return;
+        const nextId = session?.user.id ?? null;
+        if (studentSessionId.current && studentSessionId.current !== nextId) {
+          clearStudentState(SESSION_CHANGED_MESSAGE);
+        } else if (
+          !studentSessionId.current &&
+          (event === "SIGNED_OUT" ||
+            (observedIdentity !== undefined && observedIdentity !== nextId))
+        ) {
+          // Initial recovery may emit SIGNED_IN before INITIAL_SESSION. Only a
+          // change of identity invalidates the pending server profile read.
+          authEpoch.current++;
+        }
+        observedIdentity = nextId;
+      });
+      unsubscribe = () => data.subscription.unsubscribe();
+    } catch {
+      // A missing deployment configuration is reported when starting a session.
+    }
+    let recoveredIdentity: string | null = null;
+    api<Profile | null>("/api/profile", undefined, controller.signal, {
+      onResponse: (response) => {
+        recoveredIdentity = response.headers.get(STUDENT_SESSION_HEADER);
+      },
+    })
       .then((value) => {
-        if (active && value) {
+        if (active && authEpoch.current === initialEpoch && value) {
+          if (!recoveredIdentity)
+            throw new Error("Student session could not be confirmed.");
+          if (
+            observedIdentity !== undefined &&
+            observedIdentity !== recoveredIdentity
+          ) {
+            clearStudentState(SESSION_CHANGED_MESSAGE);
+            return;
+          }
+          studentSessionId.current = recoveredIdentity;
+          setSessionIdentity(recoveredIdentity);
           setProfile(profileSchema.parse(value));
           setName(value.name);
           setStrand(value.strand);
           setYear(value.ignite_year);
-          const savedQuestion = sessionStorage.getItem("ignite-question");
+          const savedQuestion = readSessionMarker("ignite-question");
           if (
             getStrand(value.strand).questions.some(
               (q) => q.id === savedQuestion,
@@ -70,33 +208,74 @@ export function InterviewApp() {
       .catch(() => {});
     return () => {
       active = false;
+      controller.abort();
+      unsubscribe?.();
+      stopSessionNotices();
+      evaluationRequest.current?.abort();
       preTranscript.current = "";
       attemptRequests.current = {};
     };
-  }, []);
+  }, [clearStudentState]);
+  useEffect(() => {
+    const previous = lastStage.current;
+    lastStage.current = stage;
+    // Recording and processing update in place. Do not move a student's focus
+    // while they are typing, recording, or recovering a failed submission.
+    if (stage.endsWith("RECORDING") || stage.endsWith("PROCESSING")) return;
+    if (stage.endsWith("QUESTION") && !previous.endsWith("SCENE")) return;
+    const heading = main.current?.querySelector("h1");
+    if (heading) {
+      heading.setAttribute("tabindex", "-1");
+      heading.focus({ preventScroll: true });
+    }
+  }, [stage]);
   function go(next: Stage) {
     stageRef.current = transition(stageRef.current, next);
     setStage(stageRef.current);
     setError("");
-    sessionStorage.setItem("ignite-stage", next);
-    window.scrollTo({ top: 0, behavior: "instant" });
+    writeSessionMarker("ignite-stage", next);
+    if (
+      !next.endsWith("RECORDING") &&
+      !next.endsWith("PROCESSING") &&
+      !(next.endsWith("QUESTION") && !stage.endsWith("SCENE"))
+    )
+      window.scrollTo({ top: 0, behavior: "instant" });
   }
   async function register(e: React.FormEvent) {
     e.preventDefault();
     if (lock.current) return;
+    const registrationEpoch = ++authEpoch.current;
+    authMutation.current = true;
     lock.current = true;
     setBusy(true);
     setError("");
     try {
       const value = profileSchema.parse({ name, strand, ignite_year: year });
       const client = browserClient();
-      await client.auth.signOut();
-      const { error: authError } = await client.auth.signInAnonymously();
-      if (authError)
+      const { error: signOutError } = await client.auth.signOut({
+        scope: "local",
+      });
+      if (signOutError)
+        throw new Error(
+          "The previous session could not be ended. Please retry before starting a new student session.",
+        );
+      const { data, error: authError } = await client.auth.signInAnonymously();
+      if (authError || !data.user)
         throw new Error(
           "Student access is unavailable. Please contact your advisor.",
         );
-      await api("/api/profile", value);
+      const identity = data.user.id;
+      await api("/api/profile", value, undefined, {
+        studentSessionId: identity,
+      });
+      const { data: current } = await client.auth.getSession();
+      if (
+        authEpoch.current !== registrationEpoch ||
+        current.session?.user.id !== identity
+      )
+        throw new Error(SESSION_CHANGED_MESSAGE);
+      studentSessionId.current = identity;
+      setSessionIdentity(identity);
       setProfile(value);
       go("READY");
     } catch (e) {
@@ -106,12 +285,23 @@ export function InterviewApp() {
           : "Enter your name, choose a strand, and select your IGNITE year.",
       );
     } finally {
-      lock.current = false;
-      setBusy(false);
+      authMutation.current = false;
+      if (authEpoch.current === registrationEpoch) {
+        lock.current = false;
+        setBusy(false);
+      }
     }
   }
   async function submit(transcript: string) {
     if (lock.current) return;
+    const identity = studentSessionId.current;
+    if (!identity) {
+      clearStudentState(SESSION_CHANGED_MESSAGE);
+      return;
+    }
+    const submissionEpoch = authEpoch.current;
+    const controller = new AbortController();
+    evaluationRequest.current = controller;
     lock.current = true;
     setBusy(true);
     setError("");
@@ -131,22 +321,49 @@ export function InterviewApp() {
         const result = await api<{
           evaluation: Evaluation;
           comparison?: Comparison;
-        }>("/api/interview/evaluate", {
-          transcript,
-          stage:
-            group === "PRE" ? "pre" : group === "POST" ? "post" : "practice",
-          requestId: attemptRequests.current[group].id,
-          questionId: activeQuestion?.id,
-          ...(group === "POST"
-            ? {
-                preTranscript: preTranscript.current,
-                preRequestId: attemptRequests.current.PRE?.id,
-              }
-            : {}),
-        });
+          comparisonComparable?: boolean;
+          scoringVersion?: string;
+        }>(
+          "/api/interview/evaluate",
+          {
+            transcript,
+            stage:
+              group === "PRE" ? "pre" : group === "POST" ? "post" : "practice",
+            requestId: attemptRequests.current[group].id,
+            questionId: activeQuestion?.id,
+            ...(group === "POST"
+              ? {
+                  preTranscript: preTranscript.current,
+                  preRequestId: attemptRequests.current.PRE?.id,
+                }
+              : {}),
+          },
+          controller.signal,
+          { studentSessionId: identity },
+        );
+        if (authEpoch.current !== submissionEpoch) return;
+        setAnswerCount((count) => count + 1);
+        setSubmittedAnswer(transcript);
+        if (activeQuestion)
+          setAttemptHistory((history) => [
+            ...history,
+            {
+              questionId: activeQuestion.id,
+              scores: result.evaluation.scores,
+              scoringVersion: result.scoringVersion,
+            },
+          ]);
+        if (group !== "PRE" && activeQuestion)
+          setCompletedQuestions((ids) =>
+            ids.includes(activeQuestion.id) ? ids : [...ids, activeQuestion.id],
+          );
         if (group === "PRE") {
           preTranscript.current = transcript;
           setPre(result.evaluation);
+          if (activeQuestion)
+            setRevisionGoal(
+              createRevisionGoal(activeQuestion.id, result.evaluation),
+            );
           go("PRE_RESULTS");
         } else if (group === "TRANSFER") {
           setTransfer(result.evaluation);
@@ -154,11 +371,17 @@ export function InterviewApp() {
         } else {
           setPost(result.evaluation);
           setComparison(result.comparison);
+          setComparisonComparable(result.comparisonComparable !== false);
           preTranscript.current = "";
           go("POST_COMPARISON");
         }
       }
     } catch (e) {
+      if (authEpoch.current !== submissionEpoch) return;
+      if (e instanceof Error && e.message === SESSION_CHANGED_MESSAGE) {
+        clearStudentState(SESSION_CHANGED_MESSAGE);
+        return;
+      }
       go(`${group}_QUESTION` as Stage);
       const message =
         e instanceof Error
@@ -167,11 +390,14 @@ export function InterviewApp() {
       setError(message);
       throw new Error(message);
     } finally {
-      lock.current = false;
-      setBusy(false);
+      if (authEpoch.current === submissionEpoch) {
+        evaluationRequest.current = null;
+        lock.current = false;
+        setBusy(false);
+      }
     }
   }
-  async function newQuestion() {
+  async function newQuestion(requestedId?: string) {
     if (lock.current) return;
     lock.current = true;
     setBusy(true);
@@ -181,12 +407,17 @@ export function InterviewApp() {
         (q) => q.id === activeQuestion.id,
       );
       const next =
+        selected.questions.find((q) => q.id === requestedId) ??
         selected.questions[(current + 1) % selected.questions.length];
       chooseQuestion(next.id);
       setQuestion(next.text);
       delete attemptRequests.current.TRANSFER;
       setTransfer(undefined);
-      go("TRANSFER_QUESTION");
+      setStoryNotes(emptyStoryNotes);
+      setPracticeRetry(false);
+      setRevisionGoal(undefined);
+      setSubmittedAnswer("");
+      go("TRANSFER_SCENE");
     } catch (e) {
       setError(e instanceof Error ? e.message : "Please try again.");
     } finally {
@@ -194,8 +425,29 @@ export function InterviewApp() {
       setBusy(false);
     }
   }
+  function retryQuestion() {
+    if (lock.current || !activeQuestion) return;
+    const reviewedAnswer =
+      stageRef.current === "POST_COMPARISON" ? post : transfer;
+    setRevisionGoal(
+      reviewedAnswer
+        ? createRevisionGoal(activeQuestion.id, reviewedAnswer)
+        : undefined,
+    );
+    delete attemptRequests.current.TRANSFER;
+    setQuestion(activeQuestion.text);
+    setTransfer(undefined);
+    setPracticeRetry(true);
+    setSubmittedAnswer("");
+    go("TRANSFER_SCENE");
+  }
   async function reset() {
     if (lock.current) return;
+    authEpoch.current++;
+    authMutation.current = true;
+    setEndingSession(true);
+    if (stageRef.current.endsWith("RECORDING"))
+      go(`${stageRef.current.split("_")[0]}_QUESTION` as Stage);
     lock.current = true;
     setBusy(true);
     preTranscript.current = "";
@@ -205,25 +457,27 @@ export function InterviewApp() {
     setComparison(undefined);
     setTransfer(undefined);
     setQuestion("");
-    sessionStorage.removeItem("ignite-stage");
-    sessionStorage.removeItem("ignite-question");
+    clearSessionMarkers();
     setPracticeQuestionId("");
+    setStoryNotes(emptyStoryNotes);
+    setCompletedQuestions([]);
+    setAnswerCount(0);
+    setAttemptHistory([]);
+    setSubmittedAnswer("");
+    setPracticeRetry(false);
+    setRevisionGoal(undefined);
     window.speechSynthesis?.cancel();
     try {
-      const { error } = await browserClient().auth.signOut();
+      const { error } = await browserClient().auth.signOut({ scope: "local" });
       if (error) throw error;
-      setProfile(null);
-      setName("");
-      setStrand("");
-      setYear(undefined);
-      stageRef.current = "PROFILE";
-      setStage("PROFILE");
-      setError("");
+      clearStudentState();
     } catch {
       setError(
-        "Unable to end the session. Please retry Next Student before handing over this device.",
+        "Unable to end the session. Please retry End session before handing over this device.",
       );
     } finally {
+      authMutation.current = false;
+      setEndingSession(false);
       lock.current = false;
       setBusy(false);
     }
@@ -232,9 +486,11 @@ export function InterviewApp() {
   const activeQuestion =
     selected?.questions.find((q) => q.id === practiceQuestionId) ??
     selected?.questions[8];
+  const activeRevisionGoal =
+    revisionGoal?.questionId === activeQuestion?.id ? revisionGoal : undefined;
   function chooseQuestion(id: string) {
     setPracticeQuestionId(id);
-    sessionStorage.setItem("ignite-question", id);
+    writeSessionMarker("ignite-question", id);
   }
   const group = stage.startsWith("PRE")
     ? "PRE"
@@ -247,6 +503,16 @@ export function InterviewApp() {
     stage.endsWith("PROCESSING");
   const displayQuestion =
     group === "TRANSFER" ? question : (activeQuestion?.text ?? "");
+  const latestEvaluation = transfer ?? post ?? pre;
+  const recommendation =
+    selected && activeQuestion && latestEvaluation
+      ? recommendPracticeQuestion(
+          selected.questions,
+          activeQuestion.id,
+          latestEvaluation,
+          attemptHistory,
+        )
+      : undefined;
   const progress =
     stage === "PROFILE"
       ? 0
@@ -260,7 +526,7 @@ export function InterviewApp() {
               ? 5
               : 4;
   return (
-    <>
+    <div className="studio">
       <header className="header">
         <Brand />
         <div className="session-header">
@@ -280,26 +546,40 @@ export function InterviewApp() {
           )}
         </div>
       </header>
-      <main id="main" className="interview-main">
+      <main
+        ref={main}
+        id="main"
+        className={`interview-main ${stage.endsWith("SCENE") ? "scene-main" : ""}`}
+      >
         {stage.startsWith("TRANSFER") || stage === "COMPLETE" ? (
-          <div className="progress">
+          <div className="progress ongoing-progress">
             <span>
               ONGOING SCORED PRACTICE · 10 QUESTIONS · UNLIMITED ROUNDS
+            </span>
+            <span>
+              {completedQuestions.length} / 10 topics explored · {answerCount}{" "}
+              answers reviewed
             </span>
           </div>
         ) : (
           <div className="progress">
             <span>YOUR INTERVIEW JOURNEY</span>
-            <div>
+            <div role="list" aria-label="Interview steps">
               {[
                 "Set up",
-                "Practice",
+                "Enter the room",
                 "Learn",
                 "Try again",
                 "Apply",
                 "Complete",
               ].map((s, i) => (
-                <span key={s} className={i <= progress ? "active" : ""}>
+                <span
+                  key={s}
+                  className={i <= progress ? "active" : ""}
+                  aria-current={i === progress ? "step" : undefined}
+                  role="listitem"
+                  aria-label={`${i + 1}. ${s}${i === progress ? ", current step" : ""}`}
+                >
                   <i>{i < progress ? <Check size={12} /> : i + 1}</i>
                   <b>{s}</b>
                 </span>
@@ -333,7 +613,7 @@ export function InterviewApp() {
                 maxLength={80}
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                placeholder="Ex: Rahul Viswanath"
+                placeholder="Your name"
                 required
               />
               <fieldset>
@@ -391,107 +671,156 @@ export function InterviewApp() {
               </p>
             </form>
           </section>
-        ) : stage === "READY" || stage === "POST_READY" ? (
+        ) : stage === "READY" && selected && activeQuestion ? (
+          <QuestionLibrary
+            strand={selected.id}
+            name={profile?.name ?? ""}
+            question={activeQuestion}
+            completed={completedQuestions}
+            onChoose={chooseQuestion}
+            onStart={() => go("PRE_SCENE")}
+          />
+        ) : stage === "POST_READY" ? (
           <section className="focus-card ready-card">
             <div className="persona-icon">
               <Target size={29} />
             </div>
-            <span className="eyebrow">
-              {stage === "READY" ? "CHOOSE YOUR PRACTICE" : "POST-ASSESSMENT"}
-            </span>
-            <h1>
-              {stage === "READY"
-                ? `Ready, ${profile?.name}?`
-                : "A fresh chance to tell your story."}
-            </h1>
+            <span className="eyebrow">POST-ASSESSMENT</span>
+            <h1>A fresh chance to tell your story.</h1>
             <p>
               You’ll meet your {selected?.interviewerTitle.toLowerCase()}.
               Choose voice or text, take the time you need, and press “I’m
               Finished” when you’re done.
             </p>
-            {stage === "READY" && (
-              <p className="helper">
-                You can use experiences from IGNITE, school, projects,
-                leadership, volunteering, or employment. Professional experience
-                is not expected.
-              </p>
-            )}
-            {stage === "READY" && selected && activeQuestion && (
-              <div className="question-picker">
-                <label htmlFor="practice-question">
-                  Choose a practice question · 10 in your strand
-                </label>
-                <select
-                  id="practice-question"
-                  value={activeQuestion.id}
-                  onChange={(e) => chooseQuestion(e.target.value)}
-                >
-                  {selected.questions.map((q, i) => (
-                    <option key={q.id} value={q.id}>
-                      {i + 1}. {q.topic}
-                    </option>
-                  ))}
-                </select>
-                <p className="question-preview">“{activeQuestion.text}”</p>
+            {activeQuestion && (
+              <>
+                <span className="eyebrow">YOUR TOPIC</span>
+                <h2>{activeQuestion.topic}</h2>
                 <p className="helper">
-                  You’ll answer this same question before and after the STAR
-                  lesson.
+                  The same question, the same rubric. It appears again when
+                  you’re ready in the room.
                 </p>
-              </div>
+                {activeRevisionGoal && (
+                  <RevisionGoalReminder goal={activeRevisionGoal} compact />
+                )}
+                <StoryNotesPanel notes={storyNotes} question={activeQuestion} />
+              </>
             )}
-            <button
-              className="button primary"
-              onClick={() =>
-                go(stage === "READY" ? "PRE_QUESTION" : "POST_QUESTION")
-              }
-            >
+            <button className="button primary" onClick={() => go("POST_SCENE")}>
               Meet your interviewer <ArrowRight size={18} />
             </button>
           </section>
+        ) : stage.endsWith("SCENE") && selected && activeQuestion ? (
+          <>
+            <InterviewScene
+              key={`${group}-${activeQuestion.id}`}
+              strand={selected.id}
+              question={activeQuestion}
+              round={group}
+              retry={practiceRetry && group === "TRANSFER"}
+              revisionGoal={activeRevisionGoal}
+              onEnter={() => go(`${group}_QUESTION` as Stage)}
+            />
+            {stage === "PRE_SCENE" && (
+              <button
+                className="scene-back quiet-link"
+                onClick={() => go("READY")}
+              >
+                <ArrowLeft size={16} /> Choose a different question
+              </button>
+            )}
+          </>
         ) : answering ? (
-          <section className="focus-card">
-            <div className="interview-stage">
-              <span className="eyebrow">
-                {group === "TRANSFER"
-                  ? "SCORED PRACTICE"
-                  : `${group}-ASSESSMENT`}
-              </span>
-              <span>
-                {group === "TRANSFER"
-                  ? "Practice at your own pace"
-                  : "Question 1 of 1"}
-              </span>
-            </div>
-            <div className="interviewer">
-              <div className="persona-icon">
-                <StrandIcon name={selected?.icon ?? "Code"} size={26} />
+          <div className="interview-workspace">
+            <aside className="room-sidebar">
+              <div className="room-sidebar-art">
+                <InterviewRoom strand={selected?.id} />
               </div>
-              <div>
-                <h2>{selected?.interviewerTitle} Interview</h2>
+              <span className="eyebrow">YOU’RE IN THE ROOM</span>
+              <h2>{selected && interviewSettings[selected.id].place}</h2>
+              <p>{selected && interviewSettings[selected.id].atmosphere}</p>
+              <div className="room-sidebar-meta">
+                <MapPin size={16} />
+                <span>Imagined setting · real practice</span>
+              </div>
+              <div className="room-sidebar-note">
+                <span className="live-dot" />
                 <p>
-                  {selected?.name} ·{" "}
-                  {profile?.ignite_year === 1 ? "Year 1" : "Year 2"}
+                  Take your time. The microphone starts only when you choose.
                 </p>
               </div>
-            </div>
-            <h1 className="question">“{displayQuestion}”</h1>
-            <AnswerRecorder
-              key={group}
-              question={displayQuestion}
-              busy={busy}
-              onRecording={() => go(`${group}_RECORDING` as Stage)}
-              onCancel={() => {
-                if (stageRef.current.endsWith("RECORDING"))
-                  go(`${group}_QUESTION` as Stage);
-              }}
-              onSubmit={submit}
-            />
-          </section>
+              {group !== "PRE" && activeQuestion && (
+                <StoryNotesPanel notes={storyNotes} question={activeQuestion} />
+              )}
+            </aside>
+            <section className="focus-card question-workspace">
+              <div className="interview-stage">
+                <span className="eyebrow">
+                  {group === "TRANSFER"
+                    ? "SCORED PRACTICE"
+                    : `${group}-ASSESSMENT`}
+                </span>
+                <span>
+                  {group === "TRANSFER"
+                    ? "Practice at your own pace"
+                    : group === "POST"
+                      ? "Same question · second take"
+                      : "First take · your starting point"}
+                </span>
+              </div>
+              <div className="interviewer">
+                <div className="persona-icon">
+                  <StrandIcon name={selected?.icon ?? "Code"} size={26} />
+                </div>
+                <div>
+                  <h2>{selected?.interviewerTitle} Interview</h2>
+                  <p>
+                    {selected?.name} ·{" "}
+                    {profile?.ignite_year === 1 ? "Year 1" : "Year 2"}
+                  </p>
+                </div>
+              </div>
+              <h1 className="question">“{displayQuestion}”</h1>
+              {group !== "PRE" && activeRevisionGoal && (
+                <RevisionGoalReminder goal={activeRevisionGoal} compact />
+              )}
+              <AnswerRecorder
+                key={`${sessionIdentity}:${group}`}
+                studentSessionId={sessionIdentity}
+                onSessionChange={() =>
+                  clearStudentState(SESSION_CHANGED_MESSAGE)
+                }
+                question={displayQuestion}
+                busy={busy}
+                disabled={endingSession}
+                onRecording={() => go(`${group}_RECORDING` as Stage)}
+                onCancel={() => {
+                  if (stageRef.current.endsWith("RECORDING"))
+                    go(`${group}_QUESTION` as Stage);
+                }}
+                onSubmit={submit}
+              />
+            </section>
+          </div>
         ) : stage === "PRE_RESULTS" && pre ? (
           <section className="focus-card">
             <span className="eyebrow">PRE-ASSESSMENT</span>
             <h1>Your starting point.</h1>
             <Assessment value={pre} />
+            {submittedAnswer && (
+              <details className="submitted-answer-review">
+                <summary>Review your first answer</summary>
+                <p>{submittedAnswer}</p>
+              </details>
+            )}
+            {activeQuestion && (
+              <div className="question-insight">
+                <span className="eyebrow">WHAT THIS QUESTION EXPLORES</span>
+                <p>
+                  {topicStories[getQuestionTopic(activeQuestion)].intention}
+                </p>
+              </div>
+            )}
             <button
               className="button primary"
               onClick={() => go("STAR_LESSON")}
@@ -499,91 +828,60 @@ export function InterviewApp() {
               Discover the STAR method <ArrowRight size={18} />
             </button>
           </section>
-        ) : stage === "STAR_LESSON" ? (
-          <section className="lesson">
-            <div className="screen-heading">
-              <span className="eyebrow">A FRAMEWORK, NOT A SCRIPT</span>
-              <h1>
-                Give your story
-                <br />
-                <em>a little structure.</em>
-              </h1>
-              <p>
-                STAR helps an interviewer follow what happened—and understand
-                your part in it.
-              </p>
-            </div>
-            <div className="star-grid">
-              {[
-                {
-                  letter: "S",
-                  title: "Situation",
-                  question: "What was happening?",
-                  text: "Set the scene. A little context goes a long way.",
-                },
-                {
-                  letter: "T",
-                  title: "Task",
-                  question: "What were you responsible for?",
-                  text: "Make your goal or responsibility clear.",
-                },
-                {
-                  letter: "A",
-                  title: "Action",
-                  question: "What specifically did YOU do?",
-                  text: "Explain the steps you took, not just what the team did.",
-                },
-                {
-                  letter: "R",
-                  title: "Result",
-                  question: "What happened or what did you learn?",
-                  text: "Share an outcome, feedback, impact, or a lesson.",
-                },
-              ].map((s) => (
-                <article key={s.letter}>
-                  <span>{s.letter}</span>
-                  <h2>{s.title}</h2>
-                  <strong>{s.question}</strong>
-                  <p>{s.text}</p>
-                </article>
-              ))}
-            </div>
-            <div className="example-card">
-              <span className="eyebrow">
-                A SMALL EXAMPLE · A DIFFERENT STORY
-              </span>
-              <div>
-                <article>
-                  <h3>Before</h3>
-                  <p>
-                    “We ran a club fundraiser. It was busy, but it went well.”
-                  </p>
-                </article>
-                <article>
-                  <h3>With STAR</h3>
-                  <p>
-                    “Our club needed funds for supplies <b>(S)</b>. I was
-                    responsible for organizing a bake sale <b>(T)</b>. I
-                    assigned shifts, made a supply checklist, and promoted it at
-                    school <b>(A)</b>. We met our goal, and I learned to
-                    delegate earlier <b>(R)</b>.”
-                  </p>
-                </article>
-              </div>
-            </div>
-            <button className="button primary" onClick={() => go("POST_READY")}>
-              I understand STAR — Start Post-Assessment <ArrowRight size={18} />
-            </button>
-          </section>
+        ) : stage === "STAR_LESSON" && activeQuestion ? (
+          <StarLesson
+            question={activeQuestion}
+            feedback={pre?.improvementArea}
+            notes={storyNotes}
+            onNotes={setStoryNotes}
+            onContinue={() => go("POST_READY")}
+          />
         ) : stage === "POST_COMPARISON" && pre && post && comparison ? (
           <section className="focus-card wide">
             <span className="eyebrow">POST-ASSESSMENT COMPARISON</span>
-            <h1>Look how far you’ve come.</h1>
-            <Compare pre={pre} post={post} comparison={comparison} />
+            <h1>
+              {!comparisonComparable
+                ? "A new review of your story."
+                : scoreChange(pre, post) > 0
+                  ? "Look how far you’ve come."
+                  : scoreChange(pre, post) === 0
+                    ? "Same score. A clearer next step."
+                    : "Every take teaches you something."}
+            </h1>
+            <Compare
+              pre={pre}
+              post={post}
+              comparison={comparison}
+              comparable={comparisonComparable}
+            />
+            {activeQuestion && (
+              <PracticeReflection
+                key={answerCount}
+                evaluation={post}
+                question={activeQuestion}
+                answer={submittedAnswer}
+                onRetry={retryQuestion}
+                busy={busy}
+              />
+            )}
+            {recommendation && (
+              <div className="recommended-practice">
+                <span className="eyebrow">RECOMMENDED FOR YOUR NEXT STEP</span>
+                <h2>{recommendation.question.topic}</h2>
+                <p>{recommendation.reason}</p>
+                <button
+                  className="button secondary"
+                  onClick={() => newQuestion(recommendation.question.id)}
+                  disabled={busy}
+                >
+                  Practice this skill <ArrowRight size={17} />
+                </button>
+              </div>
+            )}
             <button
               className="button primary"
               disabled={busy}
-              onClick={newQuestion}
+              onClick={() => newQuestion()}
             >
               {busy
                 ? "Preparing your new question…"
@@ -608,26 +906,52 @@ export function InterviewApp() {
             <p>Every answer is scored using the same four-category rubric.</p>
             <p className="question-preview">“{question}”</p>
             <Assessment value={transfer} />
+            {stage === "COMPLETE" && selected && (
+              <PracticePlan
+                strand={selected.id}
+                attempts={attemptHistory}
+                evaluation={transfer}
+              />
+            )}
+            {activeQuestion && (
+              <>
+                <QuestionGrowth
+                  attempts={attemptHistory}
+                  question={activeQuestion}
+                />
+                <PracticeReflection
+                  key={answerCount}
+                  evaluation={transfer}
+                  question={activeQuestion}
+                  answer={submittedAnswer}
+                  onRetry={
+                    stage === "TRANSFER_RESULTS" ? retryQuestion : undefined
+                  }
+                  busy={busy}
+                />
+              </>
+            )}
+            {recommendation && stage !== "COMPLETE" && (
+              <div className="recommended-practice">
+                <span className="eyebrow">RECOMMENDED FOR YOUR NEXT STEP</span>
+                <h2>{recommendation.question.topic}</h2>
+                <p>{recommendation.reason}</p>
+                <button
+                  className="button secondary"
+                  onClick={() => newQuestion(recommendation.question.id)}
+                  disabled={busy}
+                >
+                  Practice this skill <ArrowRight size={17} />
+                </button>
+              </div>
+            )}
             <button
               className="button primary"
-              onClick={newQuestion}
+              onClick={() => newQuestion()}
               disabled={busy}
             >
               Try a New Question <ArrowRight size={18} />
             </button>
-            {stage === "TRANSFER_RESULTS" && (
-              <button
-                className="button secondary"
-                disabled={busy}
-                onClick={() => {
-                  delete attemptRequests.current.TRANSFER;
-                  setTransfer(undefined);
-                  go("TRANSFER_QUESTION");
-                }}
-              >
-                Retry this question
-              </button>
-            )}
             {stage === "TRANSFER_RESULTS" ? (
               <button className="button primary" onClick={() => go("COMPLETE")}>
                 Continue to completion <ArrowRight size={18} />
@@ -665,6 +989,6 @@ export function InterviewApp() {
         <ShieldCheck size={16} /> Recordings are never saved. Assessment answers
         and feedback are available to authorized staff.
       </div>
-    </>
+    </div>
   );
 }

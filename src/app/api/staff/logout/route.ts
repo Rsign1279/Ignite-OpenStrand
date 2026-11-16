@@ -3,7 +3,7 @@ import { sameOrigin, json, failure, HttpError } from "@/lib/http";
 export async function POST(request: Request) {
   try {
     sameOrigin(request);
-    const client = await serverClient();
+    const client = await serverClient({ requireCookieWrites: true });
     const { error } = await client.auth.signOut({ scope: "local" });
     if (error)
       throw new HttpError(

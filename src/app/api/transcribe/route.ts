@@ -5,7 +5,7 @@ import { sameOrigin, json, failure, HttpError } from "@/lib/http";
 export async function POST(request: Request) {
   try {
     sameOrigin(request);
-    const { user } = await requireStudent();
+    const { user } = await requireStudent(request);
     await rateLimit(user.id, "transcribe");
     const max = 4_000_000;
     const length = Number(request.headers.get("content-length"));

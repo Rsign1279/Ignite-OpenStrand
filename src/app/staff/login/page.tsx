@@ -31,7 +31,7 @@ export default function Staff() {
     }
   }
   return (
-    <>
+    <div className="studio staff-studio">
       <Header />
       <main id="main" className="staff-main">
         <section className="focus-card staff-card">
@@ -87,6 +87,6 @@ export default function Staff() {
           </p>
         </section>
       </main>
-    </>
+    </div>
   );
 }

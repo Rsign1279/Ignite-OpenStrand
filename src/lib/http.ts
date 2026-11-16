@@ -9,7 +9,12 @@ export class HttpError extends Error {
 }
 export function sameOrigin(request: Request) {
   const origin = request.headers.get("origin");
-  if (origin && origin !== new URL(request.url).origin)
+  const site = request.headers.get("sec-fetch-site");
+  if (
+    (origin && origin !== new URL(request.url).origin) ||
+    site === "cross-site" ||
+    site === "same-site"
+  )
     throw new HttpError(403, "Request not allowed.");
 }
 export async function readJson(request: Request, max = 70000) {

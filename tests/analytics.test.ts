@@ -5,7 +5,7 @@ import {
   filterAttempts,
 } from "@/lib/analytics/aggregate";
 import { parseFilters, type Attempt } from "@/lib/analytics/model";
-import { attemptsCsv } from "@/lib/analytics/csv";
+import { attemptsCsv, csvCell } from "@/lib/analytics/csv";
 const id = (n: number) =>
   `00000000-0000-4000-8000-${String(n).padStart(12, "0")}`;
 const filters = parseFilters(new URLSearchParams());
@@ -42,6 +42,14 @@ it("returns meaningful zero states with all ten strands and no fabricated averag
     avgFirst: null,
     avgBest: null,
     avgImprovement: null,
+    avgLatestChange: null,
+    pairedStudents: 0,
+    pairedQuestions: 0,
+    studentsWithoutRepeat: 0,
+    versionChangedQuestions: 0,
+    improvedStudents: 0,
+    unchangedStudents: 0,
+    declinedStudents: 0,
   });
   expect(a.strands).toHaveLength(10);
   expect(a.rubric.every((r) => r.score === null)).toBe(true);
@@ -61,9 +69,11 @@ it("calculates first, best, latest and nonnegative best-minus-first independentl
     best_score: 11,
     latest_score: 4,
     delta: 6,
+    latest_delta: -1,
     attempts_count: 3,
   });
   expect(a.kpis.avgImprovement).toBe(6);
+  expect(a.kpis.avgLatestChange).toBe(-1);
   expect(JSON.stringify(a)).not.toContain("PRIVATE");
 });
 it("averages across questions then students rather than weighting frequent students more", () => {
@@ -77,6 +87,174 @@ it("averages across questions then students rather than weighting frequent stude
   expect(a.kpis.avgFirst).toBe(6.5);
   expect(a.kpis.avgBest).toBe(9);
   expect(a.kpis.avgImprovement).toBe(2.5);
+  expect(a.kpis.avgLatestChange).toBe(10);
+  expect(a.kpis.pairedStudents).toBe(1);
+  expect(a.kpis.studentsWithoutRepeat).toBe(1);
+});
+it("reports higher, unchanged and lower paired results without turning single attempts into zero growth", () => {
+  const rows = [
+    attempt(1, { total_score: 4 }),
+    attempt(2, { total_score: 7 }),
+    attempt(3, { student_id: id(1002), total_score: 6 }),
+    attempt(4, { student_id: id(1002), total_score: 6 }),
+    attempt(5, { student_id: id(1003), total_score: 9 }),
+    attempt(6, { student_id: id(1003), total_score: 6 }),
+    attempt(7, { student_id: id(1004), total_score: 12 }),
+  ];
+  const data = aggregate(rows, filters);
+  expect(data.kpis).toMatchObject({
+    avgLatestChange: 0,
+    pairedStudents: 3,
+    pairedQuestions: 3,
+    studentsWithoutRepeat: 1,
+    improvedStudents: 1,
+    unchangedStudents: 1,
+    declinedStudents: 1,
+  });
+  expect(data.students.find((s) => s.student_id === id(1004))).toMatchObject({
+    repeated_questions: 0,
+    avg_latest_change: null,
+    paired_first_score: null,
+    paired_latest_score: null,
+  });
+});
+it("weights paired growth by question then student and shows matching strand denominators", () => {
+  const rows = [
+    attempt(1, { total_score: 1 }),
+    attempt(2, { total_score: 5 }),
+    attempt(3, { question_id: "q2", total_score: 3 }),
+    attempt(4, { question_id: "q2", total_score: 5 }),
+    attempt(5, { question_id: "q3", total_score: 12 }),
+    attempt(6, { student_id: id(1002), total_score: 9 }),
+    attempt(7, { student_id: id(1002), total_score: 8 }),
+  ];
+  const data = aggregate(rows, filters);
+  // Student one: (4 + 2) / 2 = 3. Student two: -1. Equal student mean = 1.
+  expect(data.kpis.avgLatestChange).toBe(1);
+  expect(data.kpis.pairedQuestions).toBe(3);
+  expect(data.strands[0]).toMatchObject({
+    pairedFirst: 5.5,
+    pairedLatest: 6.5,
+    latestChange: 1,
+    pairedStudents: 2,
+    pairedQuestions: 3,
+  });
+});
+it("does not label practice across different questions as a matched repeat", () => {
+  const data = aggregate(
+    [attempt(1), attempt(2, { question_id: "q2" })],
+    filters,
+  );
+  expect(data.kpis.avgLatestChange).toBeNull();
+  expect(data.kpis.pairedStudents).toBe(0);
+  expect(data.kpis.unchangedStudents).toBe(0);
+  expect(data.students[0].questions.every((q) => q.latest_delta === null)).toBe(
+    true,
+  );
+});
+it("excludes different scoring methods from paired estimates and keeps descriptive scores", () => {
+  const data = aggregate(
+    [
+      attempt(1, { total_score: 2 }),
+      attempt(2, { total_score: 11, scoring_version: "new-rubric|model-a" }),
+    ],
+    filters,
+  );
+  expect(data.students[0].questions[0]).toMatchObject({
+    first_score: 2,
+    best_score: 11,
+    latest_score: 11,
+    latest_delta: null,
+    comparison_status: "scoring_version_changed",
+    first_scoring_version: "legacy-unversioned",
+    latest_scoring_version: "new-rubric|model-a",
+  });
+  expect(data.kpis).toMatchObject({
+    avgLatestChange: null,
+    pairedStudents: 0,
+    pairedQuestions: 0,
+    versionChangedQuestions: 1,
+    studentsWithoutRepeat: 0,
+    improvedStudents: 0,
+    unchangedStudents: 0,
+    declinedStudents: 0,
+  });
+  expect(data.students[0]).toMatchObject({
+    repeated_questions: 1,
+    comparable_questions: 0,
+    version_changed_questions: 1,
+  });
+  expect(data.strands[0]).toMatchObject({
+    pairedFirst: null,
+    pairedLatest: null,
+    pairedStudents: 0,
+    pairedQuestions: 0,
+  });
+});
+it("pairs matching method tags and treats missing historical tags as legacy", () => {
+  const data = aggregate(
+    [
+      attempt(1, { total_score: 8 }),
+      attempt(2, { total_score: 7, scoring_version: "legacy-unversioned" }),
+      attempt(3, {
+        question_id: "q2",
+        total_score: 2,
+        scoring_version: "rubric-a|model-a",
+      }),
+      attempt(4, {
+        question_id: "q2",
+        total_score: 5,
+        scoring_version: "rubric-a|model-a",
+      }),
+      attempt(5, {
+        question_id: "q3",
+        total_score: 2,
+        scoring_version: "rubric-a|model-a",
+      }),
+      attempt(6, {
+        question_id: "q3",
+        total_score: 12,
+        scoring_version: "rubric-a|model-b",
+      }),
+    ],
+    filters,
+  );
+  expect(data.kpis).toMatchObject({
+    avgLatestChange: 1,
+    pairedStudents: 1,
+    pairedQuestions: 2,
+    versionChangedQuestions: 1,
+  });
+  expect(data.students[0]).toMatchObject({
+    repeated_questions: 3,
+    comparable_questions: 2,
+    version_changed_questions: 1,
+    paired_first_score: 5,
+    paired_latest_score: 6,
+  });
+});
+it("can establish a new matched baseline within dates after a scoring-method change", () => {
+  const data = aggregate(
+    [
+      attempt(1, { total_score: 1, scoring_version: "old" }),
+      attempt(2, { total_score: 6, scoring_version: "new" }),
+      attempt(3, { total_score: 7, scoring_version: "new" }),
+    ],
+    { ...filters, from: "2026-10-02" },
+  );
+  expect(data.kpis).toMatchObject({
+    avgLatestChange: 1,
+    pairedQuestions: 1,
+    versionChangedQuestions: 0,
+  });
+});
+it("uses the selected date range for repeat eligibility without borrowing an earlier baseline", () => {
+  const data = aggregate(
+    [attempt(1, { total_score: 1 }), attempt(2, { total_score: 10 })],
+    { ...filters, from: "2026-10-02" },
+  );
+  expect(data.kpis.pairedQuestions).toBe(0);
+  expect(data.kpis.avgLatestChange).toBeNull();
 });
 it("does not combine students sharing a name", () => {
   expect(
@@ -164,4 +342,23 @@ it("exports per-question derived fields with formula-injection protection and ve
   expect(csv).toContain("'  =cmd()");
   expect(csv).toContain("'=HYPERLINK");
   expect(csv).toContain('"6","12"');
+});
+
+it("exports negative paired change as a number and leaves missing repeat evidence blank", () => {
+  const csv = attemptsCsv(
+    [
+      attempt(1, { total_score: 8 }),
+      attempt(2, { total_score: 5 }),
+      attempt(3, { question_id: "q2", total_score: 8 }),
+    ],
+    filters,
+  );
+  expect(csv.split("\r\n")[0]).toContain("latest_minus_first,has_repeat");
+  expect(csv.split("\r\n")[1]).toContain(
+    ',"-3","true","legacy-unversioned","paired"',
+  );
+  expect(csv.split("\r\n")[3]).toContain(
+    ',"","false","legacy-unversioned","single_attempt"',
+  );
+  expect(csvCell("-3+cmd()")).toBe('"\'-3+cmd()"');
 });
