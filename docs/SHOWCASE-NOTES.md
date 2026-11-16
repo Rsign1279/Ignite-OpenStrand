@@ -4,6 +4,10 @@ OpenStrand helps students turn real experiences into answers an interviewer can 
 
 [Download the printable rubric and pilot brief](IGNITE-RUBRIC-AND-PILOT.pdf). It uses the same criterion anchors as the app and is a reference for the showcase, not a report of completed pilot results.
 
+![Local production-build landing screen](SHOWCASE-DESKTOP.png)
+
+[Mobile production-build screenshot](SHOWCASE-MOBILE.png). These captures contain no student records and do not claim a production deployment.
+
 ## The experience to show
 
 1. **A world of possibility.** The landing page uses an actual textured Moon, a scroll-responsive WebGL renderer, local editorial fonts, and IGNITE branding. Motion can be paused; reduced-motion and non-WebGL devices retain a complete still experience. The three-strand landing preview demonstrates scene → question without registering or submitting an answer.
