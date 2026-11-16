@@ -3,6 +3,7 @@ export class HttpError extends Error {
   constructor(
     public status: number,
     message: string,
+    public retryAfterSeconds?: number,
   ) {
     super(message);
   }
@@ -47,6 +48,12 @@ export function failure(error: unknown) {
       : error instanceof z.ZodError
         ? 400
         : 503;
+  const requestedWait =
+    error instanceof HttpError ? error.retryAfterSeconds : undefined;
+  const retryAfter =
+    typeof requestedWait === "number" && Number.isFinite(requestedWait)
+      ? Math.max(1, Math.min(3600, Math.ceil(requestedWait)))
+      : 60;
   return Response.json(
     {
       error:
@@ -60,7 +67,7 @@ export function failure(error: unknown) {
       status,
       headers: {
         "Cache-Control": "no-store",
-        ...(status === 429 ? { "Retry-After": "60" } : {}),
+        ...(status === 429 ? { "Retry-After": String(retryAfter) } : {}),
       },
     },
   );

@@ -55,6 +55,46 @@ async function registerStudent(page: Page) {
   await page.getByRole("button", { name: "Begin Interview" }).click();
 }
 
+test("onboarding waits for hydration before accepting a student's details", async ({
+  page,
+}) => {
+  await mockStudentAuth(page);
+  await page.route("**/api/profile", (route) =>
+    route.fulfill({
+      headers: { "X-Student-Session": syntheticUser.id },
+      json:
+        route.request().method() === "POST"
+          ? route.request().postDataJSON()
+          : null,
+    }),
+  );
+  let release!: () => void;
+  const pending = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  await page.route("**/_next/static/**/*.js", async (route) => {
+    await pending;
+    await route.continue();
+  });
+  await page.goto("/interview", { waitUntil: "commit" });
+  try {
+    await expect(page.getByLabel("What should we call you?")).toBeDisabled();
+    await expect(
+      page.getByRole("button", { name: "Education Innovation", exact: true }),
+    ).toBeDisabled();
+    await expect(
+      page.getByRole("button", { name: "Preparing your studio…" }),
+    ).toBeDisabled();
+  } finally {
+    release();
+  }
+  await expect(page.getByLabel("What should we call you?")).toBeEnabled();
+  await registerStudent(page);
+  await expect(
+    page.getByRole("heading", { name: "Ready, New Student?" }),
+  ).toBeVisible();
+});
+
 async function prepare(
   page: Page,
   strand = "education",
@@ -104,9 +144,9 @@ async function enterScene(page: Page) {
   await expect(page.getByRole("heading", { level: 1 })).toBeFocused();
 }
 
-async function submitAnswer(page: Page) {
+async function submitAnswer(page: Page, text = answer) {
   await page.getByRole("button", { name: "Type my answer" }).click();
-  await page.getByLabel("Your answer", { exact: true }).fill(answer);
+  await page.getByLabel("Your answer", { exact: true }).fill(text);
   await page.getByRole("button", { name: "I'm Finished", exact: true }).click();
 }
 
@@ -232,6 +272,47 @@ test("post-comparison retry keeps the canonical question and includes all same-q
   expect(
     new Set(submissions.map((submission) => submission.requestId)).size,
   ).toBe(3);
+});
+
+test("students can inspect both submitted answers and reset clears the comparison", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 320, height: 820 });
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await prepare(page);
+  await reachLesson(page);
+  await page.getByRole("button", { name: /I understand STAR/ }).click();
+  await page.getByRole("button", { name: "Meet your interviewer" }).click();
+  await enterScene(page);
+  const secondAnswer =
+    "I listed the unfinished tasks and asked each teammate to choose one. I checked our progress, and we completed the project before the class presentation.";
+  await submitAnswer(page, secondAnswer);
+  const comparison = page.locator(".answer-comparison");
+  await comparison.locator("summary").click();
+  await expect(comparison.locator("article").nth(0)).toContainText(answer);
+  await expect(comparison.locator("article").nth(1)).toContainText(
+    secondAnswer,
+  );
+  expect(
+    await page.evaluate(() => document.documentElement.scrollWidth),
+  ).toBeLessThanOrEqual(320);
+  const accessibility = await new AxeBuilder({ page })
+    .withTags(["wcag2a", "wcag2aa", "wcag21aa"])
+    .analyze();
+  expect(accessibility.violations).toEqual([]);
+  expect(
+    await page.evaluate(() =>
+      JSON.stringify({
+        local: { ...localStorage },
+        session: { ...sessionStorage },
+      }),
+    ),
+  ).not.toContain(answer);
+  await page.getByRole("button", { name: "End session", exact: true }).click();
+  await expect(page.getByLabel("What should we call you?")).toHaveValue("");
+  await expect(comparison).toHaveCount(0);
+  expect(await page.locator("body").innerText()).not.toContain(secondAnswer);
+  expect(await page.locator("body").innerText()).not.toContain(answer);
 });
 
 test("the latest feedback goal follows the same question and clears for a new topic", async ({
@@ -729,6 +810,46 @@ test("scene film plays real local media with pause and replay controls", async (
     .getByRole("button", { name: "I’m ready — ask the question" })
     .click();
   await expect(page.getByRole("heading", { level: 1 })).toBeFocused();
+  await expect(film).toHaveCount(0);
+});
+
+test("pausing a loading scene cancels pending autoplay and explicit play still works", async ({
+  page,
+}) => {
+  let release!: () => void;
+  const pending = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  await page.route("**/films/technology.mp4", async (route) => {
+    await pending;
+    await route.continue();
+  });
+  await prepare(page, "technology");
+  await page.getByRole("button", { name: "Meet your interviewer" }).click();
+  const film = page.locator("video.scene-film-video");
+  try {
+    await page.getByRole("button", { name: "Pause scene film" }).click();
+    await expect(film).toHaveJSProperty("paused", true);
+  } finally {
+    release();
+  }
+  await expect
+    .poll(() => film.evaluate((element: HTMLVideoElement) => element.duration))
+    .toBeGreaterThan(10);
+  await page.waitForTimeout(400);
+  await expect(film).toHaveJSProperty("paused", true);
+  await expect(film).toHaveJSProperty("currentTime", 0);
+  await page
+    .getByRole("button", { name: "Play scene film", exact: true })
+    .click();
+  await expect
+    .poll(() =>
+      film.evaluate((element: HTMLVideoElement) => element.currentTime),
+    )
+    .toBeGreaterThan(0);
+  await page
+    .getByRole("button", { name: "I’m ready — ask the question" })
+    .click();
   await expect(film).toHaveCount(0);
 });
 

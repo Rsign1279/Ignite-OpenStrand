@@ -2,13 +2,15 @@
 
 OpenStrand helps students turn real experiences into answers an interviewer can follow. The experience follows one useful loop: enter a scene, answer, examine the feedback, make one deliberate revision, retry, and apply the skill to a different question.
 
+[Download the printable rubric and pilot brief](IGNITE-RUBRIC-AND-PILOT.pdf). It uses the same criterion anchors as the app and is a reference for the showcase, not a report of completed pilot results.
+
 ## The experience to show
 
 1. **A world of possibility.** The landing page uses an actual textured Moon, a scroll-responsive WebGL renderer, local editorial fonts, and IGNITE branding. Motion can be paused; reduced-motion and non-WebGL devices retain a complete still experience. The three-strand landing preview demonstrates scene → question without registering or submitting an answer.
 2. **A room connected to the student's strand.** Ten original silent animated room films establish the setting. Written narratives connect the room to the selected question's topic. Students control when the question appears and can listen to the scene, pause/replay the film, or proceed immediately.
 3. **A real question and an honest starting point.** The existing bank contains 100 canonical questions, ten per strand. The student chooses a topic and answers by voice or text. Feedback uses the actual question, verified strand and IGNITE participation year, submitted answer, and the same four observable criteria.
 4. **Feedback that leads to another action.** The STAR lesson includes an optional private story sketch. The next take keeps the same question and scoring rubric. A response-specific revision goal remains visible in the scene and answer screen; a complete answer is invited to transfer its skill instead of being assigned an invented weakness.
-5. **Practice beyond one score.** Students can review their submitted answer, reflect privately, rehearse an unscored follow-up, retry a question, or choose an explained recommendation. Progress preserves lower and unchanged outcomes as well as increases. A downloadable practice plan contains goals and scores, without a name or answer transcript.
+5. **Practice beyond one score.** Students can compare their first and second submitted answers side by side, review their latest answer, reflect privately, rehearse an unscored follow-up, retry a question, or choose an explained recommendation. Progress preserves lower and unchanged outcomes as well as increases. A downloadable practice plan contains goals and scores, without a name or answer transcript.
 6. **Evidence an advisor can inspect.** Protected staff views retain criterion-level feedback and attempt histories. Same-question first-to-latest changes have explicit denominators. Comparisons across changed scoring methods are excluded. A best observed score remains labelled as such; it is not presented as proof of learning.
 
 ## What the design keeps, changes, and removes

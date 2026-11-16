@@ -1,5 +1,11 @@
 "use client";
-import { useEffect, useState, useRef, useCallback } from "react";
+import {
+  useEffect,
+  useState,
+  useRef,
+  useCallback,
+  useSyncExternalStore,
+} from "react";
 import Link from "next/link";
 import {
   ArrowRight,
@@ -46,6 +52,7 @@ import {
 } from "@/lib/student-session";
 import { PracticePlan } from "@/components/practice-plan";
 import { RevisionGoalReminder } from "@/components/revision-goal-reminder";
+import { AnswerComparison } from "@/components/answer-comparison";
 import {
   readSessionMarker,
   writeSessionMarker,
@@ -61,7 +68,13 @@ import {
   type PracticeAttempt,
   type PracticeRevisionGoal,
 } from "@/lib/practice-learning";
+const subscribeToClientReady = () => () => {};
 export function InterviewApp() {
+  const clientReady = useSyncExternalStore(
+    subscribeToClientReady,
+    () => true,
+    () => false,
+  );
   const [stage, setStage] = useState<Stage>("PROFILE");
   const stageRef = useRef<Stage>("PROFILE");
   const [profile, setProfile] = useState<Profile | null>(null);
@@ -84,6 +97,7 @@ export function InterviewApp() {
   const [answerCount, setAnswerCount] = useState(0);
   const [attemptHistory, setAttemptHistory] = useState<PracticeAttempt[]>([]);
   const [submittedAnswer, setSubmittedAnswer] = useState("");
+  const [firstAnswer, setFirstAnswer] = useState("");
   const [practiceRetry, setPracticeRetry] = useState(false);
   const [revisionGoal, setRevisionGoal] = useState<PracticeRevisionGoal>();
   const main = useRef<HTMLElement>(null);
@@ -117,6 +131,7 @@ export function InterviewApp() {
     setAnswerCount(0);
     setAttemptHistory([]);
     setSubmittedAnswer("");
+    setFirstAnswer("");
     setPracticeRetry(false);
     setRevisionGoal(undefined);
     setProfile(null);
@@ -359,6 +374,7 @@ export function InterviewApp() {
           );
         if (group === "PRE") {
           preTranscript.current = transcript;
+          setFirstAnswer(transcript);
           setPre(result.evaluation);
           if (activeQuestion)
             setRevisionGoal(
@@ -417,6 +433,7 @@ export function InterviewApp() {
       setPracticeRetry(false);
       setRevisionGoal(undefined);
       setSubmittedAnswer("");
+      setFirstAnswer("");
       go("TRANSFER_SCENE");
     } catch (e) {
       setError(e instanceof Error ? e.message : "Please try again.");
@@ -439,6 +456,7 @@ export function InterviewApp() {
     setTransfer(undefined);
     setPracticeRetry(true);
     setSubmittedAnswer("");
+    setFirstAnswer("");
     go("TRANSFER_SCENE");
   }
   async function reset() {
@@ -464,6 +482,7 @@ export function InterviewApp() {
     setAnswerCount(0);
     setAttemptHistory([]);
     setSubmittedAnswer("");
+    setFirstAnswer("");
     setPracticeRetry(false);
     setRevisionGoal(undefined);
     window.speechSynthesis?.cancel();
@@ -605,7 +624,7 @@ export function InterviewApp() {
                 Set up your practice session. No email. No account to create.
               </p>
             </div>
-            <form onSubmit={register}>
+            <form onSubmit={register} aria-busy={!clientReady || busy}>
               <label htmlFor="name">What should we call you?</label>
               <input
                 id="name"
@@ -615,8 +634,9 @@ export function InterviewApp() {
                 onChange={(e) => setName(e.target.value)}
                 placeholder="Your name"
                 required
+                disabled={!clientReady || busy}
               />
-              <fieldset>
+              <fieldset disabled={!clientReady || busy}>
                 <legend>Choose your IGNITE strand.</legend>
                 <div className="strand-choices">
                   {strands.map((s) => (
@@ -634,7 +654,7 @@ export function InterviewApp() {
                   ))}
                 </div>
               </fieldset>
-              <fieldset>
+              <fieldset disabled={!clientReady || busy}>
                 <legend>Which year of IGNITE are you in?</legend>
                 <div className="year-choices">
                   {([1, 2] as const).map((y) => (
@@ -659,8 +679,15 @@ export function InterviewApp() {
                   their first year of IGNITE is Year 1.
                 </p>
               </fieldset>
-              <button className="button primary" disabled={busy}>
-                {busy ? "Preparing your session…" : "Begin Interview"}
+              <button
+                className="button primary"
+                disabled={busy || !clientReady}
+              >
+                {!clientReady
+                  ? "Preparing your studio…"
+                  : busy
+                    ? "Preparing your session…"
+                    : "Begin Interview"}
                 <ArrowRight size={18} />
               </button>
               <p className="privacy-note">
@@ -854,6 +881,7 @@ export function InterviewApp() {
               comparison={comparison}
               comparable={comparisonComparable}
             />
+            <AnswerComparison before={firstAnswer} after={submittedAnswer} />
             {activeQuestion && (
               <PracticeReflection
                 key={answerCount}

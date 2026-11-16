@@ -320,8 +320,71 @@
 .revision-goal-reminder.compact {
   padding: 16px 20px;
 }
+.answer-comparison {
+  border: 2px solid #1a2631;
+  border-radius: 32px;
+  padding: 8px 24px;
+  margin: 24px 0;
+  text-align: left;
+}
+.answer-comparison > summary {
+  padding: 16px 0;
+  min-height: 48px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.answer-comparison > summary:focus-visible {
+  outline: 2px solid #034f46;
+  outline-offset: 3px;
+  border-radius: 12px;
+}
+.answer-comparison > div {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+.answer-comparison article {
+  min-width: 0;
+  padding: 22px;
+  background: #f2f3e7;
+  border: 1px solid #b8c3b3;
+  border-radius: 32px;
+}
+.studio .answer-comparison article h2 {
+  font-size: 28px;
+  margin: 0 0 16px;
+}
+.studio .answer-comparison article p {
+  font-size: 14px;
+  line-height: 1.8;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  margin: 0;
+  color: #26483e;
+}
+.studio .answer-comparison .answer-comparison-intro,
+.studio .answer-comparison .answer-comparison-note {
+  font-size: 13px;
+  line-height: 1.7;
+  color: #53605e;
+  margin: 6px 0 20px;
+}
+.studio .answer-comparison .answer-comparison-note {
+  margin: 18px 0;
+  font-size: 12px;
+}
 @media (max-width: 600px) {
   .revision-goal-reminder {
     padding: 18px;
+  }
+  .answer-comparison {
+    padding: 8px 18px;
+  }
+  .answer-comparison > div {
+    grid-template-columns: 1fr;
+  }
+  .answer-comparison article {
+    padding: 20px;
   }
 }

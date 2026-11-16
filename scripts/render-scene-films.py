@@ -22,7 +22,8 @@ settings = {
  'digital-media': ('CREATIVE STUDIO', '#c3a4be', 'screen'),
 }
 label, accent_hex, prop = settings[strand]
-out = Path(os.environ.get('SCENE_RENDER_DIR', '/workspace/scratch/scene-render')) / strand
+default_output = Path(__file__).resolve().parent.parent / '.local-setup' / 'scene-render'
+out = Path(os.environ.get('SCENE_RENDER_DIR', str(default_output))) / strand
 out.mkdir(parents=True, exist_ok=True)
 bpy.ops.object.select_all(action='SELECT'); bpy.ops.object.delete(use_global=False)
 for d in list(bpy.data.materials): bpy.data.materials.remove(d)

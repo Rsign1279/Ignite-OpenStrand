@@ -6,11 +6,11 @@ A voice-first interview practice application for IGNITE Professional Studies. St
 
 - A textured, scroll-responsive Moon opens the experience. Native WebGL has a static fallback, motion controls, reduced-motion support, adaptive resolution, and offscreen suspension.
 - Every scored round starts with a question-specific story and an optional original strand film. Films are local silent H.264 videos with pause, replay, loading recovery, and still posters. Students reveal the question when ready; finishing the film is never required.
-- All 100 existing bank questions retain their canonical identities. The library exposes ten topics per strand; feedback, optional STAR sketches, same-question retries, interviewer follow-ups, and explained recommendations support deliberate practice.
+- All 100 existing bank questions retain their canonical identities. The library exposes ten topics per strand; feedback, side-by-side answer review, optional STAR sketches, same-question retries, interviewer follow-ups, and explained recommendations support deliberate practice.
 - The AI review uses the selected question, verified strand/year, submitted answer, and shared observable rubric anchors. Students can inspect the scoring guide and download a private practice plan without their name or answer text.
 - Student and advisor screens share locally hosted EB Garamond/Figtree typography, warm cream, dark chambers, lavender actions, and IGNITE branding. Mobile, keyboard, reduced-motion, recording recovery, and cross-tab identity flows have automated coverage.
 
-The [showcase notes](docs/SHOWCASE-NOTES.md), [pilot protocol](docs/PILOT-EVALUATION.md), [feedback calibration cases](docs/FEEDBACK-CALIBRATION.md), and [authentication verification](docs/AUTH_VERIFICATION.md) distinguish implemented behavior from evidence still requiring a live pilot or hosted access. Scene production and asset details are in [public/films/README.md](public/films/README.md); Moon attribution is in [public/planet/CREDITS.txt](public/planet/CREDITS.txt).
+The [showcase notes](docs/SHOWCASE-NOTES.md), [pilot protocol](docs/PILOT-EVALUATION.md), [feedback calibration cases](docs/FEEDBACK-CALIBRATION.md), and [authentication verification](docs/AUTH_VERIFICATION.md) distinguish implemented behavior from evidence still requiring a live pilot or hosted access. Scene production and asset details are in [public/films/README.md](public/films/README.md); Moon attribution is in [public/planet/CREDITS.txt](public/planet/CREDITS.txt). The locally hosted fonts retain their [Figtree](public/fonts/FIGTREE-LICENSE.txt) and [EB Garamond](public/fonts/EB-GARAMOND-LICENSE.txt) licenses.
 
 ## Architecture
 
@@ -128,7 +128,6 @@ Playwright runs Chromium desktop/mobile and WebKit (Safari engine) text onboardi
 
 Set `PLAYWRIGHT_USE_BUILD=1` to run browser tests against a built app through the local HTTPS harness (`scripts/serve-test-build.mjs`); build first. The harness binds to loopback, generates a temporary self-signed certificate, and serves Next directly on HTTPS port 3100 so production Secure cookies and same-origin checks work in WebKit. It requires OpenSSL and is for testing only. For an already-running test server, set `PLAYWRIGHT_EXTERNAL_SERVER=1` and `PLAYWRIGHT_BASE_URL` to its HTTPS localhost URL.
 
-
 ## Vercel deployment
 
 Run the Vercel CLI without making it an application dependency:
@@ -209,8 +208,8 @@ Client requests have a 65-second deadline and do not automatically repeat paid P
 The supplied official PNG is preserved at `public/ignite-logo.png`; the shared Brand component displays it without stretching or recoloring. `public/ignite-bulb.svg` is a small favicon inspired by the logo's lightbulb. The global theme lives in `src/app/globals.css`: `--brand-blue`, `--brand-deep`, `--brand-yellow`, and their soft surface tokens. Blue anchors navigation, controls, scores, and advisor tables; yellow highlights the landing CTA, active recording, STAR cards, and score change. Dark blue text on yellow preserves readable contrast. Keep future strand wording in the strand config and visual colors in the shared theme.
 
 ### Learning tracking rollout
-Apply `supabase db push` before deploying this version. The original learning_results table contains pre/post rubric category scores and transfer booleans. The newly requested interview_attempts table additionally retains assessment answers and feedback. Staff statistics use scored attempts grouped by student and canonical question for growth calculations. Missing results display a dash, not zero. Rollback: revert the app commit; leave the additive table intact to preserve collected results.
 
+Apply `supabase db push` before deploying this version. The original learning_results table contains pre/post rubric category scores and transfer booleans. The newly requested interview_attempts table additionally retains assessment answers and feedback. Staff statistics use scored attempts grouped by student and canonical question for growth calculations. Missing results display a dash, not zero. Rollback: revert the app commit; leave the additive table intact to preserve collected results.
 
 ## Staff analytics (October 19, 2026)
 
@@ -252,7 +251,6 @@ Tests use mocked AI and a browser-only bundled UI fixture, never a production au
 ### Staff login reliability
 
 Staff sign-in now posts to `/api/staff/login` on the application origin. The server authenticates with Supabase, checks the existing staff allow-list, and installs the session in cookies; no token payload is returned in JSON. Passwords are never logged or persisted by the application. Supabase Auth's sign-in rate limits still apply. `/api/staff/logout` ends the current staff session on the server. This avoids depending on direct browser-to-Supabase connectivity for staff login/logout. Failed submissions preserve the password for correction, a show/hide control supports checking pasted values, and provider/network failures are distinguished from invalid credentials.
-
 
 ## Strand-specific question banks (October 20, 2026)
 

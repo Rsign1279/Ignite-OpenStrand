@@ -5,6 +5,36 @@ import { Play, RotateCcw, Pause, Film } from "lucide-react";
 import type { StrandId } from "@/config/strands";
 import { interviewSettings } from "@/config/interview-scenes";
 
+function waitForMetadata(player: HTMLVideoElement, signal: AbortSignal) {
+  if (signal.aborted)
+    return Promise.reject(new DOMException("Canceled", "AbortError"));
+  if (player.readyState >= HTMLMediaElement.HAVE_METADATA)
+    return Promise.resolve();
+  return new Promise<void>((resolve, reject) => {
+    const finish = (error?: Error) => {
+      window.clearTimeout(timeout);
+      player.removeEventListener("loadedmetadata", ready);
+      player.removeEventListener("error", failed);
+      signal.removeEventListener("abort", canceled);
+      if (error) reject(error);
+      else resolve();
+    };
+    const ready = () => finish();
+    const failed = () => finish(new Error("Scene metadata could not load."));
+    const canceled = () => finish(new DOMException("Canceled", "AbortError"));
+    const timeout = window.setTimeout(
+      () => finish(new Error("Scene loading timed out.")),
+      15000,
+    );
+    player.addEventListener("loadedmetadata", ready, { once: true });
+    player.addEventListener("error", failed, { once: true });
+    signal.addEventListener("abort", canceled, { once: true });
+    // WebKit can suspend a newly inserted media element before selecting its
+    // source. Explicit loading, then metadata readiness, precedes every play.
+    player.load();
+  });
+}
+
 /**
  * Locally authored, silent scene films. Narrative content stays in the adjacent
  * scene text so the video is an optional, accessible way to enter the setting.
@@ -28,6 +58,7 @@ function SceneFilmPlayer({
 }) {
   const video = useRef<HTMLVideoElement>(null);
   const playRequest = useRef(0);
+  const preparation = useRef<AbortController | null>(null);
   const [playing, setPlaying] = useState(false);
   const [loading, setLoading] = useState(false);
   const [started, setStarted] = useState(false);
@@ -43,31 +74,57 @@ function SceneFilmPlayer({
     let active = true;
     let autoplayFrame = 0;
     function respectMotion(event: MediaQueryListEvent) {
-      if (event.matches) player?.pause();
+      if (event.matches) {
+        preparation.current?.abort();
+        player?.pause();
+        setLoading(false);
+        setPlaying(false);
+      }
     }
     // The first render is a still poster. Motion starts only after checking the
     // device preference, and autoplay rejection leaves a working play button.
     if (!preference.matches) {
-      // WebKit must finish selecting a newly attached <source> before play.
-      // A frame also lets React's development cleanup cancel the first attempt.
+      // A frame lets React's development cleanup cancel the first attempt.
       autoplayFrame = window.requestAnimationFrame(() => {
         if (!active || document.hidden || preference.matches) return;
+        const controller = new AbortController();
+        preparation.current = controller;
         setLoading(true);
-        void player.play().catch(() => {
-          if (active) {
-            setPlaying(false);
-            setLoading(false);
-          }
-        });
+        void waitForMetadata(player, controller.signal)
+          .then(() => {
+            if (
+              active &&
+              !controller.signal.aborted &&
+              !document.hidden &&
+              !preference.matches
+            )
+              return player.play();
+          })
+          .catch((error) => {
+            if (active && !controller.signal.aborted) {
+              setPlaying(false);
+              setLoading(false);
+              if (!(
+                error instanceof DOMException &&
+                error.name === "NotAllowedError"
+              ))
+                setFailed(true);
+            }
+          });
       });
     }
     preference.addEventListener("change", respectMotion);
     function visibility() {
-      if (document.hidden) player?.pause();
+      if (document.hidden) {
+        preparation.current?.abort();
+        player?.pause();
+        setLoading(false);
+      }
     }
     document.addEventListener("visibilitychange", visibility);
     return () => {
       active = false;
+      preparation.current?.abort();
       window.cancelAnimationFrame(autoplayFrame);
       player.pause();
       preference.removeEventListener("change", respectMotion);
@@ -78,6 +135,7 @@ function SceneFilmPlayer({
   useEffect(() => {
     if (!loading) return;
     const timeout = window.setTimeout(() => {
+      preparation.current?.abort();
       video.current?.pause();
       setLoading(false);
       setPlaying(false);
@@ -90,6 +148,7 @@ function SceneFilmPlayer({
     const player = video.current;
     if (!player) return;
     const request = ++playRequest.current;
+    preparation.current?.abort();
     if (playing || loading) {
       player.pause();
       setLoading(false);
@@ -97,17 +156,23 @@ function SceneFilmPlayer({
     }
     if (ended) player.currentTime = 0;
     try {
+      const controller = new AbortController();
+      preparation.current = controller;
       setLoading(true);
       if (failed) {
         setFailed(false);
         player.load();
-        await new Promise<void>((resolve) =>
-          window.requestAnimationFrame(() => resolve()),
-        );
       }
-      if (request !== playRequest.current || !player.isConnected) return;
+      await waitForMetadata(player, controller.signal);
+      if (
+        request !== playRequest.current ||
+        !player.isConnected ||
+        controller.signal.aborted
+      )
+        return;
       await player.play();
     } catch (error) {
+      if (request !== playRequest.current || !player.isConnected) return;
       // Pausing a pending play request is a deliberate user action, not a
       // failed film. Native controls and the external pause button both do it.
       if (!(error instanceof DOMException && error.name === "AbortError")) {
@@ -125,10 +190,11 @@ function SceneFilmPlayer({
         <video
           ref={video}
           className="scene-film-video"
+          src={`/films/${strand}.mp4`}
           muted
           playsInline
           controls={started}
-          preload="none"
+          preload="metadata"
           poster={`/films/${strand}.webp`}
           aria-label={`Silent animated scene: ${scene.place}. Camera approaches a welcoming interview table.`}
           onPlay={() => setLoading(true)}
@@ -179,15 +245,6 @@ function SceneFilmPlayer({
             setLoading(false);
           }}
         >
-          <source
-            src={`/films/${strand}.mp4`}
-            type="video/mp4"
-            onError={() => {
-              setFailed(true);
-              setPlaying(false);
-              setLoading(false);
-            }}
-          />
           Your browser cannot play this scene. The complete scene is available
           as text beside it.
         </video>

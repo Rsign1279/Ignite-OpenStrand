@@ -14,4 +14,6 @@ Rebuild with Blender 4.3 and ffmpeg:
 ./scripts/render-scene-films.sh technology education
 ```
 
+Intermediate frames default to the ignored `.local-setup/scene-render` directory. Set `SCENE_RENDER_DIR` to use another cache directory. Encoding publishes the film and poster only after both succeed; a failed render or encode preserves the previously published files.
+
 Output: H.264 MP4, 960 × 540, 24 fps, yuv420p, fast-start metadata, no audio track; one WebP poster per film. Geometry is rendered at 6 fps, denoised, then interpolated to 24 fps for a lightweight, smooth playback asset.
