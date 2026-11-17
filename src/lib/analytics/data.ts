@@ -30,19 +30,17 @@ export const loadAttempts = cache(
         .select(
           includeText
             ? "*,scoring_version:evaluation_json->>scoring_version"
-            : "id,student_id,question_id,question_text,stage,attempt_number,total_score,situation_task,personal_actions,result_impact,communication,created_at,is_legacy,scoring_version:evaluation_json->>scoring_version",
+            : "id,student_id,question_id,question_text,stage,attempt_number,total_score,situation,task,action,result,situation_task,personal_actions,result_impact,communication,created_at,is_legacy,scoring_version:evaluation_json->>scoring_version",
         )
         .order("created_at")
         .order("id");
       if (studentId) query = query.eq("student_id", studentId);
-      const { data, error } = await query
-        .range(offset, offset + 999)
-        .returns<
-          (Omit<AttemptRow, "answer_text" | "feedback_text"> &
-            Partial<Pick<AttemptRow, "answer_text" | "feedback_text">> & {
-              scoring_version?: string | null;
-            })[]
-        >();
+      const { data, error } = await query.range(offset, offset + 999).returns<
+        (Omit<AttemptRow, "answer_text" | "feedback_text"> &
+          Partial<Pick<AttemptRow, "answer_text" | "feedback_text">> & {
+            scoring_version?: string | null;
+          })[]
+      >();
       if (error)
         throw new HttpError(
           503,
@@ -56,12 +54,20 @@ export const loadAttempts = cache(
             ...row,
             student_name: p.name,
             strand: p.strand,
-            scores: {
-              situationTask: row.situation_task,
-              personalActions: row.personal_actions,
-              resultImpact: row.result_impact,
-              professionalCommunication: row.communication,
-            },
+            scores:
+              row.situation !== null
+                ? {
+                    situation: row.situation,
+                    task: row.task,
+                    action: row.action,
+                    result: row.result,
+                  }
+                : {
+                    situationTask: row.situation_task,
+                    personalActions: row.personal_actions,
+                    resultImpact: row.result_impact,
+                    professionalCommunication: row.communication,
+                  },
           }),
         );
       }

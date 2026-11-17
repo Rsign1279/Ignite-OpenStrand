@@ -26,6 +26,10 @@ beforeEach(() => {
       stage: "pre",
       attempt_number: 1,
       total_score: 8,
+      situation: null,
+      task: null,
+      action: null,
+      result: null,
       situation_task: 2,
       personal_actions: 2,
       result_impact: 2,
@@ -38,21 +42,17 @@ beforeEach(() => {
   const profileQuery = {
     order: vi.fn().mockReturnThis(),
     eq: vi.fn().mockReturnThis(),
-    range: vi
-      .fn()
-      .mockResolvedValue({
-        data: [{ user_id: id, name: "Student", strand: "technology" }],
-        error: null,
-      }),
+    range: vi.fn().mockResolvedValue({
+      data: [{ user_id: id, name: "Student", strand: "technology" }],
+      error: null,
+    }),
   };
   const attemptQuery = {
     order: vi.fn().mockReturnThis(),
     eq: vi.fn().mockReturnThis(),
-    range: vi
-      .fn()
-      .mockImplementation(() => ({
-        returns: async () => ({ data: mocks.rows, error: null }),
-      })),
+    range: vi.fn().mockImplementation(() => ({
+      returns: async () => ({ data: mocks.rows, error: null }),
+    })),
   };
   mocks.profileSelect.mockReturnValue(profileQuery);
   mocks.attemptSelect.mockReturnValue(attemptQuery);
@@ -82,4 +82,24 @@ it("loads only the JSON scoring-version alias alongside overview columns", async
 it("normalizes missing historical version metadata without fetching its full evaluation", async () => {
   mocks.rows[0].scoring_version = null;
   expect((await loadAttempts())[0].scoring_version).toBe("legacy-unversioned");
+});
+
+it("loads distinct STAR values without filling historical columns", async () => {
+  Object.assign(mocks.rows[0], {
+    situation: 3,
+    task: 0,
+    action: 1,
+    result: 2,
+    situation_task: null,
+    personal_actions: null,
+    result_impact: null,
+    communication: null,
+    total_score: 6,
+  });
+  expect((await loadAttempts())[0].scores).toEqual({
+    situation: 3,
+    task: 0,
+    action: 1,
+    result: 2,
+  });
 });

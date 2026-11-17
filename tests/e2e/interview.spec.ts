@@ -45,15 +45,16 @@ test("full student text interview and secure reset", async ({ page }) => {
   });
   await page.route("**/api/interview/evaluate", (route) => {
     const data = route.request().postDataJSON();
+    expect(data.rubricVersion).toBe("ignite-star-rubric-v2");
     const post = data.stage === "post";
     return route.fulfill({
       json: {
         evaluation: {
           scores: {
-            situationTask: post ? 3 : 2,
-            personalActions: 3,
-            resultImpact: post ? 3 : 1,
-            professionalCommunication: 3,
+            situation: post ? 3 : 2,
+            action: 3,
+            result: post ? 3 : 1,
+            task: 3,
           },
           total: post ? 12 : 9,
           strongestPart: "You described your personal actions.",
@@ -119,6 +120,14 @@ test("full student text interview and secure reset", async ({ page }) => {
   await expect(
     page.getByRole("heading", { name: "Your starting point." }),
   ).toBeVisible();
+  await expect(page.locator(".rubric-row")).toHaveCount(4);
+  await expect(page.locator(".rubric-row > div > strong")).toHaveText([
+    "S — Situation",
+    "T — Task",
+    "A — Action",
+    "R — Result",
+  ]);
+  await expect(page.locator(".rubric")).not.toContainText("Communication");
   await page.getByRole("button", { name: "Discover the STAR method" }).click();
   await expect(
     page.getByRole("heading", { name: "Situation", exact: true }),
@@ -217,10 +226,10 @@ test("voice recording waits for explicit finish and transcribes securely", async
       json: {
         evaluation: {
           scores: {
-            situationTask: 2,
-            personalActions: 2,
-            resultImpact: 2,
-            professionalCommunication: 2,
+            situation: 2,
+            action: 2,
+            result: 2,
+            task: 2,
           },
           total: 8,
           strongestPart: "You identified your contribution.",

@@ -48,6 +48,30 @@ export const strands = strandIds.map((id, i) => ({
 }));
 export const rubric = [
   {
+    key: "situation",
+    label: "S — Situation",
+    definition: "Clearly explain the setting and problem.",
+  },
+  {
+    key: "task",
+    label: "T — Task",
+    definition: "Clearly explain your goal and responsibility.",
+  },
+  {
+    key: "action",
+    label: "A — Action",
+    definition: "Clearly explain what you personally did and how or why.",
+  },
+  {
+    key: "result",
+    label: "R — Result",
+    definition:
+      "Clearly connect your actions to an outcome, feedback, or learning.",
+  },
+] as const;
+// Historical scores retain their original meaning; never infer a Task score.
+export const legacyRubric = [
+  {
     key: "situationTask",
     label: "Situation & Task",
     definition: "Situation and task are specific and understandable",

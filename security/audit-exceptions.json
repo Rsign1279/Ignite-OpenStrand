@@ -1,0 +1,10 @@
+{
+  "advisory": "https://github.com/advisories/GHSA-fc5q-39xc-vjpf",
+  "source": 1247710,
+  "severity": "high",
+  "range": "<=4.0.7",
+  "package": "picomatch",
+  "latestReviewedVersion": "4.0.7",
+  "reviewedInstalledVersions": ["2.3.2", "4.0.7"],
+  "expiresAt": "2026-12-01T23:59:59Z"
+}

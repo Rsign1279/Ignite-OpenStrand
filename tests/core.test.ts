@@ -18,10 +18,10 @@ import {
 } from "@/lib/ai/prompts";
 const value = {
   scores: {
-    situationTask: 2,
-    personalActions: 3,
-    resultImpact: 1,
-    professionalCommunication: 2,
+    situation: 2,
+    action: 3,
+    result: 1,
+    task: 2,
   },
   total: 8,
   strongestPart: "Specific personal actions.",
@@ -35,7 +35,7 @@ describe("Rubric and validation", () => {
     expect(
       scoreChange(value, {
         ...value,
-        scores: { ...value.scores, resultImpact: 0 },
+        scores: { ...value.scores, result: 0 },
       }),
     ).toBe(-1);
   });
@@ -43,7 +43,7 @@ describe("Rubric and validation", () => {
     expect(
       evaluationSchema.safeParse({
         ...value,
-        scores: { ...value.scores, personalActions: point },
+        scores: { ...value.scores, action: point },
       }).success,
     ).toBe(false),
   );

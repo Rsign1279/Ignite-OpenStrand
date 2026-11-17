@@ -243,8 +243,10 @@ export function ProgramCharts({ data }: { data: Analytics }) {
       </Card>
       <Card
         title="Which skills need attention?"
-        subtitle="Four criteria, scored 0–3. Situation and Task form one criterion."
-        empty={empty}
+        subtitle="STAR criteria, scored 0–3 each. Earlier-rubric attempts are excluded."
+        empty={data.rubric.every((r) => r.score === null)}
+        emptyTitle="No STAR-scored attempts yet"
+        emptyDescription="Earlier results remain in student histories. New STAR attempts populate this chart."
         table={
           <DataTable
             headers={["Criterion", "Average /3"]}
@@ -430,8 +432,12 @@ export function StudentCharts({ data }: { data: StudentDetail }) {
       </Card>
       <Card
         title="Your student and their strand"
-        subtitle="Averages /3, within the same dates. Strand results include this student."
-        empty={!points.length}
+        subtitle="STAR averages /3, within the same dates. Earlier-rubric attempts are excluded; strand results include this student."
+        empty={data.rubric.every(
+          (r) => r.score === null && r.strandScore == null,
+        )}
+        emptyTitle="No STAR-scored attempts yet"
+        emptyDescription="Earlier results remain in the attempt history. New STAR attempts populate this chart."
         table={
           <DataTable
             headers={["Criterion", "Student", "Strand"]}

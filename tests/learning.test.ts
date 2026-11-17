@@ -43,10 +43,10 @@ it.each([
         answer_text: "Pre answer",
         evaluation_json: {
           scores: {
-            situationTask: 2,
-            personalActions: 2,
-            resultImpact: 2,
-            professionalCommunication: 2,
+            situation: 2,
+            action: 2,
+            result: 2,
+            task: 2,
           },
           total: 8,
           strongestPart: "Specific",
@@ -70,10 +70,10 @@ it("recomputes totals when returning a matching saved evaluation", async () => {
       answer_text: "Pre answer",
       evaluation_json: {
         scores: {
-          situationTask: 2,
-          personalActions: 2,
-          resultImpact: 2,
-          professionalCommunication: 2,
+          situation: 2,
+          action: 2,
+          result: 2,
+          task: 2,
         },
         total: 12,
         strongestPart: "Specific",
@@ -92,10 +92,10 @@ it("recomputes totals when returning a matching saved evaluation", async () => {
 });
 it("stores rubric values only, omitting free-text feedback", async () => {
   const scores = {
-    situationTask: 1,
-    personalActions: 2,
-    resultImpact: 3,
-    professionalCommunication: 2,
+    situation: 1,
+    action: 2,
+    result: 3,
+    task: 2,
   };
   await saveAssessment("student", "post", {
     scores,
@@ -148,10 +148,10 @@ it("fails safely if storage is unavailable", async () => {
 it("persists canonical selected question metadata instead of the legacy default", async () => {
   const evaluation = {
     scores: {
-      situationTask: 1,
-      personalActions: 2,
-      resultImpact: 2,
-      professionalCommunication: 3,
+      situation: 1,
+      action: 2,
+      result: 2,
+      task: 3,
     },
     total: 8,
     strongestPart: "Specific",
@@ -172,9 +172,7 @@ it("persists canonical selected question metadata instead of the legacy default"
       p_question_id: "technology-teamwork-v1",
       p_question_text: expect.stringContaining("worked with a team"),
       p_evaluation: expect.objectContaining({
-        scoring_version: expect.stringMatching(
-          /^ignite-rubric-anchors-v1\|groq:/,
-        ),
+        scoring_version: expect.stringMatching(/^ignite-star-rubric-v2\|groq:/),
       }),
     }),
   );
@@ -188,10 +186,10 @@ it("reads stored scoring metadata internally while preserving the public evaluat
       answer_text: "Answer",
       evaluation_json: {
         scores: {
-          situationTask: 2,
-          personalActions: 2,
-          resultImpact: 2,
-          professionalCommunication: 2,
+          situation: 2,
+          action: 2,
+          result: 2,
+          task: 2,
         },
         total: 12,
         strongestPart: "Specific",
@@ -260,4 +258,38 @@ it("requires the saved pre answer and question to match before scoring post", as
       "Pre answer",
     ),
   ).rejects.toThrow("Complete the pre-assessment");
+});
+
+it("preserves a historical request without returning its communication score as Task", async () => {
+  mocks.single.mockResolvedValue({
+    error: null,
+    data: {
+      stage: "pre",
+      question_id: "technology-teamwork-v1",
+      answer_text: "Original answer",
+      evaluation_json: {
+        scores: {
+          situationTask: 2,
+          personalActions: 1,
+          resultImpact: 3,
+          professionalCommunication: 0,
+        },
+        total: 6,
+        strongestPart: "Specific",
+        improvementArea: "Outcome",
+        scoring_version: "ignite-rubric-anchors-v1",
+      },
+    },
+  });
+  await expect(
+    findRecordedAssessmentWithMetadata(
+      "student",
+      "request",
+      "Original answer",
+      "technology-teamwork-v1",
+      "pre",
+    ),
+  ).rejects.toThrow("original result is still saved");
+  expect(mocks.rpc).not.toHaveBeenCalled();
+  expect(mocks.upsert).not.toHaveBeenCalled();
 });

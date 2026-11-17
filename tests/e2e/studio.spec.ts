@@ -5,10 +5,10 @@ import { getStrand, type StrandId } from "../../src/config/strands";
 
 const evaluation = {
   scores: {
-    situationTask: 2,
-    personalActions: 2,
-    resultImpact: 1,
-    professionalCommunication: 2,
+    situation: 2,
+    action: 2,
+    result: 1,
+    task: 2,
   },
   total: 7,
   strongestPart: "Your actions were specific.",
@@ -463,7 +463,7 @@ test("feedback recommends a targeted topic and reports lower retry scores honest
     page.getByRole("heading", { name: "Finish with an outcome" }),
   ).toBeVisible();
   await expect(page.locator(".recommended-practice")).toContainText(
-    "result / impact",
+    "practices result.",
   );
   await page.getByRole("button", { name: "Practice this skill" }).click();
   await enterScene(page);
@@ -485,7 +485,7 @@ test("feedback recommends a targeted topic and reports lower retry scores honest
       json: {
         evaluation: {
           ...evaluation,
-          scores: { ...evaluation.scores, personalActions: 1 },
+          scores: { ...evaluation.scores, action: 1 },
           total: 6,
         },
       },

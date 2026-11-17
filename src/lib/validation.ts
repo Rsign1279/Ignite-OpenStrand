@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { strandIds } from "@/config/strands";
+import { strandIds, rubric, legacyRubric } from "@/config/strands";
 export const profileSchema = z
   .object({
     name: z
@@ -17,16 +17,32 @@ export const profileSchema = z
   .strict();
 export type Profile = z.infer<typeof profileSchema>;
 const point = z.number().int().min(0).max(3);
+export const starScoresSchema = z
+  .object({ situation: point, task: point, action: point, result: point })
+  .strict();
+export const legacyScoresSchema = z
+  .object({
+    situationTask: point,
+    personalActions: point,
+    resultImpact: point,
+    professionalCommunication: point,
+  })
+  .strict();
+export const storedScoresSchema = z.union([
+  starScoresSchema,
+  legacyScoresSchema,
+]);
+export type StarScores = z.infer<typeof starScoresSchema>;
+export type StoredScores = z.infer<typeof storedScoresSchema>;
+export const isStarScores = (scores: StoredScores): scores is StarScores =>
+  "situation" in scores;
+export const scoreRows = (scores: StoredScores) =>
+  isStarScores(scores)
+    ? rubric.map((r) => ({ ...r, score: scores[r.key] }))
+    : legacyRubric.map((r) => ({ ...r, score: scores[r.key] }));
 export const evaluationSchema = z
   .object({
-    scores: z
-      .object({
-        situationTask: point,
-        personalActions: point,
-        resultImpact: point,
-        professionalCommunication: point,
-      })
-      .strict(),
+    scores: starScoresSchema,
     total: z.number().int().min(0).max(12),
     strongestPart: z.string().min(1).max(600),
     improvementArea: z.string().min(1).max(600),
@@ -57,6 +73,7 @@ export const answerSchema = z
   .object({
     transcript: z.string().trim().min(1).max(16000),
     stage: z.enum(["pre", "post", "practice"]),
+    rubricVersion: z.string().min(1).max(100).optional(),
     requestId: z.uuid().optional(),
     questionId: z.string().min(1).max(100).optional(),
     preRequestId: z.uuid().optional(),
@@ -77,11 +94,8 @@ export const transferAnswerSchema = z
     question: z.string().min(20).max(500),
   })
   .strict();
-export const totalScore = (s: Evaluation["scores"]) =>
-  s.situationTask +
-  s.personalActions +
-  s.resultImpact +
-  s.professionalCommunication;
+export const totalScore = (scores: StoredScores) =>
+  Object.values(scores).reduce((sum, score) => sum + score, 0);
 export const parseEvaluation = (value: unknown) => {
   const result = evaluationSchema.parse(value);
   return { ...result, total: totalScore(result.scores) };

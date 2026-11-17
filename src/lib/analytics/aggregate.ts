@@ -1,3 +1,4 @@
+import { isStarScores } from "@/lib/validation";
 import { strands, rubric } from "@/config/strands";
 import { LEGACY_SCORING_VERSION, type QuestionSummary } from "./model";
 import type {
@@ -58,7 +59,9 @@ export function studentSummaries(attempts: Attempt[]): StudentSummary[] {
           const comparison_status: QuestionSummary["comparison_status"] =
             attempts.length < 2
               ? "single_attempt"
-              : first_scoring_version === latest_scoring_version
+              : first_scoring_version === latest_scoring_version &&
+                  isStarScores(attempts[0].scores) ===
+                    isStarScores(attempts.at(-1)!.scores)
                 ? "paired"
                 : "scoring_version_changed";
           return {
@@ -113,10 +116,11 @@ export function studentSummaries(attempts: Attempt[]): StudentSummary[] {
     );
 }
 export function rubricAverages(attempts: Attempt[]): RubricAverage[] {
+  const scores = attempts.map((a) => a.scores).filter(isStarScores);
   return rubric.map((r) => ({
     criterion: r.label,
     key: r.key,
-    score: mean(attempts.map((a) => a.scores[r.key])),
+    score: mean(scores.map((score) => score[r.key])),
   }));
 }
 export function aggregate(attempts: Attempt[], filters: Filters): Analytics {

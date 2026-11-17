@@ -8,10 +8,10 @@ import { getPracticeQuestion } from "@/config/strands";
 const question = getPracticeQuestion("education", "education-teamwork-v1");
 const goal = createRevisionGoal(question.id, {
   scores: {
-    situationTask: 2,
-    personalActions: 2,
-    resultImpact: 1,
-    professionalCommunication: 2,
+    situation: 2,
+    action: 2,
+    result: 1,
+    task: 2,
   },
   total: 7,
   strongestPart: "Your own action was clear.",

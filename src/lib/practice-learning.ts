@@ -21,16 +21,21 @@ export const practiceSkills: Record<
     nextTopics: readonly TopicKey[];
   }
 > = {
-  situationTask: {
-    title: "Make your role clear",
-    action:
-      "Name the moment, your goal, and your responsibility before your actions.",
-    selfCheck: "Could a new listener explain the situation and my role?",
-    rehearsal:
-      "Open with two sentences: what happened, then what was yours to do.",
-    nextTopics: ["priorities", "adaptability", "challenge"],
+  situation: {
+    title: "Set the scene",
+    action: "Name the moment and the problem so a new listener can follow.",
+    selfCheck: "Is it clear where I was and what was happening?",
+    rehearsal: "Open with one true sentence about the setting and problem.",
+    nextTopics: ["adaptability", "challenge", "learning"],
   },
-  personalActions: {
+  task: {
+    title: "Make your role clear",
+    action: "Explain your goal and what you were personally responsible for.",
+    selfCheck: "Could a listener explain what was mine to do?",
+    rehearsal: "Finish “My responsibility was…” with a specific, true goal.",
+    nextTopics: ["priorities", "initiative", "teamwork"],
+  },
+  action: {
     title: "Show your own contribution",
     action:
       "Explain one action you took and how or why. Give teammates fair credit.",
@@ -38,7 +43,7 @@ export const practiceSkills: Record<
     rehearsal: "Finish “I decided to…” and “I did that by…” with true details.",
     nextTopics: ["teamwork", "initiative", "achievement"],
   },
-  resultImpact: {
+  result: {
     title: "Finish with an outcome",
     action:
       "Connect your actions to an observed outcome, feedback, or lesson. A number is optional.",
@@ -46,15 +51,6 @@ export const practiceSkills: Record<
     rehearsal:
       "Finish “As a result…” or “I learned…” honestly. A setback is valid.",
     nextTopics: ["achievement", "feedback", "mistake"],
-  },
-  professionalCommunication: {
-    title: "Help the listener follow",
-    action:
-      "Use one relevant example, a clear order, and explain unfamiliar terms. Sound like yourself.",
-    selfCheck: "Can the listener follow how each part answers the question?",
-    rehearsal:
-      "Imagine a listener new to your project. Add the context they need.",
-    nextTopics: ["perspectives", "learning", "teamwork"],
   },
 };
 
@@ -144,7 +140,7 @@ export function recommendPracticeQuestion(
     fresh,
     reason: focus.complete
       ? `${fresh ? "New topic" : "Another topic"}: practice the same skills with a different experience.`
-      : `${question.topic} practices ${focus.label.toLowerCase()}.${fresh ? " New in this session." : " Use your current improvement goal."}`,
+      : `${question.topic} practices ${focus.label.replace(/^[STAR] — /, "").toLowerCase()}.${fresh ? " New in this session." : " Use your current improvement goal."}`,
   };
 }
 

@@ -22,13 +22,14 @@ vi.mock("@/lib/ai/provider", () => ({
 }));
 import { POST } from "@/app/api/interview/evaluate/route";
 import { POST as transfer } from "@/app/api/interview/transfer-question/route";
+import { RUBRIC_SCORING_VERSION } from "@/config/rubric-anchors";
 import { HttpError } from "@/lib/http";
 const assessment = {
   scores: {
-    situationTask: 2,
-    personalActions: 3,
-    resultImpact: 2,
-    professionalCommunication: 3,
+    situation: 2,
+    action: 3,
+    result: 2,
+    task: 3,
   },
   total: 0,
   strongestPart: "Clear actions",
@@ -38,7 +39,11 @@ const request = (body: unknown) =>
   new Request("http://localhost/api/interview/evaluate", {
     method: "POST",
     headers: { "Content-Type": "application/json", Origin: "http://localhost" },
-    body: JSON.stringify(body),
+    body: JSON.stringify(
+      body && typeof body === "object" && "stage" in body
+        ? { rubricVersion: RUBRIC_SCORING_VERSION, ...body }
+        : body,
+    ),
   });
 beforeEach(() => {
   vi.clearAllMocks();
@@ -342,7 +347,7 @@ it("returns the stored winner's score when concurrent identical requests finish 
   const winner = {
     ...assessment,
     total: 7,
-    scores: { ...assessment.scores, personalActions: 0 },
+    scores: { ...assessment.scores, action: 0 },
   };
   mock.find.mockResolvedValueOnce(null).mockResolvedValueOnce({
     evaluation: winner,
@@ -464,3 +469,22 @@ it("rejects practice without a canonical question before spending AI usage", asy
   expect(response.status).toBe(400);
   expect(mock.structured).not.toHaveBeenCalled();
 });
+
+it.each([undefined, "ignite-rubric-anchors-v1"])(
+  "requires an updated browser scoring contract before invoking AI (%s)",
+  async (rubricVersion) => {
+    const response = await POST(
+      request({
+        transcript: "A truthful school example.",
+        stage: "pre",
+        rubricVersion,
+      }),
+    );
+    expect(response.status).toBe(409);
+    expect((await response.json()).error).toContain(
+      "Copy your answer, then refresh",
+    );
+    expect(mock.structured).not.toHaveBeenCalled();
+    expect(mock.record).not.toHaveBeenCalled();
+  },
+);
