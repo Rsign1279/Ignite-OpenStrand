@@ -14,7 +14,8 @@ concurrency:
 
 jobs:
   verify:
-    runs-on: ubuntu-latest
+    # Keep the browser dependency baseline stable when ubuntu-latest rolls forward.
+    runs-on: ubuntu-24.04
     timeout-minutes: 25
     env:
       NEXT_PUBLIC_SUPABASE_URL: https://test.supabase.co
