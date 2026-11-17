@@ -27,9 +27,10 @@ export default async function RawData({
     ),
     query = filterQuery(filters);
   const requestedPage = Number(params.page ?? 1),
+    totalPages = Math.max(1, Math.ceil(rows.length / 50)),
     page =
       Number.isSafeInteger(requestedPage) && requestedPage > 0
-        ? requestedPage
+        ? Math.min(requestedPage, totalPages)
         : 1,
     visible = rows.slice((page - 1) * 50, page * 50);
   return (
@@ -143,7 +144,7 @@ export default async function RawData({
               <Link href={`/staff?${query}&page=${page - 1}`}>← Previous</Link>
             )}
             <span>
-              Page {page} of {Math.max(1, Math.ceil(rows.length / 50))}
+              Page {page} of {totalPages}
             </span>
             {page * 50 < rows.length && (
               <Link href={`/staff?${query}&page=${page + 1}`}>Next →</Link>

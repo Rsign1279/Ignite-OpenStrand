@@ -236,3 +236,47 @@ test("staff routes and JSON analytics reject unauthenticated access", async ({
   expect(response.status()).toBe(401);
   expect(response.headers()["cache-control"]).toContain("no-store");
 });
+
+test("an opened strand picker never blocks applying filters on narrow screens", async ({
+  page,
+}) => {
+  const submissions: { method: string; url: string }[] = [];
+  // This response exists only in the browser test. Staff authorization and
+  // production routes are unchanged; the assertion checks native form input.
+  await page.route("**/staff/dashboard?**", (route) => {
+    submissions.push({
+      method: route.request().method(),
+      url: route.request().url(),
+    });
+    return route.fulfill({
+      contentType: "text/html",
+      body: '<!doctype html><html lang="en"><title>Filter submission</title><main><h1>Filters submitted</h1></main></html>',
+    });
+  });
+
+  for (const width of [320, 768]) {
+    await page.setViewportSize({ width, height: 900 });
+    await preview(page, "count=300");
+    const picker = page.locator(".strand-picker");
+    await picker.locator("summary").focus();
+    await page.keyboard.press("Enter");
+    await page
+      .getByRole("checkbox", { name: "Technology", exact: true })
+      .check();
+    await expect(picker).toHaveJSProperty("open", true);
+    // A real pointer click must work while the choices remain expanded.
+    await page
+      .getByRole("button", { name: "Apply filters", exact: true })
+      .click();
+    await expect(
+      page.getByRole("heading", { name: "Filters submitted" }),
+    ).toBeVisible();
+    const submitted = submissions.at(-1)!;
+    expect(submitted.method).toBe("GET");
+    expect(new URL(submitted.url).searchParams.getAll("strand")).toEqual([
+      "technology",
+    ]);
+    expect(new URL(submitted.url).searchParams.get("minAttempts")).toBe("1");
+  }
+  expect(submissions).toHaveLength(2);
+});
