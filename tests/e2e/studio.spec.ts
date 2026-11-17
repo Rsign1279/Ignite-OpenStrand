@@ -882,6 +882,53 @@ test("scene film plays real local media with pause and replay controls", async (
   await expect(film).toHaveCount(0);
 });
 
+test("a decoded terminal clock offers replay even without a native ended event", async ({
+  page,
+}) => {
+  await prepare(page, "technology");
+  await page.getByRole("button", { name: "Meet your interviewer" }).click();
+  const film = page.locator("video.scene-film-video");
+  await expect
+    .poll(() =>
+      film.evaluate((element: HTMLVideoElement) => element.currentTime),
+    )
+    .toBeGreaterThan(0);
+  await page.getByRole("button", { name: "Pause scene film" }).click();
+  await expect(film).toHaveJSProperty("paused", true);
+  await expect(film).toHaveJSProperty("ended", false);
+  // Reproduce WebKit's observed final clock: duration minus one nanosecond,
+  // decoded and not seeking, but no native ended event. Keep real media for
+  // initial playback and replay; override only this terminal-event snapshot.
+  await film.evaluate((element: HTMLVideoElement) => {
+    Object.defineProperty(element, "currentTime", {
+      configurable: true,
+      get: () => element.duration - 0.000000001,
+    });
+    element.dispatchEvent(new Event("timeupdate"));
+  });
+  const replay = page.getByRole("button", { name: "Replay scene film" });
+  await expect(replay).toBeVisible();
+  for (const event of ["play", "playing", "waiting", "timeupdate"] as const) {
+    await film.evaluate((element, type) => {
+      element.dispatchEvent(new Event(type));
+    }, event);
+    await expect(replay).toBeVisible();
+  }
+  await film.evaluate((element) => {
+    Reflect.deleteProperty(element, "currentTime");
+  });
+  await replay.click();
+  await expect(film).toHaveJSProperty("paused", false);
+  await expect
+    .poll(() =>
+      film.evaluate((element: HTMLVideoElement) => element.currentTime),
+    )
+    .toBeLessThan(5);
+  await expect(page.locator(".scene-film-caption small")).toHaveText(
+    "Step inside",
+  );
+});
+
 test("pausing a loading scene cancels pending autoplay and explicit play still works", async ({
   page,
 }) => {
