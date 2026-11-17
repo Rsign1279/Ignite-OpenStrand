@@ -126,7 +126,7 @@ export async function POST(request: Request) {
           transcript: await ai.transcribe(file, request.signal, user.id),
         });
       });
-    });
+    }, user.id);
   } catch (error) {
     return failure(error);
   }

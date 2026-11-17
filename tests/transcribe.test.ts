@@ -3,9 +3,10 @@ const mock = vi.hoisted(() => ({
   auth: vi.fn(),
   limit: vi.fn(),
   transcribe: vi.fn(),
+  upload: vi.fn(),
 }));
 vi.mock("@/lib/request-admission", () => ({
-  withUploadAdmission: async (operation: () => Promise<unknown>) => operation(),
+  withUploadAdmission: mock.upload,
   withAssessmentLock: async (
     _user: string,
     _id: string,
@@ -32,6 +33,9 @@ beforeEach(() => {
   mock.auth.mockResolvedValue({ user: { id: "opaque-id" } });
   mock.limit.mockResolvedValue(undefined);
   mock.transcribe.mockResolvedValue("A short answer.");
+  mock.upload.mockImplementation(async (operation: () => Promise<unknown>) =>
+    operation(),
+  );
 });
 it.each([
   "audio/webm",
@@ -45,6 +49,7 @@ it.each([
   expect(await r.json()).toEqual({ transcript: "A short answer." });
   expect(mock.transcribe).toHaveBeenCalledOnce();
   expect(mock.transcribe.mock.calls[0][2]).toBe("opaque-id");
+  expect(mock.upload.mock.calls[0][1]).toBe("opaque-id");
 });
 it.each([
   ["text/plain", 256],

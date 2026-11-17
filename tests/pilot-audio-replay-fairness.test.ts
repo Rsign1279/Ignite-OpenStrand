@@ -26,7 +26,10 @@ vi.mock("@upstash/redis", () => ({ Redis: { fromEnv: mock.fromEnv } }));
 vi.mock("@/lib/rate-limit", () => ({ rateLimit: mock.rateLimit }));
 
 import { withProviderCapacity } from "@/lib/ai/capacity";
-import { limitLogicalSubmission } from "@/lib/request-admission";
+import {
+  limitLogicalSubmission,
+  withUploadAdmission,
+} from "@/lib/request-admission";
 
 const studentA = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
 const studentB = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
@@ -152,7 +155,7 @@ function parseReply(
 }
 
 describe.skipIf(!localRedisAvailable)(
-  "real Redis audio replay fairness",
+  "real Redis audio and upload fairness",
   () => {
     let server: ChildProcess;
     let folder: string;
@@ -255,6 +258,104 @@ describe.skipIf(!localRedisAvailable)(
       work = async () => "synthetic recorded words",
     ) => withProviderCapacity("audio", "test-asr", work, identity);
     const latestKeys = (): string[] => mock.eval.mock.calls.at(-1)![1];
+    function heldUpload(identity: string) {
+      let entered!: () => void;
+      let release!: () => void;
+      const started = new Promise<void>((resolve) => {
+        entered = resolve;
+      });
+      const held = new Promise<void>((resolve) => {
+        release = resolve;
+      });
+      const finished = withUploadAdmission(async () => {
+        entered();
+        await held;
+        return "synthetic upload completed";
+      }, identity);
+      return { started, release, finished };
+    }
+
+    it("limits one student to two held multipart uploads while other students fill the eight global slots", async () => {
+      const held: ReturnType<typeof heldUpload>[] = [];
+      try {
+        held.push(heldUpload(studentA), heldUpload(studentA));
+        await Promise.all(held.map((upload) => upload.started));
+        const keys = latestKeys();
+        const deniedWork = vi.fn();
+        await expect(
+          withUploadAdmission(deniedWork, studentA),
+        ).rejects.toMatchObject({
+          status: 429,
+          code: "AI_CAPACITY_BUSY",
+        });
+        expect(deniedWork).not.toHaveBeenCalled();
+        expect(await command("ZCARD", keys[0])).toBe(2);
+        expect(await command("ZCARD", keys[1])).toBe(2);
+        for (const identity of [
+          studentB,
+          "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+          "dddddddd-dddd-4ddd-8ddd-dddddddddddd",
+        ]) {
+          const pair = [heldUpload(identity), heldUpload(identity)];
+          held.push(...pair);
+          await Promise.all(pair.map((upload) => upload.started));
+          expect(await command("ZCARD", latestKeys()[1])).toBe(2);
+        }
+        expect(await command("ZCARD", keys[0])).toBe(8);
+        await expect(
+          withUploadAdmission(
+            deniedWork,
+            "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee",
+          ),
+        ).rejects.toMatchObject({ status: 429 });
+        expect(await command("ZCARD", keys[0])).toBe(8);
+        expect(await command("EXISTS", latestKeys()[1])).toBe(0);
+        expect(deniedWork).not.toHaveBeenCalled();
+      } finally {
+        held.forEach((upload) => upload.release());
+        await Promise.allSettled(held.map((upload) => upload.finished));
+      }
+      expect(await command("ZCARD", "ignite:uploads:active")).toBe(0);
+    });
+
+    it("expires an old upload in both shares and prevents its late release from deleting replacement owners", async () => {
+      const held: ReturnType<typeof heldUpload>[] = [];
+      try {
+        const old = heldUpload(studentA);
+        held.push(old);
+        await old.started;
+        const [, keys, args] = mock.eval.mock.calls.at(-1)!;
+        const oldOwner = args[2];
+        const other = heldUpload(studentA);
+        held.push(other);
+        await other.started;
+        for (const key of keys) await command("ZADD", key, 1, oldOwner);
+
+        const replacement = heldUpload(studentA);
+        held.push(replacement);
+        await replacement.started;
+        const replacementOwner = mock.eval.mock.calls.at(-1)![2][2];
+        expect(replacementOwner).not.toBe(oldOwner);
+        for (const key of keys) {
+          expect(await command("ZCARD", key)).toBe(2);
+          expect(await command("ZSCORE", key, oldOwner)).toBeNull();
+          expect(await command("PTTL", key)).toBeGreaterThan(100000);
+        }
+        old.release();
+        await expect(old.finished).resolves.toBe("synthetic upload completed");
+        for (const key of keys) {
+          expect(await command("ZCARD", key)).toBe(2);
+          expect(await command("ZSCORE", key, replacementOwner)).not.toBeNull();
+        }
+        other.release();
+        await other.finished;
+        for (const key of keys) expect(await command("ZCARD", key)).toBe(1);
+      } finally {
+        held.forEach((upload) => upload.release());
+        await Promise.allSettled(held.map((upload) => upload.finished));
+      }
+      expect(await command("ZCARD", "ignite:uploads:active")).toBe(0);
+    });
 
     it("charges every physical replay of the same previously accepted logical clip", async () => {
       const provider = vi.fn(async () => "synthetic recorded words");

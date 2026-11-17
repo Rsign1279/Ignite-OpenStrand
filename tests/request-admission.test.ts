@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 
 const mock = vi.hoisted(() => ({
@@ -7,7 +8,6 @@ const mock = vi.hoisted(() => ({
   get: vi.fn(),
   set: vi.fn(),
   eval: vi.fn(),
-  zrem: vi.fn(),
   rate: vi.fn(),
   fromEnv: vi.fn(),
 }));
@@ -45,7 +45,6 @@ beforeEach(() => {
     get: mock.get,
     set: mock.set,
     eval: mock.eval,
-    zrem: mock.zrem,
   });
   mock.get.mockImplementation(
     async (key: string) => current(key)?.value ?? null,
@@ -67,22 +66,38 @@ beforeEach(() => {
     async (script: string, keys: string[], args: (string | number)[]) => {
       const key = keys[0];
       if (script.includes("ZREMRANGEBYSCORE")) {
-        const [maximum, leaseMs, owner] = args;
-        const active = mock.uploads.get(key) ?? new Map<string, number>();
-        for (const [id, expires] of active)
-          if (expires <= mock.clock) active.delete(id);
-        mock.uploads.set(key, active);
-        if (active.size >= Number(maximum)) return 0;
-        active.set(String(owner), mock.clock + Number(leaseMs));
+        const [maximum, leaseMs, owner, studentMaximum] = args;
+        const active = keys.map(
+          (uploadKey) =>
+            mock.uploads.get(uploadKey) ?? new Map<string, number>(),
+        );
+        for (const leases of active)
+          for (const [id, expires] of leases)
+            if (expires <= mock.clock) leases.delete(id);
+        if (
+          active[0].size >= Number(maximum) ||
+          (active[1] && active[1].size >= Number(studentMaximum))
+        )
+          return 0;
+        for (const [index, leases] of active.entries()) {
+          leases.set(String(owner), mock.clock + Number(leaseMs));
+          mock.uploads.set(keys[index], leases);
+        }
         return 1;
       }
+      if (script.includes("'ZREM'"))
+        return keys.reduce(
+          (removed, uploadKey) =>
+            removed +
+            Number(
+              mock.uploads.get(uploadKey)?.delete(String(args[0])) ?? false,
+            ),
+          0,
+        );
       if (current(key)?.value !== args[0]) return 0;
       mock.strings.delete(key);
       return 1;
     },
-  );
-  mock.zrem.mockImplementation(async (key: string, owner: string) =>
-    Number(mock.uploads.get(key)?.delete(owner) ?? false),
   );
   mock.rate.mockResolvedValue(undefined);
 });
@@ -273,7 +288,9 @@ it("bounds concurrent upload operations before any rejected body can be read", a
         code: "AI_CAPACITY_BUSY",
       });
   expect(mock.uploads.get("ignite:uploads:active")?.size).toBe(0);
-  expect(mock.zrem).toHaveBeenCalledTimes(8);
+  expect(
+    mock.eval.mock.calls.filter(([script]) => script.includes("'ZREM'")),
+  ).toHaveLength(8);
 });
 
 it("releases upload ownership on parse/provider failure and tolerates cleanup failure", async () => {
@@ -284,10 +301,12 @@ it("releases upload ownership on parse/provider failure and tolerates cleanup fa
     }),
   ).rejects.toBe(failure);
   expect(mock.uploads.get("ignite:uploads:active")?.size).toBe(0);
-  mock.zrem.mockRejectedValueOnce(new Error("cleanup unavailable"));
-  await expect(withUploadAdmission(async () => "completed")).resolves.toBe(
-    "completed",
-  );
+  await expect(
+    withUploadAdmission(async () => {
+      mock.eval.mockRejectedValueOnce(new Error("cleanup unavailable"));
+      return "completed";
+    }),
+  ).resolves.toBe("completed");
 });
 
 it("never enters an upload operation when shared admission storage fails", async () => {
@@ -297,4 +316,174 @@ it("never enters an upload operation when shared admission storage fails", async
     status: 503,
   });
   expect(operation).not.toHaveBeenCalled();
+});
+
+const studentA = "abcdef12-1111-4111-8111-111111111111";
+const studentB = "22222222-2222-4222-8222-222222222222";
+const globalUploads = "ignite:uploads:active";
+const studentUploads = (id: string) =>
+  `ignite:uploads:{ignite:uploads:active}:student:${createHash("sha256").update(id.toLowerCase()).digest("hex")}`;
+
+it("limits a trusted student to two uploads without reserving a rejected global slot", async () => {
+  const held = deferred<string>();
+  const readBody = vi.fn(() => held.promise);
+  const first = withUploadAdmission(readBody, studentA);
+  const second = withUploadAdmission(readBody, studentA);
+  const rejectedBody = vi.fn(async () => "should not read");
+  await expect(
+    withUploadAdmission(rejectedBody, studentA),
+  ).rejects.toMatchObject({ status: 429, code: "AI_CAPACITY_BUSY" });
+  expect(readBody).toHaveBeenCalledTimes(2);
+  expect(rejectedBody).not.toHaveBeenCalled();
+  expect(mock.uploads.get(globalUploads)?.size).toBe(2);
+  expect(mock.uploads.get(studentUploads(studentA))?.size).toBe(2);
+  await expect(
+    withUploadAdmission(async () => "another student can upload", studentB),
+  ).resolves.toBe("another student can upload");
+  expect(mock.uploads.get(globalUploads)?.size).toBe(2);
+  expect(mock.rate).not.toHaveBeenCalled();
+  held.resolve("read");
+  await Promise.all([first, second]);
+  expect(mock.uploads.get(globalUploads)?.size).toBe(0);
+  expect(mock.uploads.get(studentUploads(studentA))?.size).toBe(0);
+});
+
+it("retains the global eight-upload bound across isolated student shares", async () => {
+  const held = deferred<string>();
+  const readBody = vi.fn(() => held.promise);
+  const students = Array.from(
+    { length: 5 },
+    (_, index) =>
+      `12345678-1234-4123-8123-${String(index + 1).padStart(12, "0")}`,
+  );
+  const attempts = students.flatMap((id) =>
+    Array.from({ length: 2 }, () =>
+      withUploadAdmission(readBody, id).then(
+        () => true,
+        () => false,
+      ),
+    ),
+  );
+  await new Promise<void>((resolve) => setImmediate(resolve));
+  expect(readBody).toHaveBeenCalledTimes(8);
+  expect(mock.uploads.get(globalUploads)?.size).toBe(8);
+  for (const id of students.slice(0, 4))
+    expect(mock.uploads.get(studentUploads(id))?.size).toBe(2);
+  // A denied global admission must not leave a student-only lease behind.
+  expect(mock.uploads.has(studentUploads(students[4]))).toBe(false);
+  held.resolve("read");
+  const results = await Promise.all(attempts);
+  expect(results.filter(Boolean)).toHaveLength(8);
+  expect(results.filter((result) => !result)).toHaveLength(2);
+  for (const leases of mock.uploads.values()) expect(leases.size).toBe(0);
+});
+
+it("canonicalizes valid UUIDs into the same hashed share and rejects invalid IDs before storage", async () => {
+  const held = deferred<string>();
+  const first = withUploadAdmission(() => held.promise, studentA);
+  const second = withUploadAdmission(
+    () => held.promise,
+    studentA.toUpperCase(),
+  );
+  await expect(
+    withUploadAdmission(async () => "blocked", studentA),
+  ).rejects.toMatchObject({ status: 429 });
+  const acquisition = mock.eval.mock.calls[0];
+  expect(acquisition[1]).toEqual([globalUploads, studentUploads(studentA)]);
+  expect(acquisition[1].join(" ")).not.toContain(studentA);
+  expect(acquisition[1].join(" ")).not.toContain(studentA.toUpperCase());
+  expect(mock.uploads.size).toBe(2);
+  const evalCount = mock.eval.mock.calls.length;
+  const invalidBody = vi.fn(async () => "never");
+  for (const id of ["", "student-a", ` ${studentA}`, `${studentA}:other`])
+    await expect(withUploadAdmission(invalidBody, id)).rejects.toMatchObject({
+      name: "ZodError",
+    });
+  expect(mock.eval).toHaveBeenCalledTimes(evalCount);
+  expect(invalidBody).not.toHaveBeenCalled();
+  held.resolve("done");
+  await Promise.all([first, second]);
+});
+
+it("expires both upload shares and prevents an old owner from removing newer leases", async () => {
+  const oldHeld = deferred<string>();
+  const newHeld = deferred<string>();
+  const old = withUploadAdmission(() => oldHeld.promise, studentA);
+  await new Promise<void>((resolve) => setImmediate(resolve));
+  const oldOwner = [...mock.uploads.get(globalUploads)!.keys()][0];
+  mock.clock = 100001;
+  const newer = withUploadAdmission(() => newHeld.promise, studentA);
+  await new Promise<void>((resolve) => setImmediate(resolve));
+  const newOwner = [...mock.uploads.get(globalUploads)!.keys()][0];
+  expect(newOwner).not.toBe(oldOwner);
+  for (const key of [globalUploads, studentUploads(studentA)]) {
+    expect([...mock.uploads.get(key)!.keys()]).toEqual([newOwner]);
+  }
+  oldHeld.resolve("old operation completed late");
+  await old;
+  for (const key of [globalUploads, studentUploads(studentA)])
+    expect([...mock.uploads.get(key)!.keys()]).toEqual([newOwner]);
+  newHeld.resolve("new operation completed");
+  await newer;
+  for (const key of [globalUploads, studentUploads(studentA)])
+    expect(mock.uploads.get(key)?.size).toBe(0);
+});
+
+it("releases both owned upload members on failure without deleting another student's work", async () => {
+  const held = deferred<string>();
+  const other = withUploadAdmission(() => held.promise, studentB);
+  await new Promise<void>((resolve) => setImmediate(resolve));
+  const otherOwner = [...mock.uploads.get(globalUploads)!.keys()][0];
+  const failure = new Error("multipart parse failed");
+  await expect(
+    withUploadAdmission(async () => {
+      throw failure;
+    }, studentA),
+  ).rejects.toBe(failure);
+  expect(mock.uploads.get(studentUploads(studentA))?.size).toBe(0);
+  expect([...mock.uploads.get(globalUploads)!.keys()]).toEqual([otherOwner]);
+  expect([...mock.uploads.get(studentUploads(studentB))!.keys()]).toEqual([
+    otherOwner,
+  ]);
+  const cleanup = mock.eval.mock.calls.find(
+    ([script, keys]) =>
+      script.includes("'ZREM'") && keys.includes(studentUploads(studentA)),
+  );
+  expect(cleanup?.[1]).toEqual([globalUploads, studentUploads(studentA)]);
+  held.resolve("other student completed");
+  await other;
+});
+
+it("fails closed before reading a student's body if atomic admission storage fails", async () => {
+  const readBody = vi.fn(async () => "never");
+  mock.eval.mockRejectedValueOnce(new Error("admission storage failed"));
+  await expect(withUploadAdmission(readBody, studentA)).rejects.toMatchObject({
+    status: 503,
+  });
+  expect(readBody).not.toHaveBeenCalled();
+  expect(mock.uploads.size).toBe(0);
+  expect(mock.rate).not.toHaveBeenCalled();
+});
+
+it("keeps failed cleanup bounded and restores both shares after lease expiry", async () => {
+  for (let index = 0; index < 2; index++)
+    await expect(
+      withUploadAdmission(async () => {
+        mock.eval.mockRejectedValueOnce(new Error("release storage failed"));
+        return "body was read";
+      }, studentA),
+    ).resolves.toBe("body was read");
+  expect(mock.uploads.get(globalUploads)?.size).toBe(2);
+  expect(mock.uploads.get(studentUploads(studentA))?.size).toBe(2);
+  const blocked = vi.fn(async () => "never");
+  await expect(withUploadAdmission(blocked, studentA)).rejects.toMatchObject({
+    status: 429,
+  });
+  expect(blocked).not.toHaveBeenCalled();
+  mock.clock = 100001;
+  await expect(
+    withUploadAdmission(async () => "recovered", studentA),
+  ).resolves.toBe("recovered");
+  expect(mock.uploads.get(globalUploads)?.size).toBe(0);
+  expect(mock.uploads.get(studentUploads(studentA))?.size).toBe(0);
 });

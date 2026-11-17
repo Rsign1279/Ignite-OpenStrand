@@ -1,6 +1,7 @@
 import "server-only";
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { Redis } from "@upstash/redis";
+import { z } from "zod";
 import { HttpError } from "@/lib/http";
 import { rateLimit } from "@/lib/rate-limit";
 
@@ -15,7 +16,25 @@ class RequestBusy extends HttpError {
   }
 }
 const releaseOwned = `if redis.call('GET',KEYS[1])==ARGV[1] then return redis.call('DEL',KEYS[1]) else return 0 end`;
-const acquireUpload = `local t=redis.call('TIME');local now=tonumber(t[1])*1000+math.floor(tonumber(t[2])/1000);redis.call('ZREMRANGEBYSCORE',KEYS[1],'-inf',now);if redis.call('ZCARD',KEYS[1])>=tonumber(ARGV[1]) then return 0 end;redis.call('ZADD',KEYS[1],now+tonumber(ARGV[2]),ARGV[3]);redis.call('PEXPIRE',KEYS[1],tonumber(ARGV[2])+1000);return 1`;
+const acquireUpload = `
+local t=redis.call('TIME')
+local now=tonumber(t[1])*1000+math.floor(tonumber(t[2])/1000)
+for i=1,#KEYS do
+  redis.call('ZREMRANGEBYSCORE',KEYS[i],'-inf',now)
+end
+if redis.call('ZCARD',KEYS[1])>=tonumber(ARGV[1]) then return 0 end
+if KEYS[2] and redis.call('ZCARD',KEYS[2])>=tonumber(ARGV[4]) then return 0 end
+for i=1,#KEYS do
+  redis.call('ZADD',KEYS[i],now+tonumber(ARGV[2]),ARGV[3])
+  redis.call('PEXPIRE',KEYS[i],tonumber(ARGV[2])+1000)
+end
+return 1`;
+const releaseUpload = `
+local removed=0
+for i=1,#KEYS do
+  removed=removed+redis.call('ZREM',KEYS[i],ARGV[1])
+end
+return removed`;
 function client() {
   if (
     !process.env.UPSTASH_REDIS_REST_URL ||
@@ -96,14 +115,27 @@ export async function limitLogicalSubmission(
   }
 }
 
-/** Bound multipart memory before reading a body, across all function instances. */
-export async function withUploadAdmission<T>(operation: () => Promise<T>) {
+/** Bound multipart memory and each student's share before reading a body. */
+export async function withUploadAdmission<T>(
+  operation: () => Promise<T>,
+  userId?: string,
+) {
+  // Only an authenticated ID supplied by the server may select a student share.
+  const studentId =
+    userId === undefined ? undefined : z.uuid().parse(userId).toLowerCase();
   const redis = client(),
     owner = randomUUID(),
-    key = "ignite:uploads:active";
+    keys = ["ignite:uploads:active"];
+  if (studentId) {
+    // The hash tag matches the existing global key's hash slot, preserving its
+    // live leases while allowing atomic multi-key scripts on clustered Redis.
+    keys.push(
+      `ignite:uploads:{ignite:uploads:active}:student:${createHash("sha256").update(studentId).digest("hex")}`,
+    );
+  }
   let allowed: unknown;
   try {
-    allowed = await redis.eval(acquireUpload, [key], [8, 100000, owner]);
+    allowed = await redis.eval(acquireUpload, keys, [8, 100000, owner, 2]);
   } catch {
     throw unavailable();
   }
@@ -112,7 +144,7 @@ export async function withUploadAdmission<T>(operation: () => Promise<T>) {
     return await operation();
   } finally {
     try {
-      await redis.zrem(key, owner);
+      await redis.eval(releaseUpload, keys, [owner]);
     } catch {
       /* bounded lease expires */
     }
