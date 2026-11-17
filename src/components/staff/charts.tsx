@@ -243,7 +243,7 @@ export function ProgramCharts({ data }: { data: Analytics }) {
       </Card>
       <Card
         title="Which skills need attention?"
-        subtitle="Four criteria, scored 0–3. Situation and Task form one criterion."
+        subtitle="STAR criteria, scored 0–3 each. Earlier-rubric attempts are excluded."
         empty={empty}
         table={
           <DataTable
@@ -430,7 +430,7 @@ export function StudentCharts({ data }: { data: StudentDetail }) {
       </Card>
       <Card
         title="Your student and their strand"
-        subtitle="Averages /3, within the same dates. Strand results include this student."
+        subtitle="STAR averages /3, within the same dates. Earlier-rubric attempts are excluded; strand results include this student."
         empty={!points.length}
         table={
           <DataTable

@@ -24,22 +24,22 @@ const rows: Attempt[] = Array.from({ length: count }, (_, i) => ({
   total_score: 6 + (i % 3) * 3,
   scores: [
     {
-      situationTask: 1,
-      personalActions: 2,
-      resultImpact: 1,
-      professionalCommunication: 2,
+      situation: 1,
+      action: 2,
+      result: 1,
+      task: 2,
     },
     {
-      situationTask: 2,
-      personalActions: 3,
-      resultImpact: 2,
-      professionalCommunication: 2,
+      situation: 2,
+      action: 3,
+      result: 2,
+      task: 2,
     },
     {
-      situationTask: 3,
-      personalActions: 3,
-      resultImpact: 3,
-      professionalCommunication: 3,
+      situation: 3,
+      action: 3,
+      result: 3,
+      task: 3,
     },
   ][i % 3],
   created_at: new Date(Date.UTC(2026, 9, 1) + i * 2 * 3600000).toISOString(),
@@ -59,10 +59,10 @@ if (params.get("outcomes") === "mixed") {
     );
     row.total_score = score;
     row.scores = {
-      situationTask: values[0],
-      personalActions: values[1],
-      resultImpact: values[2],
-      professionalCommunication: values[3],
+      situation: values[0],
+      action: values[1],
+      result: values[2],
+      task: values[3],
     };
   });
 }

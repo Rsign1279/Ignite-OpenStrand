@@ -2,10 +2,10 @@ import { test, expect } from "@playwright/test";
 import { getStrand } from "../../src/config/strands";
 const pre = {
   scores: {
-    situationTask: 2,
-    personalActions: 2,
-    resultImpact: 2,
-    professionalCommunication: 2,
+    situation: 2,
+    action: 2,
+    result: 2,
+    task: 2,
   },
   total: 8,
   strongestPart: "Clear actions.",

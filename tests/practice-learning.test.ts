@@ -13,10 +13,10 @@ import type { Evaluation } from "@/lib/validation";
 
 const score = (values: [number, number, number, number]): Evaluation => ({
   scores: {
-    situationTask: values[0],
-    personalActions: values[1],
-    resultImpact: values[2],
-    professionalCommunication: values[3],
+    situation: values[0],
+    action: values[1],
+    result: values[2],
+    task: values[3],
   },
   total: 12,
   strongestPart: "A specific action.",
@@ -26,14 +26,14 @@ const score = (values: [number, number, number, number]): Evaluation => ({
 describe("A focused practice goal", () => {
   it("uses actual category scores, ignoring an inconsistent total", () => {
     const focus = getPracticeFocus(score([2, 3, 0, 2]));
-    expect(focus.key).toBe("resultImpact");
+    expect(focus.key).toBe("result");
     expect(focus.score).toBe(0);
     expect(focus.complete).toBe(false);
     expect(focus.action).toContain("A number is optional");
   });
   it("resolves tied gaps consistently, starting with context before actions", () => {
-    expect(getPracticeFocus(score([1, 1, 2, 3])).key).toBe("situationTask");
-    expect(getPracticeFocus(score([2, 1, 1, 3])).key).toBe("personalActions");
+    expect(getPracticeFocus(score([1, 1, 2, 3])).key).toBe("situation");
+    expect(getPracticeFocus(score([2, 1, 1, 3])).key).toBe("action");
   });
   it("offers transfer instead of an invented weakness after a complete answer", () => {
     const focus = getPracticeFocus(score([3, 3, 3, 3]));
@@ -51,7 +51,7 @@ describe("A focused practice goal", () => {
     evaluation.improvementArea = "Another answer's feedback";
     expect(goal).toMatchObject({
       questionId: "education-feedback-v1",
-      criterion: "resultImpact",
+      criterion: "result",
       action: "Explain what the teacher said about your revised instructions.",
       complete: false,
     });
@@ -80,7 +80,7 @@ describe("Question recommendations", () => {
       );
       expect(result?.question).toEqual(strand.questions[9]);
       expect(result?.question.id).not.toBe(current.id);
-      expect(result?.reason).toContain("result / impact");
+      expect(result?.reason).toContain("result");
       expect(result?.fresh).toBe(true);
     }
   });
@@ -174,7 +174,7 @@ describe("Honest same-question growth", () => {
       change: 0,
       direction: "steady",
     });
-    expect(result?.categories.map((c) => c.change)).toEqual([1, -1, 1, -1]);
+    expect(result?.categories.map((c) => c.change)).toEqual([1, -1, -1, 1]);
     expect(result?.explanation).toContain("individual skills change");
   });
   it("identifies improved responses without calling the student job-ready", () => {

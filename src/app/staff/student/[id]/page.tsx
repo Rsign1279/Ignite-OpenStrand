@@ -1,3 +1,4 @@
+import { isStarScores, scoreRows } from "@/lib/validation";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { z } from "zod";
@@ -14,7 +15,7 @@ import { AnalyticsFilters } from "@/components/staff/filters";
 import { StudentCharts } from "@/components/staff/chart-loader";
 import { ReportExports } from "@/components/staff/exports";
 import { signed, filterLabel } from "@/components/staff/report-utils";
-import { getStrand, rubric } from "@/config/strands";
+import { getStrand } from "@/config/strands";
 export const dynamic = "force-dynamic";
 export default async function Student({
   params,
@@ -212,11 +213,16 @@ export default async function Student({
                       Central{a.is_legacy ? " · Legacy date" : null}
                     </span>
                   </summary>
+                  {!isStarScores(a.scores) && (
+                    <p className="helper">
+                      Earlier rubric — original scores preserved.
+                    </p>
+                  )}
                   <dl className="attempt-rubric">
-                    {rubric.map((r) => (
+                    {scoreRows(a.scores).map((r) => (
                       <div key={r.key}>
                         <dt>{r.label}</dt>
-                        <dd>{a.scores[r.key]} /3</dd>
+                        <dd>{r.score} /3</dd>
                       </div>
                     ))}
                   </dl>

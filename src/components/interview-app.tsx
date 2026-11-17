@@ -7,6 +7,7 @@ import {
   useSyncExternalStore,
 } from "react";
 import Link from "next/link";
+import { RUBRIC_SCORING_VERSION } from "@/config/rubric-anchors";
 import Image from "next/image";
 import {
   ArrowRight,
@@ -341,6 +342,7 @@ export function InterviewApp() {
           "/api/interview/evaluate",
           {
             transcript,
+            rubricVersion: RUBRIC_SCORING_VERSION,
             stage:
               group === "PRE" ? "pre" : group === "POST" ? "post" : "practice",
             requestId: attemptRequests.current[group].id,

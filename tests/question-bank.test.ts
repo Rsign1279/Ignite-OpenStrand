@@ -88,9 +88,7 @@ it("keeps independent scoring and the same single-focus coaching policy across f
     expect(prompt).toContain("The stage is not evidence of improvement");
     expect(prompt).toContain("After assigning scores independently");
     expect(prompt).toContain("lowest-scoring category");
-    expect(prompt).toContain(
-      "situationTask, personalActions, resultImpact, professionalCommunication",
-    );
+    expect(prompt).toContain("situation, task, action, result");
     expect(prompt).toContain("one response-specific, achievable action");
     expect(prompt).toContain(
       "If all four scores are 3, do not invent a deficit",

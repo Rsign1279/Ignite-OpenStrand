@@ -1,6 +1,6 @@
 import { z } from "zod";
-import { strandIds } from "@/config/strands";
-import { evaluationSchema } from "@/lib/validation";
+import { strandIds, rubric } from "@/config/strands";
+import { storedScoresSchema } from "@/lib/validation";
 import { LEGACY_SCORING_VERSION } from "@/config/rubric-anchors";
 export { LEGACY_SCORING_VERSION };
 export const attemptSchema = z.object({
@@ -12,7 +12,7 @@ export const attemptSchema = z.object({
   question_text: z.string(),
   attempt_number: z.number().int().positive(),
   total_score: z.number().int().min(0).max(12),
-  scores: evaluationSchema.shape.scores,
+  scores: storedScoresSchema,
   created_at: z.iso.datetime({ offset: true }),
   stage: z.enum(["pre", "post", "practice"]),
   answer_text: z.string().nullable().optional(),
@@ -102,7 +102,7 @@ export type StudentSummary = {
 };
 export type RubricAverage = {
   criterion: string;
-  key: keyof Attempt["scores"];
+  key: (typeof rubric)[number]["key"];
   score: number | null;
   strandScore?: number | null;
 };

@@ -1,3 +1,4 @@
+import { isStarScores } from "@/lib/validation";
 import { getStrand } from "@/config/strands";
 import { filterAttempts, studentSummaries } from "./aggregate";
 import type { Attempt, Filters } from "./model";
@@ -19,7 +20,7 @@ export function attemptsCsv(attempts: Attempt[], filters: Filters) {
     ),
   );
   return [
-    "id,student_id,student_name,strand,question_id,question_text,stage,attempt_number,total_score,situation_task,personal_actions,result_impact,communication,created_at,answer_text,feedback_text,first_score,best_score,latest_score,delta,attempts_count,is_legacy,latest_minus_first,has_repeat,scoring_version,comparison_status,first_scoring_version,latest_scoring_version",
+    "id,student_id,student_name,strand,question_id,question_text,stage,attempt_number,total_score,situation_task,personal_actions,result_impact,communication,created_at,answer_text,feedback_text,first_score,best_score,latest_score,delta,attempts_count,is_legacy,latest_minus_first,has_repeat,scoring_version,comparison_status,first_scoring_version,latest_scoring_version,situation,task,action,result,rubric_format",
     ...rows.map((a) => {
       const q = derived.get(a.student_id + ":" + a.question_id)!;
       return [
@@ -32,7 +33,14 @@ export function attemptsCsv(attempts: Attempt[], filters: Filters) {
         a.stage,
         a.attempt_number,
         a.total_score,
-        ...Object.values(a.scores),
+        ...(!isStarScores(a.scores)
+          ? [
+              a.scores.situationTask,
+              a.scores.personalActions,
+              a.scores.resultImpact,
+              a.scores.professionalCommunication,
+            ]
+          : [null, null, null, null]),
         a.created_at,
         a.answer_text,
         a.feedback_text,
@@ -48,6 +56,15 @@ export function attemptsCsv(attempts: Attempt[], filters: Filters) {
         q.comparison_status,
         q.first_scoring_version,
         q.latest_scoring_version,
+        ...(isStarScores(a.scores)
+          ? [
+              a.scores.situation,
+              a.scores.task,
+              a.scores.action,
+              a.scores.result,
+            ]
+          : [null, null, null, null]),
+        isStarScores(a.scores) ? "STAR" : "Earlier rubric",
       ]
         .map(csvCell)
         .join(",");

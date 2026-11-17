@@ -3,13 +3,19 @@ import { randomUUID } from "node:crypto";
 import { z } from "zod";
 import { getPracticeQuestion, type StrandId } from "@/config/strands";
 import { adminClient } from "@/lib/supabase/server";
-import { evaluationSchema, parseEvaluation } from "@/lib/validation";
+import {
+  evaluationSchema,
+  parseEvaluation,
+  storedScoresSchema,
+  isStarScores,
+} from "@/lib/validation";
 import type { Evaluation, Transfer } from "@/lib/validation";
 import { HttpError } from "@/lib/http";
 import { getScoringVersion } from "@/lib/ai/scoring-config";
 import { LEGACY_SCORING_VERSION } from "@/config/rubric-anchors";
 
 const storedEvaluationSchema = evaluationSchema.extend({
+  scores: storedScoresSchema,
   scoring_version: z.string().min(1).max(300).optional(),
 });
 export async function saveAssessment(
@@ -111,7 +117,12 @@ export async function findRecordedAssessmentWithMetadata(
     );
   if (!data.evaluation_json) return null;
   const stored = storedEvaluationSchema.parse(data.evaluation_json);
-  // Metadata belongs to storage; the public AI evaluation schema is unchanged.
+  if (!isStarScores(stored.scores))
+    throw new HttpError(
+      409,
+      "This answer used the earlier scoring guide. Copy your answer and start a new STAR round; your original result is still saved.",
+    );
+  // Strip storage metadata from the public evaluation.
   return {
     evaluation: parseEvaluation({
       scores: stored.scores,

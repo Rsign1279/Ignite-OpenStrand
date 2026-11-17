@@ -231,7 +231,7 @@ New writes store the rubric-policy version, configured Groq model, and temperatu
 
 Minimum attempts, date range, and student-name search are applied before program charts. “Scores by attempt number” is an unpaired descriptive view with different contributors at different attempt counts; it does not establish a learning curve or causation. Weeks start Monday in UTC and gaps are filled with zero. Student strand-comparison averages use the same dates but ignore the selected student's name search and minimum-attempt threshold. See `docs/PILOT-EVALUATION.md` for transfer, independent review, and reporting limits.
 
-The original rubric is retained: **Situation & Task, Personal Actions, Result/Impact, Communication**, each 0–3. There is no fabricated independent Task score. Ongoing practice uses the same /12 rubric and is included in attempt counts and growth analytics.
+The rubric is **S — Situation, T — Task, A — Action, R — Result**, each 0–3 for a total of 12. Clear, relevant communication is expected within each element rather than scored separately. Situation and Task are evaluated independently. Earlier-rubric attempts retain their original scores and labels; they are excluded from STAR skill averages and are never converted into an invented Task score. Ongoing practice uses the same STAR rubric and is included in attempt counts and growth analytics.
 
 Anonymous profiles are registration/session identities. Never merge two students by name. Reset signs out the current identity, so repeat registrations remain separate unless a future authenticated identity-linking flow is added. There is no reliable cross-session longitudinal identity matching in this version.
 

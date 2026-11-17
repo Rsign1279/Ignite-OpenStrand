@@ -1,8 +1,8 @@
-import type { Profile, Evaluation } from "@/lib/validation";
+import type { Profile, Evaluation, StoredScores } from "@/lib/validation";
 export type LearningResult = {
   user_id: string;
-  pre_scores: Evaluation["scores"] | null;
-  post_scores: Evaluation["scores"] | null;
+  pre_scores: StoredScores | null;
+  post_scores: StoredScores | null;
   transfer_star: {
     situation: boolean;
     task: boolean;
@@ -19,16 +19,25 @@ export type AttemptRow = {
   question_text: string;
   stage: "pre" | "post" | "practice";
   attempt_number: number;
-  situation_task: number;
-  personal_actions: number;
-  result_impact: number;
-  communication: number;
+  situation: number | null;
+  task: number | null;
+  action: number | null;
+  result: number | null;
+  situation_task: number | null;
+  personal_actions: number | null;
+  result_impact: number | null;
+  communication: number | null;
   total_score: number;
   created_at: string;
   answer_text: string | null;
   feedback_text: string | null;
   is_legacy: boolean;
-  evaluation_json: Evaluation | null;
+  evaluation_json:
+    | (Omit<Evaluation, "scores"> & {
+        scores: StoredScores;
+        scoring_version?: string;
+      })
+    | null;
 };
 export type Database = {
   public: {

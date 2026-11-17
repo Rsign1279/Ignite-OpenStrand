@@ -22,10 +22,10 @@ it("retries malformed JSON once then validates", async () => {
           message: {
             content: JSON.stringify({
               scores: {
-                situationTask: 1,
-                personalActions: 2,
-                resultImpact: 1,
-                professionalCommunication: 2,
+                situation: 1,
+                action: 2,
+                result: 1,
+                task: 2,
               },
               total: 6,
               strongestPart: "Specific action",

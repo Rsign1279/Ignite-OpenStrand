@@ -9,10 +9,10 @@ import type { Evaluation } from "@/lib/validation";
 
 const evaluation: Evaluation = {
   scores: {
-    situationTask: 2,
-    personalActions: 2,
-    resultImpact: 1,
-    professionalCommunication: 2,
+    situation: 2,
+    action: 2,
+    result: 1,
+    task: 2,
   },
   total: 7,
   strongestPart: "Specific action.",

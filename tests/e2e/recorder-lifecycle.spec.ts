@@ -18,10 +18,10 @@ const answer =
   "I tested our project, found the missing connection, and helped our team finish on time.";
 const evaluation = {
   scores: {
-    situationTask: 2,
-    personalActions: 2,
-    resultImpact: 2,
-    professionalCommunication: 2,
+    situation: 2,
+    action: 2,
+    result: 2,
+    task: 2,
   },
   total: 8,
   strongestPart: "You described your own action.",

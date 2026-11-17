@@ -22,7 +22,10 @@ import {
   buildComparisonPrompt,
 } from "@/lib/ai/prompts";
 import { getScoringVersion } from "@/lib/ai/scoring-config";
-import { LEGACY_SCORING_VERSION } from "@/config/rubric-anchors";
+import {
+  LEGACY_SCORING_VERSION,
+  RUBRIC_SCORING_VERSION,
+} from "@/config/rubric-anchors";
 import { sameOrigin, readJson, json, failure, HttpError } from "@/lib/http";
 export async function POST(request: Request) {
   try {
@@ -32,6 +35,11 @@ export async function POST(request: Request) {
     const id = studentProfile.strand;
     await rateLimit(user.id, "assessment");
     const answer = answerSchema.parse(await readJson(request));
+    if (answer.rubricVersion !== RUBRIC_SCORING_VERSION)
+      throw new HttpError(
+        409,
+        "The scoring guide has changed. Copy your answer, then refresh to start a new STAR round.",
+      );
     try {
       getPracticeQuestion(id, answer.questionId);
     } catch {
