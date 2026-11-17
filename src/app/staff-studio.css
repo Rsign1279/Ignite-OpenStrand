@@ -219,6 +219,10 @@
   padding: 28px;
   background: transparent;
 }
+.staff-studio .table-scroll {
+  /* Keep absolutely positioned accessible labels inside the scrolling table. */
+  position: relative;
+}
 .staff-studio .table-heading h2 {
   font-size: 32px;
   line-height: 1.1;
