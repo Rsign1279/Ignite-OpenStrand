@@ -619,6 +619,7 @@ export function InterviewApp() {
               <label htmlFor="name">What should we call you?</label>
               <input
                 id="name"
+                aria-describedby="name-example"
                 autoComplete="off"
                 maxLength={80}
                 value={name}
@@ -627,6 +628,9 @@ export function InterviewApp() {
                 required
                 disabled={!clientReady || busy}
               />
+              <p id="name-example" className="helper">
+                Ex: Rahul Viswanath
+              </p>
               <fieldset disabled={!clientReady || busy}>
                 <legend>Choose your IGNITE strand.</legend>
                 <div className="strand-choices">
