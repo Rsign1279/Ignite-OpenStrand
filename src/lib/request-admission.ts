@@ -25,7 +25,10 @@ function client() {
       503,
       "Processing is temporarily unavailable. Your answer is still here.",
     );
-  return Redis.fromEnv();
+  return Redis.fromEnv({
+    retry: { retries: 0 },
+    signal: () => AbortSignal.timeout(2000),
+  });
 }
 function unavailable() {
   return new HttpError(

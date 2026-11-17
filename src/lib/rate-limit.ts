@@ -15,7 +15,10 @@ export async function rateLimit(userId: string, bucket: string) {
   let limiter = limiters.get(bucket);
   if (!limiter) {
     limiter = new Ratelimit({
-      redis: Redis.fromEnv(),
+      redis: Redis.fromEnv({
+        retry: { retries: 0 },
+        signal: () => AbortSignal.timeout(2000),
+      }),
       limiter: Ratelimit.slidingWindow(
         bucket === "transcribe" ? 30 : 12,
         "10 m",
