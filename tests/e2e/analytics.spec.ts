@@ -280,3 +280,23 @@ test("an opened strand picker never blocks applying filters on narrow screens", 
   }
   expect(submissions).toHaveLength(2);
 });
+
+test("earlier-rubric attempts remain visible without inventing STAR skill averages", async ({
+  page,
+}) => {
+  for (const mode of ["", "&drilldown=1"]) {
+    await preview(page, "count=3&rubric=earlier" + mode);
+    await expect(
+      page.getByText("No STAR-scored attempts yet", { exact: true }),
+    ).toBeVisible();
+    const skills = page
+      .locator(".analytics-chart")
+      .filter({
+        hasText: mode
+          ? "Your student and their strand"
+          : "Which skills need attention?",
+      });
+    await expect(skills.locator(".recharts-wrapper")).toHaveCount(0);
+    await expect(skills).toContainText("Earlier results remain");
+  }
+});

@@ -71,6 +71,18 @@ if (params.get("versions") === "mixed") {
     row.scoring_version = index < 2 ? "previous-method" : "current-method";
   });
 }
+if (params.get("rubric") === "earlier") {
+  rows.forEach((row) => {
+    row.scores = {
+      situationTask: 1,
+      personalActions: 2,
+      resultImpact: 1,
+      professionalCommunication: 2,
+    };
+    row.total_score = 6;
+    row.scoring_version = "ignite-rubric-anchors-v1";
+  });
+}
 const data = aggregate(rows, parseFilters(new URLSearchParams()));
 const detail = studentDetail(rows, id(1000), data.filters);
 function App() {

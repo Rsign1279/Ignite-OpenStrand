@@ -53,7 +53,7 @@ it("preserves historical scores and securely records independent STAR scores wit
     ).rows;
     await db.exec(
       readFileSync(
-        "supabase/migrations/20261117192305_star_rubric.sql",
+        "supabase/migrations/20261117193026_star_rubric.sql",
         "utf8",
       ),
     );
