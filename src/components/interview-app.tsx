@@ -45,7 +45,10 @@ import {
 } from "@/lib/validation";
 import { transition, type Stage } from "@/lib/machine";
 import { browserClient } from "@/lib/supabase/browser";
-import { studentAccessMessage } from "@/lib/student-access-errors";
+import {
+  registerWithRecovery,
+  type PendingRegistration,
+} from "@/lib/registration-recovery";
 import { api } from "@/lib/client-api";
 import { onSessionChange } from "@/lib/session-events";
 import {
@@ -84,6 +87,7 @@ export function InterviewApp() {
   const [strand, setStrand] = useState<StrandId | "">("");
   const [year, setYear] = useState<1 | 2 | undefined>();
   const [busy, setBusy] = useState(false);
+  const [waitingForCapacity, setWaitingForCapacity] = useState(false);
   const [endingSession, setEndingSession] = useState(false);
   const lock = useRef(false);
   const [error, setError] = useState("");
@@ -108,6 +112,7 @@ export function InterviewApp() {
   const studentSessionId = useRef<string | null>(null);
   const [sessionIdentity, setSessionIdentity] = useState<string>();
   const authMutation = useRef(false);
+  const pendingRegistration = useRef<PendingRegistration | null>(null);
   const evaluationRequest = useRef<AbortController | null>(null);
   const preTranscript = useRef("");
   const attemptRequests = useRef<
@@ -115,6 +120,9 @@ export function InterviewApp() {
   >({});
   const clearStudentState = useCallback((message = "") => {
     authEpoch.current++;
+    authMutation.current = false;
+    pendingRegistration.current = null;
+    setWaitingForCapacity(false);
     studentSessionId.current = null;
     setSessionIdentity(undefined);
     evaluationRequest.current?.abort();
@@ -156,8 +164,7 @@ export function InterviewApp() {
     let unsubscribe: (() => void) | undefined;
     let observedIdentity: string | null | undefined;
     const stopSessionNotices = onSessionChange(() => {
-      if (active && !authMutation.current)
-        clearStudentState(SESSION_CHANGED_MESSAGE);
+      if (active) clearStudentState(SESSION_CHANGED_MESSAGE);
     });
     Promise.resolve().then(() => {
       if (active && strands.some((s) => s.id === selected))
@@ -269,39 +276,63 @@ export function InterviewApp() {
     try {
       const value = profileSchema.parse({ name, strand, ignite_year: year });
       const client = browserClient();
-      const { error: signOutError } = await client.auth.signOut({
-        scope: "local",
+      const registered = await registerWithRecovery({
+        auth: client.auth,
+        pending: pendingRegistration.current,
+        desiredProfile: value,
+        isCurrent: () => authEpoch.current === registrationEpoch,
+        onPending: (pending) => {
+          if (authEpoch.current === registrationEpoch)
+            pendingRegistration.current = pending;
+        },
+        readProfile: async (identity) => {
+          let actual: string | null = null;
+          const profile = await api<Profile | null>(
+            "/api/profile",
+            undefined,
+            undefined,
+            {
+              studentSessionId: identity,
+              onResponse: (response) => {
+                actual = response.headers.get(STUDENT_SESSION_HEADER);
+              },
+            },
+          );
+          return { profile, sessionIdentity: actual };
+        },
+        writeProfile: async (identity, profile) => {
+          let actual: string | null = null;
+          await api("/api/profile", profile, undefined, {
+            studentSessionId: identity,
+            onResponse: (response) => {
+              actual = response.headers.get(STUDENT_SESSION_HEADER);
+            },
+          });
+          return { sessionIdentity: actual };
+        },
       });
-      if (signOutError)
-        throw new Error(
-          "The previous session could not be ended. Retry before starting a new session.",
-        );
-      const { data, error: authError } = await client.auth.signInAnonymously();
-      if (authError || !data.user)
-        throw new Error(studentAccessMessage(authError));
-      const identity = data.user.id;
-      await api("/api/profile", value, undefined, {
-        studentSessionId: identity,
-      });
-      const { data: current } = await client.auth.getSession();
-      if (
-        authEpoch.current !== registrationEpoch ||
-        current.session?.user.id !== identity
-      )
-        throw new Error(SESSION_CHANGED_MESSAGE);
-      studentSessionId.current = identity;
-      setSessionIdentity(identity);
-      setProfile(value);
+      if (authEpoch.current !== registrationEpoch) return;
+      studentSessionId.current = registered.identity;
+      setSessionIdentity(registered.identity);
+      setProfile(registered.profile);
+      setName(registered.profile.name);
+      setStrand(registered.profile.strand);
+      setYear(registered.profile.ignite_year);
       go("READY");
     } catch (e) {
+      if (authEpoch.current !== registrationEpoch) return;
+      if (e instanceof Error && e.message === SESSION_CHANGED_MESSAGE) {
+        clearStudentState(SESSION_CHANGED_MESSAGE);
+        return;
+      }
       setError(
         e instanceof Error && e.name !== "ZodError"
           ? e.message
           : "Enter your name, choose a strand, and select your IGNITE year.",
       );
     } finally {
-      authMutation.current = false;
       if (authEpoch.current === registrationEpoch) {
+        authMutation.current = false;
         lock.current = false;
         setBusy(false);
       }
@@ -317,6 +348,7 @@ export function InterviewApp() {
     const submissionEpoch = authEpoch.current;
     const controller = new AbortController();
     evaluationRequest.current = controller;
+    setWaitingForCapacity(false);
     lock.current = true;
     setBusy(true);
     setError("");
@@ -355,7 +387,17 @@ export function InterviewApp() {
               : {}),
           },
           controller.signal,
-          { studentSessionId: identity },
+          {
+            studentSessionId: identity,
+            onCapacityWait: () => {
+              if (authEpoch.current === submissionEpoch)
+                setWaitingForCapacity(true);
+            },
+            onAttempt: () => {
+              if (authEpoch.current === submissionEpoch)
+                setWaitingForCapacity(false);
+            },
+          },
         );
         if (authEpoch.current !== submissionEpoch) return;
         setAnswerCount((count) => count + 1);
@@ -401,13 +443,16 @@ export function InterviewApp() {
       }
       go(`${group}_QUESTION` as Stage);
       const message =
-        e instanceof Error
-          ? e.message
-          : "Unable to review your answer. Please try again.";
+        e instanceof Error && e.name === "AbortError"
+          ? "Waiting canceled. Your answer is still here."
+          : e instanceof Error
+            ? e.message
+            : "Unable to review your answer. Please try again.";
       setError(message);
       throw new Error(message);
     } finally {
       if (authEpoch.current === submissionEpoch) {
+        setWaitingForCapacity(false);
         evaluationRequest.current = null;
         lock.current = false;
         setBusy(false);
@@ -821,6 +866,11 @@ export function InterviewApp() {
                 }
                 question={displayQuestion}
                 busy={busy}
+                processingMessage={
+                  waitingForCapacity
+                    ? "Reviews are busy. Your answer is safe; retrying shortly…"
+                    : undefined
+                }
                 disabled={endingSession}
                 onRecording={() => go(`${group}_RECORDING` as Stage)}
                 onCancel={() => {
@@ -829,6 +879,15 @@ export function InterviewApp() {
                 }}
                 onSubmit={submit}
               />
+              {waitingForCapacity && (
+                <button
+                  className="button secondary"
+                  type="button"
+                  onClick={() => evaluationRequest.current?.abort()}
+                >
+                  Cancel waiting
+                </button>
+              )}
             </section>
           </div>
         ) : stage === "PRE_RESULTS" && pre ? (

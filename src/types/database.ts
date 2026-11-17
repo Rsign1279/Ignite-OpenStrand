@@ -1,4 +1,9 @@
-import type { Profile, Evaluation, StoredScores } from "@/lib/validation";
+import type {
+  Profile,
+  Evaluation,
+  StoredScores,
+  Comparison,
+} from "@/lib/validation";
 export type LearningResult = {
   user_id: string;
   pre_scores: StoredScores | null;
@@ -39,9 +44,23 @@ export type AttemptRow = {
       })
     | null;
 };
+export type ComparisonRow = {
+  post_attempt_id: string;
+  pre_attempt_id: string;
+  student_id: string;
+  comparison_json: Comparison;
+  review_version: string;
+  created_at: string;
+};
 export type Database = {
   public: {
     Tables: {
+      interview_comparisons: {
+        Row: ComparisonRow;
+        Insert: Omit<ComparisonRow, "created_at"> & { created_at?: string };
+        Update: never;
+        Relationships: [];
+      };
       interview_attempts: {
         Row: AttemptRow;
         Insert: Omit<AttemptRow, "total_score">;
@@ -55,7 +74,7 @@ export type Database = {
         Relationships: [];
       };
       student_profiles: {
-        Row: Profile & { user_id: string };
+        Row: Profile & { user_id: string; qa_cohort_id: string | null };
         Insert: Profile & { user_id: string };
         Update: never;
         Relationships: [];
@@ -63,6 +82,28 @@ export type Database = {
     };
     Views: Record<string, never>;
     Functions: {
+      refresh_interview_summary: {
+        Args: { p_student_id: string };
+        Returns: undefined;
+      };
+      find_interview_comparison: {
+        Args: {
+          p_student_id: string;
+          p_post_attempt_id: string;
+          p_pre_attempt_id: string;
+        };
+        Returns: Comparison | null;
+      };
+      record_interview_comparison: {
+        Args: {
+          p_student_id: string;
+          p_post_attempt_id: string;
+          p_pre_attempt_id: string;
+          p_comparison: Comparison;
+          p_review_version: string;
+        };
+        Returns: Comparison;
+      };
       record_interview_attempt: {
         Args: {
           p_student_id: string;

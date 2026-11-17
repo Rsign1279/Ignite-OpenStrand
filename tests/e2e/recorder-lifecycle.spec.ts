@@ -137,9 +137,9 @@ async function begin(page: Page) {
     .first()
     .click();
 }
-async function finish(page: Page) {
+async function stopVoice(page: Page) {
   await page
-    .getByRole("button", { name: "I'm Finished", exact: true })
+    .getByRole("button", { name: "Stop and review", exact: true })
     .first()
     .click();
 }
@@ -187,13 +187,15 @@ test("discarding a recording releases tracks without uploading and allows a fres
 }) => {
   await fakeRecorder(page);
   let uploads = 0;
+  let evaluations = 0;
   await page.route("**/api/transcribe", (route) => {
     uploads++;
     return route.fulfill({ json: { transcript: answer } });
   });
-  await page.route("**/api/interview/evaluate", (route) =>
-    route.fulfill({ json: { evaluation } }),
-  );
+  await page.route("**/api/interview/evaluate", (route) => {
+    evaluations++;
+    return route.fulfill({ json: { evaluation } });
+  });
   await enter(page);
   await begin(page);
   await expect(page.locator(".record-status")).toContainText("Recording");
@@ -204,12 +206,20 @@ test("discarding a recording releases tracks without uploading and allows a fres
   );
   expect(uploads).toBe(0);
   await begin(page);
-  await finish(page);
+  await stopVoice(page);
+  await expect(page.getByLabel("Your answer", { exact: true })).toHaveValue(
+    answer,
+  );
+  await expect(page.getByLabel("Your answer", { exact: true })).toBeEditable();
+  expect(evaluations).toBe(0);
+  await expectTracksEnded(page);
+  await page.getByRole("button", { name: "I'm Finished", exact: true }).click();
   await expect(
     page.getByRole("heading", { name: "Your starting point." }),
   ).toBeVisible();
   await expectTracksEnded(page);
   expect(uploads).toBe(1);
+  expect(evaluations).toBe(1);
 });
 
 test("recorder errors ignore queued stop events and preserve a typed draft", async ({
@@ -325,7 +335,7 @@ test("session reset aborts pending transcription before signout resolves and nev
   });
   await enter(page);
   await begin(page);
-  await finish(page);
+  await stopVoice(page);
   await expect.poll(() => uploads).toBe(1);
   await expectTracksEnded(page);
   await page.getByRole("button", { name: "End session" }).click();

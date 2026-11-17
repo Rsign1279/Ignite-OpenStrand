@@ -1,0 +1,36 @@
+.answer-area .answer-tools {
+  flex-wrap: wrap;
+}
+.answer-area .answer-tools button {
+  justify-content: center;
+  white-space: normal;
+}
+.recorded-edit-box {
+  margin-top: 20px;
+  padding: 20px;
+  border: 2px solid var(--border);
+  border-radius: 20px;
+  text-align: left;
+}
+.recorded-edit-box textarea {
+  resize: vertical;
+  min-height: 100px;
+}
+.pending-recording-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 12px;
+}
+.recorded-edit-box > .quiet-link {
+  display: block;
+  margin-top: 12px;
+}
+@media (max-width: 480px) {
+  .answer-area .answer-tools button {
+    flex: 1 1 160px;
+  }
+  .pending-recording-actions > button {
+    width: 100%;
+  }
+}

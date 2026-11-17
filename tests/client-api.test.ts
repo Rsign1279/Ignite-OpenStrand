@@ -64,7 +64,8 @@ it("does not override browser multipart boundaries", async () => {
   const f = new FormData();
   await api("/api/transcribe", f);
   expect(fetch.mock.calls[0][1].headers).toBeUndefined();
-  expect(fetch.mock.calls[0][1].body).toBe(f);
+  expect(fetch.mock.calls[0][1].body).not.toBe(f);
+  expect([...fetch.mock.calls[0][1].body.entries()]).toEqual([...f.entries()]);
 });
 it("aborts transcription when its recorder session ends", async () => {
   const controller = new AbortController();

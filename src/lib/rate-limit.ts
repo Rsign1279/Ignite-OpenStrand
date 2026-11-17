@@ -2,7 +2,7 @@ import "server-only";
 import { Redis } from "@upstash/redis";
 import { Ratelimit } from "@upstash/ratelimit";
 import { HttpError } from "@/lib/http";
-let limiter: Ratelimit | undefined;
+const limiters = new Map<string, Ratelimit>();
 export async function rateLimit(userId: string, bucket: string) {
   if (
     !process.env.UPSTASH_REDIS_REST_URL ||
@@ -12,12 +12,19 @@ export async function rateLimit(userId: string, bucket: string) {
       503,
       "Interview processing is not configured yet. Please contact your advisor.",
     );
-  limiter ??= new Ratelimit({
-    redis: Redis.fromEnv(),
-    limiter: Ratelimit.slidingWindow(12, "10 m"),
-    analytics: false,
-    prefix: "ignite:limit",
-  });
+  let limiter = limiters.get(bucket);
+  if (!limiter) {
+    limiter = new Ratelimit({
+      redis: Redis.fromEnv(),
+      limiter: Ratelimit.slidingWindow(
+        bucket === "transcribe" ? 30 : 12,
+        "10 m",
+      ),
+      analytics: false,
+      prefix: "ignite:limit",
+    });
+    limiters.set(bucket, limiter);
+  }
   let result;
   try {
     result = await limiter.limit(`${bucket}:${userId}`);

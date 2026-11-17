@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { RUBRIC_SCORING_VERSION } from "@/config/rubric-anchors";
 test("full student text interview and secure reset", async ({ page }) => {
   let registered = false;
   await page.route("**/auth/v1/**", async (route) => {
@@ -45,7 +46,7 @@ test("full student text interview and secure reset", async ({ page }) => {
   });
   await page.route("**/api/interview/evaluate", (route) => {
     const data = route.request().postDataJSON();
-    expect(data.rubricVersion).toBe("ignite-star-rubric-v2");
+    expect(data.rubricVersion).toBe(RUBRIC_SCORING_VERSION);
     const post = data.stage === "post";
     return route.fulfill({
       json: {
@@ -200,7 +201,7 @@ test("landing has no critical accessibility violations", async ({ page }) => {
   expect(result.violations).toEqual([]);
 });
 
-test("voice recording waits for explicit finish and transcribes securely", async ({
+test("voice recording stops for review and submits only the edited transcript", async ({
   page,
   context,
 }) => {
@@ -212,17 +213,22 @@ test("voice recording waits for explicit finish and transcribes securely", async
     }),
   );
   let transcribed = false;
+  let evaluations = 0;
+  let submittedTranscript = "";
+  const spokenAnswer =
+    "I helped organize our team project and we finished on time.";
   await page.route("**/api/transcribe", (r) => {
     transcribed = true;
     return r.fulfill({
       json: {
-        transcript:
-          "I helped organize our team project and we finished on time.",
+        transcript: spokenAnswer,
       },
     });
   });
-  await page.route("**/api/interview/evaluate", (r) =>
-    r.fulfill({
+  await page.route("**/api/interview/evaluate", (r) => {
+    evaluations++;
+    submittedTranscript = r.request().postDataJSON().transcript;
+    return r.fulfill({
       json: {
         evaluation: {
           scores: {
@@ -236,8 +242,8 @@ test("voice recording waits for explicit finish and transcribes securely", async
           improvementArea: "Add specific actions.",
         },
       },
-    }),
-  );
+    });
+  });
   await page.goto("/interview");
   await page.getByRole("button", { name: "Meet your interviewer" }).click();
   await page
@@ -247,17 +253,30 @@ test("voice recording waits for explicit finish and transcribes securely", async
     .getByRole("button", { name: "Begin Answer", exact: true })
     .first()
     .click();
-  await expect(page.getByRole("status")).toContainText("Recording");
+  await expect(page.locator(".record-status")).toContainText("Recording");
   expect(transcribed).toBe(false);
-  await expect(page.getByRole("status")).toContainText(/0:0[1-9]/);
+  await expect(page.locator(".record-status")).toContainText(/0:0[1-9]/);
   await page
-    .getByRole("button", { name: "I'm Finished", exact: true })
+    .getByRole("button", { name: "Stop and review", exact: true })
     .first()
     .click();
+  const draft = page.getByLabel("Your answer", { exact: true });
+  await expect(draft).toHaveValue(spokenAnswer);
+  await expect(draft).toBeEditable();
+  expect(evaluations).toBe(0);
+  await expect(
+    page.getByRole("heading", { name: "Your starting point." }),
+  ).toHaveCount(0);
+  const editedAnswer =
+    spokenAnswer + " I personally checked our final instructions.";
+  await draft.fill(editedAnswer);
+  await page.getByRole("button", { name: "I'm Finished", exact: true }).click();
   await expect(
     page.getByRole("heading", { name: "Your starting point." }),
   ).toBeVisible();
   expect(transcribed).toBe(true);
+  expect(evaluations).toBe(1);
+  expect(submittedTranscript).toBe(editedAnswer);
 });
 test("microphone denial offers text fallback without skipping assessment", async ({
   page,

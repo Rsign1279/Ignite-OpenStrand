@@ -13,7 +13,10 @@ beforeEach(() => {
 });
 it("admin API rejects non-admin before privileged query", async () => {
   mocked.admin.mockRejectedValue(new HttpError(403, "Forbidden"));
-  expect((await GET()).status).toBe(403);
+  expect(
+    (await GET(new Request("https://studio.example/api/admin/profiles")))
+      .status,
+  ).toBe(403);
   expect(mocked.client).not.toHaveBeenCalled();
 });
 it("admin API selects only profile fields", async () => {
@@ -25,6 +28,11 @@ it("admin API selects only profile fields", async () => {
     data: [{ name: "Student", strand: "education", ignite_year: 1 }],
     error: null,
   });
-  expect((await GET()).status).toBe(200);
-  expect(select).toHaveBeenCalledWith("name,strand,ignite_year");
+  expect(
+    (await GET(new Request("https://studio.example/api/admin/profiles")))
+      .status,
+  ).toBe(200);
+  expect(select).toHaveBeenCalledWith(
+    "user_id,name,strand,ignite_year,qa_cohort_id",
+  );
 });

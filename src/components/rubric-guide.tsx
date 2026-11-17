@@ -13,9 +13,9 @@ export function RubricGuide() {
       </summary>
       <div className="rubric-guide-content">
         <p className="rubric-guide-intro">
-          Situation, Task, Action, and Result each earn 0–3 points. Clear
-          communication is expected throughout. Scores describe this answer and
-          cannot judge your worth or predict hiring success.
+          Situation, Task, Action, and Result each earn 0–3 points, for 12
+          total. Clear communication is expected throughout. Scores describe
+          this answer and cannot judge your worth or predict hiring success.
         </p>
         <div className="rubric-guide-grid">
           {rubricScoringGuide.map((criterion) => (

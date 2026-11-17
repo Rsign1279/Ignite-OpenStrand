@@ -2,33 +2,14 @@
 import { ArrowRight, ChevronDown, Lightbulb, PenLine } from "lucide-react";
 import { getQuestionTopic, topicStories } from "@/config/interview-scenes";
 import type { PracticeQuestion } from "@/config/question-bank";
+import { rubric } from "@/config/strands";
 
-export const starParts = [
-  {
-    letter: "S",
-    title: "Situation",
-    question: "What was happening?",
-    text: "Give the context your listener needs.",
-  },
-  {
-    letter: "T",
-    title: "Task",
-    question: "What were you responsible for?",
-    text: "Name your goal or responsibility.",
-  },
-  {
-    letter: "A",
-    title: "Action",
-    question: "What specifically did YOU do?",
-    text: "Spend most time on your steps and choices.",
-  },
-  {
-    letter: "R",
-    title: "Result",
-    question: "What happened or what did you learn?",
-    text: "Share an outcome, feedback, impact, or honest lesson.",
-  },
-] as const;
+export const starParts = rubric.map((criterion) => ({
+  letter: criterion.letter,
+  title: criterion.title,
+  question: criterion.lessonQuestion,
+  text: criterion.lessonText,
+}));
 export type StoryNotes = Record<(typeof starParts)[number]["letter"], string>;
 export const emptyStoryNotes: StoryNotes = { S: "", T: "", A: "", R: "" };
 
@@ -55,7 +36,9 @@ export function StarLesson({
           <br />
           <em>easy to follow.</em>
         </h1>
-        <p>Use STAR to make your role and outcome clear.</p>
+        <p>
+          Four parts, up to 3 points each. Make your role and outcome clear.
+        </p>
       </div>
       {feedback && (
         <div className="lesson-feedback">

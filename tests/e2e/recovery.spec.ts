@@ -35,6 +35,12 @@ async function finish(page: Page) {
     .first()
     .click();
 }
+async function stopVoice(page: Page) {
+  await page
+    .getByRole("button", { name: "Stop and review", exact: true })
+    .first()
+    .click();
+}
 for (const kind of ["unavailable", "limited", "gateway", "network"]) {
   test(`typed answer survives ${kind} failure and retries once`, async ({
     page,
@@ -169,6 +175,7 @@ test("transcription failure offers typed recovery", async ({
   context,
 }) => {
   await context.grantPermissions(["microphone"]);
+  let evaluations = 0;
   await page.route("**/api/transcribe", (r) =>
     r.fulfill({
       status: 503,
@@ -178,9 +185,10 @@ test("transcription failure offers typed recovery", async ({
       },
     }),
   );
-  await page.route("**/api/interview/evaluate", (r) =>
-    r.fulfill({ json: { evaluation } }),
-  );
+  await page.route("**/api/interview/evaluate", (r) => {
+    evaluations++;
+    return r.fulfill({ json: { evaluation } });
+  });
   await enter(page);
   await page
     .getByRole("button", { name: "Begin Answer", exact: true })
@@ -188,14 +196,26 @@ test("transcription failure offers typed recovery", async ({
     .click();
   await expect(page.getByRole("status")).toContainText("Recording");
   await page.waitForTimeout(1100);
-  await finish(page);
+  await stopVoice(page);
   await expect(page.getByLabel("Your answer", { exact: true })).toBeVisible();
   await expect(page.locator("p[role=alert]")).toContainText("transcribe");
+  expect(evaluations).toBe(0);
   await page.getByLabel("Your answer", { exact: true }).fill(answer);
+  await expect(
+    page.getByRole("button", { name: "I'm Finished", exact: true }),
+  ).toBeDisabled();
+  await page
+    .getByRole("region", { name: "Pending recording", exact: true })
+    .getByRole("button", { name: "Discard recording", exact: true })
+    .click();
+  await expect(page.getByLabel("Your answer", { exact: true })).toHaveValue(
+    answer,
+  );
   await finish(page);
   await expect(
     page.getByRole("heading", { name: "Your starting point." }),
   ).toBeVisible();
+  expect(evaluations).toBe(1);
 });
 test("successful transcription survives failed evaluation without rerecording", async ({
   page,
@@ -223,10 +243,20 @@ test("successful transcription survives failed evaluation without rerecording", 
     .click();
   await expect(page.getByRole("status")).toContainText("Recording");
   await page.waitForTimeout(1100);
-  await finish(page);
+  await stopVoice(page);
   await expect(page.getByLabel("Your answer", { exact: true })).toHaveValue(
     answer,
   );
+  await expect(page.getByLabel("Your answer", { exact: true })).toBeEditable();
+  expect(evaluations).toBe(0);
+  await finish(page);
+  await expect(page.locator("p[role=alert]")).toContainText(
+    "Review unavailable",
+  );
+  await expect(page.getByLabel("Your answer", { exact: true })).toHaveValue(
+    answer,
+  );
+  expect(transcriptions).toBe(1);
   await finish(page);
   await expect(
     page.getByRole("heading", { name: "Your starting point." }),

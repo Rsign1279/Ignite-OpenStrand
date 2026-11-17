@@ -3,6 +3,7 @@ import { cache } from "react";
 import { requireAdmin } from "@/lib/auth";
 import { adminClient } from "@/lib/supabase/server";
 import { HttpError } from "@/lib/http";
+import { comparisonSchema } from "@/lib/validation";
 import type { AttemptRow } from "@/types/database";
 import { attemptSchema, type Attempt } from "./model";
 // React cache is request-scoped. No persistent/shared cache of student data.
@@ -10,11 +11,14 @@ export const loadAttempts = cache(
   async (studentId?: string, includeText = false): Promise<Attempt[]> => {
     await requireAdmin();
     const client = adminClient();
-    const profiles = new Map<string, { name: string; strand: string }>();
+    const profiles = new Map<
+      string,
+      { name: string; strand: string; qa_cohort_id?: string | null }
+    >();
     for (let offset = 0; ; offset += 1000) {
       let query = client
         .from("student_profiles")
-        .select("user_id,name,strand")
+        .select("user_id,name,strand,qa_cohort_id")
         .order("user_id");
       if (studentId) query = query.eq("user_id", studentId);
       const { data, error } = await query.range(offset, offset + 999);
@@ -53,6 +57,7 @@ export const loadAttempts = cache(
           attemptSchema.parse({
             ...row,
             student_name: p.name,
+            qa_cohort_id: p.qa_cohort_id ?? null,
             strand: p.strand,
             scores:
               row.situation !== null
@@ -72,6 +77,38 @@ export const loadAttempts = cache(
         );
       }
       if (data.length < 1000) break;
+    }
+    // Verbatim comparisons stay in authorized detail/export loads, never overview.
+    if (includeText) {
+      const postRows = new Map(
+        rows.filter((row) => row.stage === "post").map((row) => [row.id, row]),
+      );
+      const postIds = [...postRows.keys()];
+      for (let offset = 0; offset < postIds.length; offset += 100) {
+        let query = client
+          .from("interview_comparisons")
+          .select(
+            "post_attempt_id,pre_attempt_id,comparison_json,review_version,created_at",
+          )
+          .in("post_attempt_id", postIds.slice(offset, offset + 100));
+        if (studentId) query = query.eq("student_id", studentId);
+        const { data, error } = await query;
+        if (error)
+          throw new HttpError(
+            503,
+            "Saved comparisons are temporarily unavailable. Please try again.",
+          );
+        for (const comparison of data) {
+          const attempt = postRows.get(comparison.post_attempt_id);
+          if (attempt)
+            attempt.comparison = attemptSchema.shape.comparison.parse({
+              ...comparisonSchema.parse(comparison.comparison_json),
+              pre_attempt_id: comparison.pre_attempt_id,
+              review_version: comparison.review_version,
+              created_at: comparison.created_at,
+            });
+        }
+      }
     }
     return rows;
   },

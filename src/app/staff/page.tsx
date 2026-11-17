@@ -6,6 +6,7 @@ import { filterQuery } from "@/lib/analytics/model";
 import { StaffShell } from "@/components/staff/shell";
 import { AnalyticsFilters } from "@/components/staff/filters";
 import { getStrand } from "@/config/strands";
+import { AttemptReviewDetails } from "@/components/staff/attempt-review-details";
 import { signed } from "@/components/staff/report-utils";
 export const dynamic = "force-dynamic";
 export default async function RawData({
@@ -34,7 +35,7 @@ export default async function RawData({
         : 1,
     visible = rows.slice((page - 1) * 50, page * 50);
   return (
-    <StaffShell active="raw">
+    <StaffShell active="raw" scope={filters.scope}>
       <main id="main" className="analytics-main">
         <div className="analytics-heading">
           <div>
@@ -50,6 +51,12 @@ export default async function RawData({
           </a>
         </div>
         <AnalyticsFilters filters={filters} action="/staff" />
+        {filters.scope && filters.scope !== "students" && (
+          <p className="registration-evidence-note">
+            Synthetic QA is marked below and excluded from the default student
+            view.
+          </p>
+        )}
         <section className="table-panel">
           <div className="table-heading">
             <h2>{rows.length} attempts</h2>
@@ -95,6 +102,11 @@ export default async function RawData({
                         <Link href={`/staff/student/${a.student_id}?${query}`}>
                           {a.student_name}
                         </Link>
+                        {a.qa_cohort_id && (
+                          <span className="pill qa-session-badge">
+                            Synthetic QA
+                          </span>
+                        )}
                       </td>
                       <td>{getStrand(a.strand).name}</td>
                       <td>{a.question_text}</td>
@@ -128,6 +140,23 @@ export default async function RawData({
                             {a.feedback_text ??
                               "Not saved for this historical attempt."}
                           </p>
+                          {a.comparison && (
+                            <>
+                              <h3>Changes between answers</h3>
+                              <ol>
+                                {a.comparison.improvements.map(
+                                  (change, index) => (
+                                    <li key={index}>{change}</li>
+                                  ),
+                                )}
+                              </ol>
+                              <h3>Next step</h3>
+                              <p className="verbatim">
+                                {a.comparison.nextStep}
+                              </p>
+                            </>
+                          )}
+                          <AttemptReviewDetails attempt={a} />
                         </details>
                       </td>
                     </tr>

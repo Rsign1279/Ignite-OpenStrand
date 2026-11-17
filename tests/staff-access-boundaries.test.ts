@@ -75,7 +75,10 @@ const endpoints = [
         new Request("https://studio.example/api/staff/export-csv?id=invalid"),
       ),
   ],
-  ["profiles", profiles],
+  [
+    "profiles",
+    () => profiles(new Request("https://studio.example/api/admin/profiles")),
+  ],
 ] as const;
 
 const rejectedIdentities = [
@@ -142,7 +145,9 @@ describe("staff access uses verified provider identity before private reads", ()
     expect(overview.status).toBe(200);
     expect(overview.headers.get("cache-control")).toBe("no-store");
     expect(await overview.json()).toHaveProperty("kpis.activeStudents", 0);
-    const allProfiles = await profiles();
+    const allProfiles = await profiles(
+      new Request("https://studio.example/api/admin/profiles"),
+    );
     expect(allProfiles.status).toBe(200);
     expect(await allProfiles.json()).toEqual(profileRows);
     const exportResponse = await csv(
@@ -166,7 +171,9 @@ describe("staff access uses verified provider identity before private reads", ()
       await expect(Attempts({ searchParams })).rejects.toThrow(
         "REDIRECT:/staff/login",
       );
-      await expect(Registrations()).rejects.toThrow("REDIRECT:/staff/login");
+      await expect(
+        Registrations({ searchParams: Promise.resolve({}) }),
+      ).rejects.toThrow("REDIRECT:/staff/login");
       await expect(
         Student({ params: Promise.resolve({ id: staff.id }), searchParams }),
       ).rejects.toThrow("REDIRECT:/staff/login");
@@ -193,7 +200,9 @@ describe("staff access uses verified provider identity before private reads", ()
       })),
       error: null,
     });
-    await expect(Registrations()).resolves.toBeTruthy();
+    await expect(
+      Registrations({ searchParams: Promise.resolve({}) }),
+    ).resolves.toBeTruthy();
   });
 
   it("uses exact, case-insensitive allowlist entries rather than domains or editable metadata", () => {

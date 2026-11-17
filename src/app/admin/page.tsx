@@ -1,35 +1,22 @@
 import { redirect } from "next/navigation";
 import { requireAdmin } from "@/lib/auth";
-import { adminClient } from "@/lib/supabase/server";
 import { AdminDashboard } from "@/components/admin-dashboard";
-import { profileSchema, type Profile } from "@/lib/validation";
+import { registeredProfiles } from "@/lib/analytics/registrations";
+import { dataScopeSchema } from "@/lib/analytics/model";
 export const dynamic = "force-dynamic";
-export default async function Admin() {
+export default async function Admin({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
   try {
     await requireAdmin();
   } catch {
     redirect("/staff/login");
   }
-  const client = adminClient();
-  const profiles: (Profile & { user_id: string })[] = [];
-  for (let offset = 0; ; offset += 1000) {
-    const { data, error } = await client
-      .from("student_profiles")
-      .select("user_id,name,strand,ignite_year")
-      .order("user_id")
-      .range(offset, offset + 999);
-    if (error) throw new Error("Unable to load registrations. Please refresh.");
-    profiles.push(
-      ...data.map((p) => ({
-        ...profileSchema.parse({
-          name: p.name,
-          strand: p.strand,
-          ignite_year: p.ignite_year,
-        }),
-        user_id: p.user_id,
-      })),
-    );
-    if (data.length < 1000) break;
-  }
-  return <AdminDashboard profiles={profiles} />;
+  const params = await searchParams;
+  const scope = dataScopeSchema.parse(params.scope ?? "students");
+  return (
+    <AdminDashboard profiles={await registeredProfiles(scope)} scope={scope} />
+  );
 }

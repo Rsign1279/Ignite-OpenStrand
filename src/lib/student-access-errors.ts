@@ -14,7 +14,7 @@ export function studentAccessMessage(error: unknown) {
     return "Student sign-in is not ready on this site yet. Your details are still here.";
 
   if (failure?.status === 429 || failure?.code === "over_request_rate_limit")
-    return "Student sign-in is busy. Your details are still here. Please wait a minute and retry.";
+    return "Student sign-in is busy. Your details are still here. Please wait before retrying.";
 
   if (failure?.code === "captcha_failed")
     return "Student sign-in could not complete its verification. Your details are still here. Try again.";

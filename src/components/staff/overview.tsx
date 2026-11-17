@@ -8,7 +8,7 @@ import {
   UsersRound,
 } from "lucide-react";
 import { StudentGrowthRow } from "./student-row";
-import { filterQuery } from "@/lib/analytics/model";
+import { filterQuery, scopeLabel } from "@/lib/analytics/model";
 import { AnalyticsFilters } from "@/components/staff/filters";
 import { ProgramCharts } from "@/components/staff/chart-loader";
 import { ReportExports } from "@/components/staff/exports";
@@ -37,6 +37,7 @@ export function OverviewContent({ data }: { data: Analytics }) {
           ? `Through ${filters.to} (UTC)`
           : "All dates";
   const viewSummary = [
+    scopeLabel(filters.scope),
     filters.strand.length
       ? filters.strand.map((id) => getStrand(id as StrandId).name).join(", ")
       : "All strands",
@@ -47,7 +48,15 @@ export function OverviewContent({ data }: { data: Analytics }) {
     .filter(Boolean)
     .join(" · ");
   const kpis = [
-    { label: "Active students", value: String(data.kpis.activeStudents) },
+    {
+      label:
+        filters.scope === "qa"
+          ? "Active QA identities"
+          : filters.scope === "all"
+            ? "Active identities"
+            : "Active students",
+      value: String(data.kpis.activeStudents),
+    },
     { label: "Total attempts", value: String(data.kpis.totalAttempts) },
     { label: "Avg first score /12", value: number(data.kpis.avgFirst) },
     { label: "Avg best observed /12", value: number(data.kpis.avgBest) },
@@ -61,12 +70,18 @@ export function OverviewContent({ data }: { data: Analytics }) {
     },
   ];
   const report = {
-    title: "IGNITE · Student growth",
+    title:
+      filters.scope === "qa"
+        ? "IGNITE · Synthetic QA review"
+        : filters.scope === "all"
+          ? "IGNITE · All sessions (includes QA)"
+          : "IGNITE · Student growth",
     filters: filterLabel(filters),
     kpis,
     methodology: `Paired latest change uses ${data.kpis.pairedQuestions} comparable repeated student-question pairs from ${data.kpis.pairedStudents} students; ${data.kpis.studentsWithoutRepeat} students have no repeat. ${data.kpis.versionChangedQuestions} pairs excluded because the rubric/model version changed. Compare first and latest within selected dates and the same scoring version, average questions per student, then weight students equally. Higher: ${data.kpis.improvedStudents}; unchanged: ${data.kpis.unchangedStudents}; lower: ${data.kpis.declinedStudents}. Historical unversioned responses are grouped together. Best observed is descriptive. These observations do not establish an app effect or real-world transfer.`,
     headers: [
       "Student",
+      ...(filters.scope === "all" ? ["Session kind"] : []),
       "Strand",
       "Attempts",
       "First avg",
@@ -75,6 +90,9 @@ export function OverviewContent({ data }: { data: Analytics }) {
     ],
     rows: data.students.map((s) => [
       s.student_name,
+      ...(filters.scope === "all"
+        ? [s.qa_cohort_id ? "Synthetic QA" : "Student"]
+        : []),
       getStrand(s.strand).name,
       String(s.total_attempts),
       number(s.avg_first_score),
@@ -86,8 +104,16 @@ export function OverviewContent({ data }: { data: Analytics }) {
     <main id="main" className="analytics-main">
       <div className="analytics-heading">
         <div>
-          <span className="eyebrow">PROGRAM OVERVIEW</span>
-          <h1>Student practice at a glance.</h1>
+          <span className="eyebrow">
+            {filters.scope === "qa"
+              ? "SYNTHETIC QA REVIEW"
+              : "PROGRAM OVERVIEW"}
+          </span>
+          <h1>
+            {filters.scope === "qa"
+              ? "QA practice at a glance."
+              : "Student practice at a glance."}
+          </h1>
           <p>Review answers, repeat scores, and follow-up needs.</p>
         </div>
         <ReportExports
@@ -96,6 +122,12 @@ export function OverviewContent({ data }: { data: Analytics }) {
         />
       </div>
       <AnalyticsFilters filters={filters} />
+      {filters.scope && filters.scope !== "students" && (
+        <p className="registration-evidence-note">
+          This view includes synthetic QA data. It is not student pilot
+          evidence.
+        </p>
+      )}
       <p className="staff-view-summary">
         <span>Current view</span>
         {viewSummary}
@@ -234,6 +266,11 @@ export function OverviewContent({ data }: { data: Analytics }) {
                     >
                       {s.student_name}
                     </Link>
+                    {s.qa_cohort_id && (
+                      <span className="pill qa-session-badge">
+                        Synthetic QA
+                      </span>
+                    )}
                   </td>
                   <td>{getStrand(s.strand).name}</td>
                   <td>{s.total_attempts}</td>

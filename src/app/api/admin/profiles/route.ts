@@ -1,22 +1,25 @@
 import { requireAdmin } from "@/lib/auth";
-import { adminClient } from "@/lib/supabase/server";
 import { failure, json } from "@/lib/http";
-export async function GET() {
+import { dataScopeSchema } from "@/lib/analytics/model";
+import { registeredProfiles } from "@/lib/analytics/registrations";
+export async function GET(request: Request) {
   try {
     await requireAdmin();
-    const client = adminClient();
-    const profiles: unknown[] = [];
-    for (let offset = 0; ; offset += 1000) {
-      const { data, error } = await client
-        .from("student_profiles")
-        .select("name,strand,ignite_year")
-        .order("user_id")
-        .range(offset, offset + 999);
-      if (error) throw error;
-      profiles.push(...data);
-      if (data.length < 1000) break;
-    }
-    return json(profiles);
+    const scope = dataScopeSchema.parse(
+      new URL(request.url).searchParams.get("scope") ?? "students",
+    );
+    const profiles = await registeredProfiles(scope);
+    // Preserve the compact ordinary-registration API while explicit QA/all
+    // requests include the teacher's session link and trusted cohort marker.
+    return json(
+      scope === "students"
+        ? profiles.map(({ name, strand, ignite_year }) => ({
+            name,
+            strand,
+            ignite_year,
+          }))
+        : profiles,
+    );
   } catch (e) {
     return failure(e);
   }

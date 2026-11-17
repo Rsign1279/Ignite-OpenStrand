@@ -23,14 +23,16 @@ export const practiceSkills: Record<
 > = {
   situation: {
     title: "Set the scene",
-    action: "Name the moment and the problem so a new listener can follow.",
+    action:
+      "Name the moment and relevant context so a new listener can follow.",
     selfCheck: "Is it clear where I was and what was happening?",
-    rehearsal: "Open with one true sentence about the setting and problem.",
+    rehearsal:
+      "Open with one true sentence about the setting and relevant context.",
     nextTopics: ["adaptability", "challenge", "learning"],
   },
   task: {
     title: "Make your role clear",
-    action: "Explain your goal and what you were personally responsible for.",
+    action: "Explain the task or goal you took responsibility for.",
     selfCheck: "Could a listener explain what was mine to do?",
     rehearsal: "Finish “My responsibility was…” with a specific, true goal.",
     nextTopics: ["priorities", "initiative", "teamwork"],

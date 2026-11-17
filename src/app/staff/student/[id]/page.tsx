@@ -10,6 +10,7 @@ import {
   filterAttempts,
 } from "@/lib/analytics/aggregate";
 import { filterQuery } from "@/lib/analytics/model";
+import { AttemptReviewDetails } from "@/components/staff/attempt-review-details";
 import { StaffShell } from "@/components/staff/shell";
 import { AnalyticsFilters } from "@/components/staff/filters";
 import { StudentCharts } from "@/components/staff/chart-loader";
@@ -39,12 +40,14 @@ export default async function Student({
   );
   if (!data)
     return (
-      <StaffShell>
+      <StaffShell scope={filters.scope}>
         <main id="main" className="analytics-main">
           <h1>No matching student attempts</h1>
           <p>No scored attempts match these filters.</p>
           <AnalyticsFilters filters={filters} action={`/staff/student/${id}`} />
-          <Link href="/staff/dashboard">Return to overview</Link>
+          <Link href={`/staff/dashboard?${filterQuery(filters)}`}>
+            Return to overview
+          </Link>
         </main>
       </StaffShell>
     );
@@ -73,7 +76,7 @@ export default async function Student({
     ],
     query = filterQuery(filters);
   const report = {
-    title: `IGNITE · ${s.student_name}`,
+    title: `IGNITE · ${s.qa_cohort_id ? "Synthetic QA · " : ""}${s.student_name}`,
     filters: filterLabel(filters),
     kpis,
     methodology: `Paired latest change averages first-to-latest changes across ${s.comparable_questions} comparable repeated questions within these filters. ${s.version_changed_questions} pairs are excluded because their scoring version changed. Single attempts have no change estimate. Historical unversioned responses are grouped together. Best observed is descriptive, not evidence of lasting mastery. Review actual answers and unfamiliar questions alongside scores.`,
@@ -103,7 +106,7 @@ export default async function Student({
     questions: data.questions.map((q) => ({ ...q, attempts: [] })),
   };
   return (
-    <StaffShell>
+    <StaffShell scope={filters.scope}>
       <main id="main" className="analytics-main">
         <Link href={`/staff/dashboard?${query}`} className="back-link">
           ← Program overview
@@ -112,6 +115,12 @@ export default async function Student({
           <div>
             <span className="eyebrow">STUDENT GROWTH</span>
             <h1>{s.student_name}</h1>
+            {s.qa_cohort_id && (
+              <p className="registration-evidence-note">
+                <span className="pill">Synthetic QA</span> Test session;
+                excluded from default student pilot statistics.
+              </p>
+            )}
             <p>
               {getStrand(s.strand).name} · Last active{" "}
               <time dateTime={s.last_active}>
@@ -235,6 +244,19 @@ export default async function Student({
                     {a.feedback_text ??
                       "Not saved for this historical attempt."}
                   </p>
+                  {a.comparison && (
+                    <section aria-label="Saved answer comparison">
+                      <h3>Changes between answers</h3>
+                      <ol>
+                        {a.comparison.improvements.map((change, index) => (
+                          <li key={index}>{change}</li>
+                        ))}
+                      </ol>
+                      <h3>Next step</h3>
+                      <p className="verbatim">{a.comparison.nextStep}</p>
+                    </section>
+                  )}
+                  <AttemptReviewDetails attempt={a} />
                 </details>
               ))}
             </details>

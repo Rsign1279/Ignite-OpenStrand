@@ -16,22 +16,22 @@ import { LEGACY_SCORING_VERSION } from "@/config/rubric-anchors";
 
 const storedEvaluationSchema = evaluationSchema.extend({
   scores: storedScoresSchema,
+  pre_request_id: z.uuid().optional(),
   scoring_version: z.string().min(1).max(300).optional(),
 });
 export async function saveAssessment(
   userId: string,
-  stage: "pre" | "post",
-  evaluation: Evaluation,
+  _stage: "pre" | "post",
+  _evaluation: Evaluation,
 ) {
-  const { error } = await adminClient()
-    .from("learning_results")
-    .upsert({
-      user_id: userId,
-      ...(stage === "pre"
-        ? { pre_scores: evaluation.scores }
-        : { post_scores: evaluation.scores }),
-      updated_at: new Date().toISOString(),
-    });
+  // Retain the existing call contract; scores come only from immutable attempts.
+  void _stage;
+  void _evaluation;
+  // Derive the latest stored scores under a database lock. Replaying an older
+  // request must not roll this compatibility summary back to its old scores.
+  const { error } = await adminClient().rpc("refresh_interview_summary", {
+    p_student_id: userId,
+  });
   if (error)
     throw new HttpError(
       503,
@@ -65,6 +65,7 @@ export async function recordAttempt(
   requestId: string = randomUUID(),
   questionId?: string,
   scoringVersion: string = getScoringVersion(),
+  preRequestId?: string,
 ) {
   const { error } = await adminClient().rpc("record_interview_attempt", {
     p_student_id: userId,
@@ -74,7 +75,13 @@ export async function recordAttempt(
     p_stage: stage,
     p_scores: evaluation.scores,
     p_answer: transcript,
-    p_evaluation: { ...evaluation, scoring_version: scoringVersion },
+    p_evaluation: {
+      ...evaluation,
+      scoring_version: scoringVersion,
+      ...(stage === "post" && preRequestId
+        ? { pre_request_id: preRequestId }
+        : {}),
+    },
     p_feedback: `Strongest part: ${evaluation.strongestPart}\nMost important improvement: ${evaluation.improvementArea}`,
   });
   if (error)
@@ -92,6 +99,7 @@ export async function findRecordedAssessmentWithMetadata(
   transcript: string,
   questionId: string,
   stage: "pre" | "post" | "practice",
+  expectedPreRequestId?: string,
 ): Promise<{ evaluation: Evaluation; scoringVersion: string } | null> {
   if (!requestId) return null;
   const { data, error } = await adminClient()
@@ -117,6 +125,15 @@ export async function findRecordedAssessmentWithMetadata(
     );
   if (!data.evaluation_json) return null;
   const stored = storedEvaluationSchema.parse(data.evaluation_json);
+  if (
+    stage === "post" &&
+    expectedPreRequestId &&
+    stored.pre_request_id !== expectedPreRequestId
+  )
+    throw new HttpError(
+      409,
+      "This saved response belongs to a different first answer. Start a new practice round; your original results are still saved.",
+    );
   if (!isStarScores(stored.scores))
     throw new HttpError(
       409,

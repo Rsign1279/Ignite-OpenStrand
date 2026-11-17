@@ -20,7 +20,7 @@ export function attemptsCsv(attempts: Attempt[], filters: Filters) {
     ),
   );
   return [
-    "id,student_id,student_name,strand,question_id,question_text,stage,attempt_number,total_score,situation_task,personal_actions,result_impact,communication,created_at,answer_text,feedback_text,first_score,best_score,latest_score,delta,attempts_count,is_legacy,latest_minus_first,has_repeat,scoring_version,comparison_status,first_scoring_version,latest_scoring_version,situation,task,action,result,rubric_format",
+    "id,student_id,student_name,strand,question_id,question_text,stage,attempt_number,total_score,situation_task,personal_actions,result_impact,communication,created_at,answer_text,feedback_text,first_score,best_score,latest_score,delta,attempts_count,is_legacy,latest_minus_first,has_repeat,scoring_version,comparison_status,first_scoring_version,latest_scoring_version,situation,task,action,result,rubric_format,session_kind,qa_cohort_id,comparison_change_1,comparison_change_2,comparison_next_step,comparison_review_version,comparison_saved_at,comparison_pre_attempt_id",
     ...rows.map((a) => {
       const q = derived.get(a.student_id + ":" + a.question_id)!;
       return [
@@ -65,6 +65,14 @@ export function attemptsCsv(attempts: Attempt[], filters: Filters) {
             ]
           : [null, null, null, null]),
         isStarScores(a.scores) ? "STAR" : "Earlier rubric",
+        a.qa_cohort_id ? "Synthetic QA" : "Student",
+        a.qa_cohort_id ?? "",
+        a.comparison?.improvements[0] ?? "",
+        a.comparison?.improvements[1] ?? "",
+        a.comparison?.nextStep ?? "",
+        a.comparison?.review_version ?? "",
+        a.comparison?.created_at ?? "",
+        a.comparison?.pre_attempt_id ?? "",
       ]
         .map(csvCell)
         .join(",");

@@ -4,6 +4,16 @@ const mock = vi.hoisted(() => ({
   limit: vi.fn(),
   transcribe: vi.fn(),
 }));
+vi.mock("@/lib/request-admission", () => ({
+  withUploadAdmission: async (operation: () => Promise<unknown>) => operation(),
+  withAssessmentLock: async (
+    _user: string,
+    _id: string,
+    operation: () => Promise<unknown>,
+  ) => operation(),
+  limitLogicalSubmission: (user: string, bucket: string) =>
+    mock.limit(user, bucket),
+}));
 vi.mock("@/lib/auth", () => ({ requireStudent: mock.auth }));
 vi.mock("@/lib/rate-limit", () => ({ rateLimit: mock.limit }));
 vi.mock("@/lib/ai/provider", () => ({ ai: { transcribe: mock.transcribe } }));
