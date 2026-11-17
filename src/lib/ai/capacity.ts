@@ -27,9 +27,17 @@ export const PROVIDER_ADMISSION_SCRIPT = `
 local clock = redis.call('TIME')
 local now = tonumber(clock[1]) * 1000 + math.floor(tonumber(clock[2]) / 1000)
 local cooldown = tonumber(redis.call('GET', KEYS[3]) or '0')
+if cooldown > now then return {0, math.ceil((cooldown - now) / 1000), 2} end
+local userKey = KEYS[4]
+if userKey then
+ redis.call('ZREMRANGEBYSCORE', userKey, '-inf', now - 600000)
+ if redis.call('ZCARD', userKey) >= tonumber(ARGV[5]) then
+  local oldest = redis.call('ZRANGE', userKey, 0, 0, 'WITHSCORES')
+  return {0, math.max(1, math.ceil((tonumber(oldest[2]) + 600000 - now) / 1000)), 3}
+ end
+end
 redis.call('ZREMRANGEBYSCORE', KEYS[1], '-inf', now)
 redis.call('ZREMRANGEBYSCORE', KEYS[2], '-inf', now - 60000)
-if cooldown > now then return {0, math.ceil((cooldown - now) / 1000), 2} end
 if redis.call('ZCARD', KEYS[1]) >= tonumber(ARGV[2]) then return {0, 4, 0} end
 if redis.call('ZCARD', KEYS[2]) >= tonumber(ARGV[3]) then
  local oldest = redis.call('ZRANGE', KEYS[2], 0, 0, 'WITHSCORES')
@@ -39,6 +47,10 @@ redis.call('ZADD', KEYS[1], now + tonumber(ARGV[4]), ARGV[1])
 redis.call('PEXPIRE', KEYS[1], tonumber(ARGV[4]))
 redis.call('ZADD', KEYS[2], now, ARGV[1])
 redis.call('PEXPIRE', KEYS[2], 60000)
+if userKey then
+ redis.call('ZADD', userKey, now, ARGV[1])
+ redis.call('PEXPIRE', userKey, 600000)
+end
 return {1, 0, 0}
 `;
 export const PROVIDER_COOLDOWN_SCRIPT = `
@@ -90,11 +102,21 @@ export function providerBudget(lane: ProviderLane) {
     ? {
         concurrent: setting("IGNITE_AI_TEXT_CONCURRENCY", 4, 32),
         requestsPerMinute: setting("IGNITE_AI_TEXT_RPM", 20, 1000),
+        userRequestsPerTenMinutes: setting(
+          "IGNITE_AI_TEXT_USER_CALLS_10M",
+          30,
+          300,
+        ),
         leaseMs: 45000,
       }
     : {
         concurrent: setting("IGNITE_AI_AUDIO_CONCURRENCY", 2, 8),
         requestsPerMinute: setting("IGNITE_AI_AUDIO_RPM", 12, 200),
+        userRequestsPerTenMinutes: setting(
+          "IGNITE_AI_AUDIO_USER_CALLS_10M",
+          30,
+          300,
+        ),
         leaseMs: 75000,
       };
 }
@@ -120,6 +142,18 @@ function tuple(value: unknown): [number, number, number] {
     throw new Error("Invalid capacity response");
   return value as [number, number, number];
 }
+function userRequestsKey(requestKey: string, userId: string) {
+  if (
+    typeof userId !== "string" ||
+    userId.length !== 36 ||
+    !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+      userId,
+    )
+  )
+    throw new Error("Invalid provider admission identity");
+  const hash = createHash("sha256").update(userId.toLowerCase()).digest("hex");
+  return `${requestKey}:student:${hash}`;
+}
 function unavailable() {
   return new HttpError(
     503,
@@ -127,11 +161,14 @@ function unavailable() {
   );
 }
 
-/** Each actual provider call acquires its own lease and rolling-minute reservation. */
+/** Each call acquires one lease and global/student reservations in one atomic decision.
+ * userId must come from trusted server authentication, never client request data.
+ */
 export async function withProviderCapacity<T>(
   lane: ProviderLane,
   model: string,
   operation: () => Promise<T>,
+  userId?: string,
 ): Promise<T> {
   const id = randomUUID(),
     k = keys(lane, model);
@@ -139,16 +176,36 @@ export async function withProviderCapacity<T>(
   try {
     redis = store();
     const budget = providerBudget(lane);
+    const admissionKeys = [k.leases, k.requests, k.cooldown];
+    const args: (string | number)[] = [
+      id,
+      budget.concurrent,
+      budget.requestsPerMinute,
+      budget.leaseMs,
+    ];
+    if (userId !== undefined) {
+      admissionKeys.push(userRequestsKey(k.requests, userId));
+      args.push(budget.userRequestsPerTenMinutes);
+    }
     const result = tuple(
-      await redis.eval(
-        PROVIDER_ADMISSION_SCRIPT,
-        [k.leases, k.requests, k.cooldown],
-        [id, budget.concurrent, budget.requestsPerMinute, budget.leaseMs],
-      ),
+      await redis.eval(PROVIDER_ADMISSION_SCRIPT, admissionKeys, args),
     );
     if (result[0] === 0) {
-      if (result[1] < 1 || result[1] > 86400 || ![0, 1, 2].includes(result[2]))
+      if (
+        result[1] < 1 ||
+        result[1] > 86400 ||
+        ![0, 1, 2, 3].includes(result[2])
+      )
         throw new Error("Invalid admission denial");
+      if (result[2] === 3) {
+        if (userId === undefined || result[1] > 600)
+          throw new Error("Invalid student admission denial");
+        throw new HttpError(
+          429,
+          "You have reached the current interview processing allowance. Your answer is still here; please wait before trying again.",
+          result[1],
+        );
+      }
       throw new ProviderCapacityError(
         result[2] === 2 ? "AI_PROVIDER_RATE_LIMIT" : "AI_CAPACITY_BUSY",
         result[1],
@@ -157,7 +214,7 @@ export async function withProviderCapacity<T>(
     if (result[0] !== 1 || result[1] !== 0 || result[2] !== 0)
       throw new Error("Invalid admission result");
   } catch (error) {
-    if (error instanceof ProviderCapacityError) throw error;
+    if (error instanceof HttpError) throw error;
     throw unavailable();
   }
   try {

@@ -55,6 +55,7 @@ it("binds legacy evaluation to the canonical question and sends only the answer 
   expect(mock.structured.mock.calls[0][2]).toEqual({
     transcript: "I organized our project.",
   });
+  expect(mock.structured.mock.calls[0][5]).toBe("student");
   expect(mock.save).toHaveBeenCalledWith(
     "student",
     expect.objectContaining({ task: false }),

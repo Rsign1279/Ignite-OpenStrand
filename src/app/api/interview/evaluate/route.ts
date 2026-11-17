@@ -157,6 +157,7 @@ export async function POST(request: Request) {
             { transcript: answer.transcript },
             evaluationSchema,
             request.signal,
+            user.id,
           ),
         );
       if (!recorded)
@@ -202,6 +203,7 @@ export async function POST(request: Request) {
         { pre: answer.preTranscript, post: answer.transcript },
         comparisonSchema,
         request.signal,
+        user.id,
       );
       const persisted = await saveRecordedComparison(
         user.id,

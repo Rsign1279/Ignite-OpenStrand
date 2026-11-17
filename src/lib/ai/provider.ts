@@ -25,8 +25,13 @@ export interface AIProvider {
     data: unknown,
     schema: z.ZodType<T>,
     signal?: AbortSignal,
+    userId?: string,
   ): Promise<T>;
-  transcribe(file: File, signal?: AbortSignal): Promise<string>;
+  transcribe(
+    file: File,
+    signal?: AbortSignal,
+    userId?: string,
+  ): Promise<string>;
 }
 export class GroqProvider implements AIProvider {
   private client(timeout = 12000) {
@@ -42,6 +47,7 @@ export class GroqProvider implements AIProvider {
     model: string,
     run: () => Promise<{ data: T; response: Response }>,
     signal?: AbortSignal,
+    userId?: string,
   ): Promise<T> {
     const cancelled = () =>
       new HttpError(
@@ -49,40 +55,46 @@ export class GroqProvider implements AIProvider {
         "Your interview request was cancelled. Your answer is still here.",
       );
     if (signal?.aborted) throw cancelled();
-    return withProviderCapacity(lane, model, async () => {
-      if (signal?.aborted) throw cancelled();
-      const started = Date.now();
-      try {
-        const { data, response } = await run();
-        await recordProviderObservation(
-          lane,
-          model,
-          response.status,
-          response.headers,
-          Date.now() - started,
-          typeof data === "object" && data !== null && "usage" in data
-            ? data.usage
-            : undefined,
-        );
-        // Once a score completes, the route may persist it for retry-safe retrieval.
-        return data;
-      } catch (error) {
-        const providerStatus = statusOf(error);
-        const aborted = signal?.aborted && providerStatus === undefined;
-        const status = aborted ? 499 : providerStatus;
-        const headers = headersOf(error);
-        await recordProviderObservation(
-          lane,
-          model,
-          status ?? 503,
-          headers,
-          Date.now() - started,
-        );
-        if (aborted) throw cancelled();
-        if (status === 429) throw await providerRateLimit(lane, model, headers);
-        throw error;
-      }
-    });
+    return withProviderCapacity(
+      lane,
+      model,
+      async () => {
+        if (signal?.aborted) throw cancelled();
+        const started = Date.now();
+        try {
+          const { data, response } = await run();
+          await recordProviderObservation(
+            lane,
+            model,
+            response.status,
+            response.headers,
+            Date.now() - started,
+            typeof data === "object" && data !== null && "usage" in data
+              ? data.usage
+              : undefined,
+          );
+          // Once a score completes, the route may persist it for retry-safe retrieval.
+          return data;
+        } catch (error) {
+          const providerStatus = statusOf(error);
+          const aborted = signal?.aborted && providerStatus === undefined;
+          const status = aborted ? 499 : providerStatus;
+          const headers = headersOf(error);
+          await recordProviderObservation(
+            lane,
+            model,
+            status ?? 503,
+            headers,
+            Date.now() - started,
+          );
+          if (aborted) throw cancelled();
+          if (status === 429)
+            throw await providerRateLimit(lane, model, headers);
+          throw error;
+        }
+      },
+      userId,
+    );
   }
   async structured<T>(
     name: string,
@@ -90,6 +102,7 @@ export class GroqProvider implements AIProvider {
     data: unknown,
     schema: z.ZodType<T>,
     signal?: AbortSignal,
+    userId?: string,
   ): Promise<T> {
     for (let attempt = 0; attempt < 2; attempt++) {
       try {
@@ -128,6 +141,7 @@ export class GroqProvider implements AIProvider {
               )
               .withResponse(),
           signal,
+          userId,
         );
         if (result.choices[0]?.finish_reason === "length")
           throw new Error("Incomplete structured output");
@@ -149,7 +163,7 @@ export class GroqProvider implements AIProvider {
     }
     throw new Error("Invalid AI output");
   }
-  async transcribe(file: File, signal?: AbortSignal) {
+  async transcribe(file: File, signal?: AbortSignal, userId?: string) {
     let result;
     try {
       const model =
@@ -169,6 +183,7 @@ export class GroqProvider implements AIProvider {
             )
             .withResponse(),
         signal,
+        userId,
       );
     } catch (error) {
       if (error instanceof HttpError) throw error;

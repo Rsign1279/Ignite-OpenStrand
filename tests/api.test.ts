@@ -94,6 +94,7 @@ describe("Authenticated AI endpoints", () => {
     );
     expect(response.status).toBe(200);
     expect((await response.json()).evaluation.total).toBe(10);
+    expect(mock.structured.mock.calls[0][5]).toBe("user-1");
     expect(mock.limit).toHaveBeenCalledWith("user-1", "assessment");
     expect(mock.structured.mock.calls[0][2]).toEqual({
       transcript: "I organized a school event and learned to delegate.",
@@ -161,6 +162,8 @@ describe("Authenticated AI endpoints", () => {
       pre: "My previous answer",
       post: "My detailed post answer",
     });
+    expect(mock.structured.mock.calls[0][5]).toBe("user-1");
+    expect(mock.structured.mock.calls[1][5]).toBe("user-1");
     expect((await r.json()).comparison.nextStep).toBe(
       assessment.improvementArea,
     );

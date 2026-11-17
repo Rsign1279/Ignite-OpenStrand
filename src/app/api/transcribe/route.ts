@@ -122,7 +122,9 @@ export async function POST(request: Request) {
             499,
             "Transcription canceled. Your answer is still here.",
           );
-        return json({ transcript: await ai.transcribe(file, request.signal) });
+        return json({
+          transcript: await ai.transcribe(file, request.signal, user.id),
+        });
       });
     });
   } catch (error) {

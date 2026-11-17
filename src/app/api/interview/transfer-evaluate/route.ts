@@ -32,6 +32,8 @@ export async function POST(request: Request) {
       buildTransferEvaluationPrompt(strand.id, question.id),
       { transcript: answer.transcript },
       transferSchema,
+      request.signal,
+      user.id,
     );
     await saveTransfer(user.id, result);
     return json(result);

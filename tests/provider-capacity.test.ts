@@ -30,6 +30,8 @@ beforeEach(() => {
     "IGNITE_AI_TEXT_RPM",
     "IGNITE_AI_AUDIO_CONCURRENCY",
     "IGNITE_AI_AUDIO_RPM",
+    "IGNITE_AI_TEXT_USER_CALLS_10M",
+    "IGNITE_AI_AUDIO_USER_CALLS_10M",
   ])
     delete process.env[name];
   mocks.fromEnv.mockReturnValue({
@@ -77,6 +79,100 @@ it("uses disjoint lane/model keys and unique request lease IDs", async () => {
   await withProviderCapacity("text", "model-b", async () => true);
   expect(new Set(mocks.eval.mock.calls.map((call) => call[1][0])).size).toBe(3);
   expect(new Set(mocks.eval.mock.calls.map((call) => call[2][0])).size).toBe(3);
+});
+it("atomically supplies a hashed trusted identity with the lane's student budget", async () => {
+  const userId = "fb075f6b-9225-4d54-b4dc-5ebc2baf9588";
+  await withProviderCapacity("audio", "whisper", async () => true, userId);
+  const [, keys, args] = mocks.eval.mock.calls[0];
+  expect(keys).toHaveLength(4);
+  expect(keys[3]).toMatch(/:requests:student:[0-9a-f]{64}$/);
+  expect(keys[3]).not.toContain(userId);
+  expect(
+    new Set(keys.map((key: string) => key.match(/\{[^}]+\}/)?.[0])).size,
+  ).toBe(1);
+  expect(args.slice(1)).toEqual([2, 12, 75000, 30]);
+  expect(mocks.zrem).toHaveBeenCalledWith(keys[0], args[0]);
+});
+it("canonicalizes the UUID and isolates student budgets between people and lanes", async () => {
+  const userId = "fb075f6b-9225-4d54-b4dc-5ebc2baf9588";
+  await withProviderCapacity("text", "model", async () => true, userId);
+  await withProviderCapacity(
+    "text",
+    "model",
+    async () => true,
+    userId.toUpperCase(),
+  );
+  await withProviderCapacity("audio", "model", async () => true, userId);
+  await withProviderCapacity(
+    "text",
+    "model",
+    async () => true,
+    "fb075f6b-9225-4d54-b4dc-5ebc2baf9589",
+  );
+  const studentKeys = mocks.eval.mock.calls.map((call) => call[1][3]);
+  expect(studentKeys[0]).toBe(studentKeys[1]);
+  expect(new Set(studentKeys).size).toBe(3);
+});
+it("returns a non-retrying student allowance denial without executing or releasing work", async () => {
+  mocks.eval.mockResolvedValue([0, 576, 3]);
+  const work = vi.fn();
+  const error = await withProviderCapacity(
+    "audio",
+    "whisper",
+    work,
+    "fb075f6b-9225-4d54-b4dc-5ebc2baf9588",
+  ).catch((error: unknown) => error);
+  expect(error).toMatchObject({ status: 429, retryAfterSeconds: 576 });
+  expect(error).not.toHaveProperty("code");
+  expect(work).not.toHaveBeenCalled();
+  expect(mocks.zrem).not.toHaveBeenCalled();
+});
+it.each([
+  "",
+  "student-id",
+  "fb075f6b-9225-4d54-b4dc-5ebc2baf9588\n",
+  "x".repeat(10000),
+])(
+  "fails closed when the supplied trusted identity is malformed",
+  async (userId) => {
+    const work = vi.fn();
+    await expect(
+      withProviderCapacity("audio", "whisper", work, userId),
+    ).rejects.toMatchObject({ status: 503 });
+    expect(work).not.toHaveBeenCalled();
+    expect(mocks.eval).not.toHaveBeenCalled();
+  },
+);
+it("rejects an impossible student denial instead of accepting malformed quota timing", async () => {
+  mocks.eval.mockResolvedValue([0, 601, 3]);
+  await expect(
+    withProviderCapacity(
+      "audio",
+      "whisper",
+      vi.fn(),
+      "fb075f6b-9225-4d54-b4dc-5ebc2baf9588",
+    ),
+  ).rejects.toMatchObject({ status: 503 });
+  mocks.eval.mockResolvedValue([0, 10, 3]);
+  await expect(
+    withProviderCapacity("audio", "whisper", vi.fn()),
+  ).rejects.toMatchObject({ status: 503 });
+});
+it("uses independent bounded student budgets without changing global defaults", async () => {
+  process.env.IGNITE_AI_TEXT_USER_CALLS_10M = "11";
+  process.env.IGNITE_AI_AUDIO_USER_CALLS_10M = "7";
+  expect(providerBudget("text")).toMatchObject({
+    concurrent: 4,
+    requestsPerMinute: 20,
+    userRequestsPerTenMinutes: 11,
+  });
+  expect(providerBudget("audio")).toMatchObject({
+    concurrent: 2,
+    requestsPerMinute: 12,
+    userRequestsPerTenMinutes: 7,
+  });
+  process.env.IGNITE_AI_AUDIO_USER_CALLS_10M = "301";
+  expect(() => providerBudget("audio")).toThrow();
 });
 it.each([
   [0, 4, 0],

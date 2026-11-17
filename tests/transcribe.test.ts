@@ -44,6 +44,7 @@ it.each([
   expect(r.status).toBe(200);
   expect(await r.json()).toEqual({ transcript: "A short answer." });
   expect(mock.transcribe).toHaveBeenCalledOnce();
+  expect(mock.transcribe.mock.calls[0][2]).toBe("opaque-id");
 });
 it.each([
   ["text/plain", 256],

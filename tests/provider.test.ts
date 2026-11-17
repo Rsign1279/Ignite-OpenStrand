@@ -54,6 +54,8 @@ beforeEach(() => {
   mocked.zrem.mockReset().mockResolvedValue(1);
   mocked.set.mockReset().mockResolvedValue("OK");
   mocked.responseHeaders = {};
+  delete process.env.IGNITE_AI_TEXT_USER_CALLS_10M;
+  delete process.env.IGNITE_AI_AUDIO_USER_CALLS_10M;
 });
 it("retries malformed JSON once then validates", async () => {
   mocked.create
@@ -151,6 +153,45 @@ it("accepts brief speech for rubric evaluation", async () => {
   expect(
     await new GroqProvider().transcribe(new File(["audio"], "a.webm")),
   ).toBe("No.");
+});
+it("supplies the authenticated student to every actual text call, including a structured retry", async () => {
+  const userId = "fb075f6b-9225-4d54-b4dc-5ebc2baf9588";
+  mocked.create.mockResolvedValue({
+    choices: [{ message: { content: "not json" } }],
+  });
+  await expect(
+    new GroqProvider().structured(
+      "evaluation",
+      "Rubric",
+      {},
+      evaluationSchema,
+      undefined,
+      userId,
+    ),
+  ).rejects.toMatchObject({ status: 503 });
+  expect(mocked.create).toHaveBeenCalledTimes(2);
+  expect(mocked.eval).toHaveBeenCalledTimes(2);
+  const reservations = mocked.eval.mock.calls;
+  expect(
+    reservations.every((call) => call[1].length === 4 && call[2][4] === 30),
+  ).toBe(true);
+  expect(reservations[0][1][3]).toBe(reservations[1][1][3]);
+  expect(reservations[0][2][0]).not.toBe(reservations[1][2][0]);
+});
+it("does not call or silently retry the provider when the student's physical audio allowance is exhausted", async () => {
+  mocked.eval.mockResolvedValue([0, 450, 3]);
+  const error = await new GroqProvider()
+    .transcribe(
+      new File(["same audio"], "a.webm"),
+      undefined,
+      "fb075f6b-9225-4d54-b4dc-5ebc2baf9588",
+    )
+    .catch((error: unknown) => error);
+  expect(error).toMatchObject({ status: 429, retryAfterSeconds: 450 });
+  expect(error).not.toHaveProperty("code");
+  expect(mocked.transcribe).not.toHaveBeenCalled();
+  expect(mocked.eval).toHaveBeenCalledOnce();
+  expect(mocked.zrem).not.toHaveBeenCalled();
 });
 it("transcription failure hides provider details and permits rerecording", async () => {
   mocked.transcribe.mockRejectedValue(new Error("PRIVATE AUDIO"));
