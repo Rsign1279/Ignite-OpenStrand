@@ -59,11 +59,14 @@ test("analytics handles 0, 1 and 300 attempts without clipping the mobile viewpo
       await page.screenshot({
         path: ".local-setup/analytics-" + testInfo.project.name + ".png",
       });
-    if (count === 0)
+    if (count === 0) {
       await expect(
         page.getByText("No practice data yet", { exact: true }),
-      ).toHaveCount(5);
-    else if (count === 1) {
+      ).toHaveCount(4);
+      await expect(
+        page.getByText("No STAR-scored attempts yet", { exact: true }),
+      ).toBeVisible();
+    } else if (count === 1) {
       await expect(
         page.getByText("No repeated questions yet", { exact: true }),
       ).toBeVisible();
@@ -289,13 +292,11 @@ test("earlier-rubric attempts remain visible without inventing STAR skill averag
     await expect(
       page.getByText("No STAR-scored attempts yet", { exact: true }),
     ).toBeVisible();
-    const skills = page
-      .locator(".analytics-chart")
-      .filter({
-        hasText: mode
-          ? "Your student and their strand"
-          : "Which skills need attention?",
-      });
+    const skills = page.locator(".analytics-chart").filter({
+      hasText: mode
+        ? "Your student and their strand"
+        : "Which skills need attention?",
+    });
     await expect(skills.locator(".recharts-wrapper")).toHaveCount(0);
     await expect(skills).toContainText("Earlier results remain");
   }
