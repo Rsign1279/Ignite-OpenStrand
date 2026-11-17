@@ -1,16 +1,51 @@
 import Link from "next/link";
+import {
+  ArrowLeftRight,
+  Flag,
+  Gauge,
+  MessagesSquare,
+  Repeat2,
+  UsersRound,
+} from "lucide-react";
 import { StudentGrowthRow } from "./student-row";
 import { filterQuery } from "@/lib/analytics/model";
 import { AnalyticsFilters } from "@/components/staff/filters";
 import { ProgramCharts } from "@/components/staff/chart-loader";
 import { ReportExports } from "@/components/staff/exports";
 import { filterLabel, number, signed } from "@/components/staff/report-utils";
-import { getStrand } from "@/config/strands";
+import { getStrand, type StrandId } from "@/config/strands";
 import type { Analytics } from "@/lib/analytics/model";
+
+const kpiIcons = [
+  UsersRound,
+  MessagesSquare,
+  Flag,
+  Gauge,
+  ArrowLeftRight,
+  Repeat2,
+];
 
 export function OverviewContent({ data }: { data: Analytics }) {
   const filters = data.filters,
     query = filterQuery(filters);
+  const dateSummary =
+    filters.from && filters.to
+      ? `${filters.from} – ${filters.to} (UTC)`
+      : filters.from
+        ? `From ${filters.from} (UTC)`
+        : filters.to
+          ? `Through ${filters.to} (UTC)`
+          : "All dates";
+  const viewSummary = [
+    filters.strand.length
+      ? filters.strand.map((id) => getStrand(id as StrandId).name).join(", ")
+      : "All strands",
+    dateSummary,
+    filters.minAttempts > 1 ? `${filters.minAttempts}+ attempts` : "",
+    filters.student ? `Name: ${filters.student}` : "",
+  ]
+    .filter(Boolean)
+    .join(" · ");
   const kpis = [
     { label: "Active students", value: String(data.kpis.activeStudents) },
     { label: "Total attempts", value: String(data.kpis.totalAttempts) },
@@ -61,13 +96,26 @@ export function OverviewContent({ data }: { data: Analytics }) {
         />
       </div>
       <AnalyticsFilters filters={filters} />
+      <p className="staff-view-summary">
+        <span>Current view</span>
+        {viewSummary}
+      </p>
       <div className="analytics-kpis">
-        {kpis.map((k) => (
-          <article key={k.label}>
-            <span>{k.label}</span>
-            <strong>{k.value}</strong>
-          </article>
-        ))}
+        {kpis.map((k, index) => {
+          const Icon = kpiIcons[index] ?? Gauge;
+          return (
+            <article
+              key={k.label}
+              data-kind={index === 4 ? "change" : undefined}
+            >
+              <span className="staff-kpi-label">
+                <Icon size={17} aria-hidden="true" />
+                {k.label}
+              </span>
+              <strong>{k.value}</strong>
+            </article>
+          );
+        })}
       </div>
       <p className="analytics-method">
         Latest change compares repeat answers to the same question. Best
