@@ -110,7 +110,10 @@ export function PilotCapacity() {
     const controller = new AbortController();
     current.current = controller;
     read(controller);
-    return () => controller.abort();
+    return () => {
+      current.current?.abort();
+      current.current = null;
+    };
   }, [read]);
   function refresh() {
     if (current.current) return;

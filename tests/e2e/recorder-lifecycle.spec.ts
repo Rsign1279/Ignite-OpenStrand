@@ -234,8 +234,7 @@ test("recorder errors ignore queued stop events and preserve a typed draft", asy
   await enter(page);
   await page.getByRole("button", { name: "Type my answer" }).click();
   await page.getByLabel("Your answer", { exact: true }).fill(answer);
-  await page.getByRole("button", { name: "Use microphone" }).click();
-  await begin(page);
+  await page.getByRole("button", { name: "Continue recording" }).click();
   await page.evaluate(() => window.recorderHarness.emitError?.());
   await expect(page.locator(".answer-area [role=alert]")).toContainText(
     "Recording failed",

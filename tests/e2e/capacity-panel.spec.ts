@@ -124,3 +124,45 @@ test("capacity panel marks an unavailable store without presenting quotas as zer
     page.getByRole("heading", { name: "Answer reviews" }),
   ).toHaveCount(0);
 });
+
+test("leaving the capacity view aborts a pending manual refresh", async ({
+  page,
+}) => {
+  const pageErrors: string[] = [];
+  page.on("pageerror", (error) => pageErrors.push(error.message));
+  await open(page, () => snapshot);
+  await expect(
+    page.getByRole("button", { name: "Refresh capacity" }),
+  ).toBeEnabled();
+  await page.evaluate(() => {
+    const fetch = window.fetch;
+    window.fetch = (input, init) => {
+      if (String(input) !== "/api/staff/capacity") return fetch(input, init);
+      document.documentElement.dataset.capacityRefreshPending = "true";
+      return new Promise<Response>((_resolve, reject) => {
+        init?.signal?.addEventListener(
+          "abort",
+          () => {
+            document.documentElement.dataset.capacityRefreshAborted = "true";
+            reject(new DOMException("Request canceled.", "AbortError"));
+          },
+          { once: true },
+        );
+      });
+    };
+  });
+  await page.getByRole("button", { name: "Refresh capacity" }).click();
+  await expect(page.locator("html")).toHaveAttribute(
+    "data-capacity-refresh-pending",
+    "true",
+  );
+  await page.getByRole("button", { name: "Leave capacity view" }).click();
+  await expect(
+    page.getByRole("heading", { name: "Know the current limits." }),
+  ).toHaveCount(0);
+  await expect(page.locator("html")).toHaveAttribute(
+    "data-capacity-refresh-aborted",
+    "true",
+  );
+  expect(pageErrors).toEqual([]);
+});
