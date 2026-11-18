@@ -4,7 +4,6 @@ import { questionTopics, legacyQuestions } from "@/config/question-bank";
 import {
   buildPreAssessmentPrompt,
   buildPostAssessmentPrompt,
-  buildComparisonPrompt,
   buildPracticeAssessmentPrompt,
 } from "@/lib/ai/prompts";
 import { transition } from "@/lib/machine";
@@ -27,13 +26,12 @@ it("provides exactly ten distinct, versioned questions per strand, covering the 
     }
   }
 });
-it("uses the exact selected question in pre, post and comparison prompts for all 100 variants", () => {
+it("uses the exact selected question in pre, post and practice prompts for all 100 variants", () => {
   for (const s of strands)
     for (const q of s.questions) {
       for (const builder of [
         buildPreAssessmentPrompt,
         buildPostAssessmentPrompt,
-        buildComparisonPrompt,
         buildPracticeAssessmentPrompt,
       ]) {
         expect(builder(s.id, q.id)).toContain(q.text);

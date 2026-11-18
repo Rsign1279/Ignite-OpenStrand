@@ -81,7 +81,7 @@ it("preserves raw attempts with derived columns", async () => {
   );
   expect(html).toContain("Every scored attempt.");
   expect(html).toContain("PRIVATE STUDENT ANSWER");
-  expect(html).toContain("Export CSV");
+  expect(html).toContain("Download all attempts CSV");
 });
 it("gates server pages before any privileged load", async () => {
   mocks.auth.mockRejectedValue(new Error("Not staff"));

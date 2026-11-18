@@ -39,21 +39,28 @@ export function AdminDashboard({
     a.download =
       scope === "qa"
         ? "ignite-qa-registrations.csv"
-        : "ignite-registrations.csv";
+        : scope === "all"
+          ? "ignite-all-registrations.csv"
+          : "ignite-student-registrations.csv";
     document.body.appendChild(a);
     a.click();
     a.remove();
     window.setTimeout(() => URL.revokeObjectURL(url), 1000);
   }
   return (
-    <StaffShell active={scope === "qa" ? "qa" : "registrations"} scope={scope}>
+    <StaffShell
+      active={scope === "qa" ? "qa" : "registrations"}
+      scope={scope === "students" ? undefined : scope}
+    >
       <main id="main" className="admin-main">
         <div className="section-heading">
           <div>
             <span className="eyebrow">
               {scope === "qa"
                 ? "SYNTHETIC QA SESSIONS"
-                : "STUDENT REGISTRATIONS"}
+                : scope === "all"
+                  ? "ALL REGISTRATIONS"
+                  : "STUDENT REGISTRATIONS"}
             </span>
             <h1>
               {scope === "qa"
@@ -66,10 +73,23 @@ export function AdminDashboard({
                 : "All registrations in this view, including students with no submitted answers."}
             </p>
           </div>
-          <button className="button secondary" onClick={exportCsv}>
-            <Download size={17} />
-            Export CSV
-          </button>
+          <div className="report-actions">
+            {scope === "qa" && (
+              <a
+                className="button primary"
+                href="/api/staff/export-csv?scope=qa"
+              >
+                <Download size={17} aria-hidden="true" />
+                Download all scored QA CSV
+              </a>
+            )}
+            <button className="button secondary" onClick={exportCsv}>
+              <Download size={17} aria-hidden="true" />
+              {scope === "qa"
+                ? "Download QA roster"
+                : "Download registration roster"}
+            </button>
+          </div>
         </div>
         <nav
           className="session-scope-links"
@@ -89,6 +109,12 @@ export function AdminDashboard({
             </Link>
           ))}
         </nav>
+        {scope === "qa" && (
+          <p className="registration-evidence-note">
+            <Link href="/staff?scope=qa">Review QA scores & answers</Link>. The
+            roster below also includes sessions without answers.
+          </p>
+        )}
         {scope !== "students" && (
           <p className="registration-evidence-note">
             Synthetic QA is test data, not evidence of student improvement.
@@ -121,7 +147,14 @@ export function AdminDashboard({
           Each registration is a separate identity. The{" "}
           <Link href={`/staff/dashboard${scopeQuery}`}>growth dashboard</Link>{" "}
           compares same-question repeats.{" "}
-          <Link href={`/staff${scopeQuery}`}>View every scored attempt</Link>.
+          <Link href={`/staff?scope=${scope}`}>
+            {scope === "qa"
+              ? "View scored QA attempts"
+              : scope === "all"
+                ? "View all scored attempts"
+                : "View scored student attempts"}
+          </Link>
+          .
         </p>
         <div className="admin-strands">
           {strands.map((s) => (
@@ -137,7 +170,10 @@ export function AdminDashboard({
         <section className="table-panel">
           <div className="table-heading">
             <h2>
-              Student registrations <span>{filtered.length}</span>
+              {scope === "qa"
+                ? "QA registration roster"
+                : "Registration roster"}{" "}
+              <span>{filtered.length}</span>
             </h2>
             <div className="filters">
               <label className="search">

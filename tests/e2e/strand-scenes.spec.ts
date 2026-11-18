@@ -73,6 +73,9 @@ test("all ten strand films decode, fit a narrow screen, and preserve interview a
         )
         .toBeGreaterThan(0);
       await expect(film).toHaveJSProperty("muted", true);
+      await expect(film).toHaveJSProperty("controls", false);
+      await expect(film).toHaveAttribute("disablepictureinpicture", "");
+      await expect(film).toHaveAttribute("disableremoteplayback", "");
       await expect(film).toHaveJSProperty("videoWidth", 960);
       await expect(film).toHaveJSProperty("videoHeight", 540);
       const geometry = await film.evaluate((element) => {

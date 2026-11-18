@@ -18,6 +18,12 @@ type RequestContext = {
   onAttempt?: () => void;
 };
 
+function formatWait(seconds: number) {
+  if (seconds < 60) return `${seconds} seconds`;
+  const minutes = Math.ceil(seconds / 60);
+  return `${minutes} ${minutes === 1 ? "minute" : "minutes"}`;
+}
+
 export async function api<T>(
   path: string,
   body?: unknown,
@@ -151,9 +157,17 @@ export async function api<T>(
           typeof result.error === "string"
             ? result.error
             : undefined;
+        const quotaMessage =
+          canWaitForCapacity &&
+          response.status === 429 &&
+          code === "AI_PROVIDER_RATE_LIMIT" &&
+          retryAfterSeconds !== undefined
+            ? `${path === "/api/transcribe" ? "Voice transcription" : "Scoring"} is temporarily at capacity. Keep this tab open and try again in about ${formatWait(retryAfterSeconds)}.`
+            : undefined;
         throw new ApiError(
           response.status,
-          message ??
+          quotaMessage ??
+            message ??
             (response.status === 401
               ? "Your session expired. Refresh this page to reconnect."
               : response.status === 429

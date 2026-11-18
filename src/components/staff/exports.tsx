@@ -21,7 +21,7 @@ export function ReportExports({
   return (
     <div className="report-actions">
       <a className="button secondary" href={csvUrl}>
-        Export CSV
+        Download scored attempts CSV
       </a>
       <button
         className="button primary"

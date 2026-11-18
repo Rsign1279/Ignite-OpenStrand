@@ -55,7 +55,7 @@ it("clamps an oversized page to the final matching page and retains filters", as
   expect(html).toContain("Learner 101");
   expect(html).not.toContain("Learner 100");
   expect(html).toContain(
-    "/staff?strand=technology&amp;strand=education&amp;student=Learner&amp;from=2026-10-01&amp;to=2026-10-31&amp;page=2",
+    "/staff?strand=technology&amp;strand=education&amp;student=Learner&amp;from=2026-10-01&amp;to=2026-10-31&amp;scope=all&amp;page=2",
   );
   expect(html).not.toContain("Next →");
 });

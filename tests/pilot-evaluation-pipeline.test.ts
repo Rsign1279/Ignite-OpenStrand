@@ -34,6 +34,10 @@ vi.mock("@/lib/ai/provider", () => ({
 import { POST } from "@/app/api/interview/evaluate/route";
 import { RUBRIC_SCORING_VERSION } from "@/config/rubric-anchors";
 import { getScoringVersion } from "@/lib/ai/scoring-config";
+import {
+  buildEvidenceComparison,
+  COMPARISON_REVIEW_VERSION,
+} from "@/lib/evidence-comparison";
 import { HttpError } from "@/lib/http";
 import type { Comparison, Evaluation } from "@/lib/validation";
 
@@ -94,7 +98,9 @@ beforeEach(() => {
   mock.validatePre.mockResolvedValue(getScoringVersion());
   mock.find.mockResolvedValue(null);
   mock.findComparison.mockResolvedValue(null);
-  mock.saveComparison.mockResolvedValue(comparison);
+  mock.saveComparison.mockImplementation(
+    async (_user, _post, _pre, value) => value,
+  );
   mock.logicalLimit.mockResolvedValue(undefined);
   mock.lock.mockImplementation(
     async (
@@ -177,58 +183,119 @@ describe("independent pilot evaluation recovery review", () => {
     expect(mock.structured).not.toHaveBeenCalled();
   });
 
-  it("resumes only a missing comparison after the score has already been saved", async () => {
+  it("recovers a missing comparison from saved answers without provider work", async () => {
     mock.find.mockResolvedValue(saved);
 
     const response = await POST(request());
     expect(response.status).toBe(200);
-    expect(mock.structured).toHaveBeenCalledTimes(1);
-    expect(mock.structured.mock.calls[0][0]).toBe("comparison");
+    expect(mock.structured).not.toHaveBeenCalled();
     expect(mock.record).not.toHaveBeenCalled();
     expect(mock.lock).toHaveBeenCalledWith(
       userId,
       postId,
       expect.any(Function),
     );
-    expect(mock.logicalLimit).toHaveBeenCalledWith(
-      userId,
-      "assessment",
-      postId,
-      expect.stringMatching(/^[a-f0-9]{64}$/),
-    );
+    expect(mock.logicalLimit).not.toHaveBeenCalled();
     expect(mock.saveComparison).toHaveBeenCalledWith(
       userId,
       postId,
       preId,
-      comparison,
+      buildEvidenceComparison(
+        answer.preTranscript,
+        answer.transcript,
+        evaluation.improvementArea,
+        {
+          before: evaluation.scores,
+          after: evaluation.scores,
+          comparable: true,
+        },
+      ),
+      COMPARISON_REVIEW_VERSION,
     );
   });
 
-  it("keeps the score after comparison capacity fails and does not grade it again on retry", async () => {
+  it("repairs an exact saved POST even after the logical scoring bucket is exhausted", async () => {
+    mock.find.mockResolvedValue(saved);
+    mock.logicalLimit.mockRejectedValue(
+      new HttpError(429, "Scoring bucket exhausted"),
+    );
+    mock.structured.mockRejectedValue(
+      new HttpError(429, "Provider quota exhausted"),
+    );
+
+    const response = await POST(request());
+    expect(response.status).toBe(200);
+    expect((await response.json()).evaluation).toEqual(evaluation);
+    expect(mock.logicalLimit).not.toHaveBeenCalled();
+    expect(mock.structured).not.toHaveBeenCalled();
+    expect(mock.record).not.toHaveBeenCalled();
+    expect(mock.saveComparison).toHaveBeenCalledTimes(1);
+  });
+
+  it("compares text from different review methods without reinterpreting older rubric scores", async () => {
+    mock.validatePre.mockResolvedValue("legacy-unversioned");
+    mock.find.mockResolvedValue(saved);
+
+    const response = await POST(request());
+    expect(response.status).toBe(200);
+    expect(await response.json()).toMatchObject({
+      comparisonComparable: false,
+    });
+    expect(mock.find).toHaveBeenCalledTimes(2);
+    expect(mock.find.mock.calls.every((call) => call[1] === postId)).toBe(true);
+    expect(mock.structured).not.toHaveBeenCalled();
+    expect(mock.saveComparison.mock.calls[0][3].nextStep).toBe(
+      evaluation.improvementArea,
+    );
+    expect(
+      mock.saveComparison.mock.calls[0][3].improvements.join(" "),
+    ).toContain("different review settings");
+  });
+
+  it("completes comparison after a score is saved even when no more provider capacity is available", async () => {
     mock.find
       .mockResolvedValueOnce(null)
       .mockResolvedValueOnce(null)
       .mockResolvedValue(saved);
     mock.structured
       .mockResolvedValueOnce(evaluation)
-      .mockRejectedValueOnce(new HttpError(429, "Provider quota reached", 120));
+      .mockRejectedValue(new HttpError(429, "Provider quota reached", 120));
 
     const first = await POST(request());
-    expect(first.status).toBe(429);
-    expect(first.headers.get("Retry-After")).toBe("120");
+    expect(first.status).toBe(200);
     expect(mock.record).toHaveBeenCalledTimes(1);
     expect(mock.record.mock.calls[0][8]).toBe(preId);
     expect(mock.save).toHaveBeenCalledWith(userId, "post", evaluation);
 
+    const completed = (await first.json()).comparison;
+    mock.findComparison.mockResolvedValue(completed);
     const second = await POST(request());
     expect(second.status).toBe(200);
     expect(mock.record).toHaveBeenCalledTimes(1);
     expect(mock.structured.mock.calls.map((call) => call[0])).toEqual([
       "assessment",
-      "comparison",
-      "comparison",
     ]);
     expect((await second.json()).evaluation).toEqual(evaluation);
+    expect(mock.saveComparison).toHaveBeenCalledTimes(1);
+  });
+
+  it("recovers a comparison storage failure without regrading the committed POST", async () => {
+    mock.find.mockResolvedValue(saved);
+    mock.saveComparison.mockRejectedValueOnce(
+      new HttpError(503, "Comparison storage unavailable"),
+    );
+
+    expect((await POST(request())).status).toBe(503);
+    const retried = await POST(request());
+    expect(retried.status).toBe(200);
+    expect((await retried.json()).evaluation).toEqual(evaluation);
+    expect(mock.structured).not.toHaveBeenCalled();
+    expect(mock.record).not.toHaveBeenCalled();
+    expect(mock.logicalLimit).not.toHaveBeenCalled();
+    expect(mock.saveComparison).toHaveBeenCalledTimes(2);
+    expect(mock.saveComparison.mock.calls[1][3]).toEqual(
+      mock.saveComparison.mock.calls[0][3],
+    );
   });
 
   it("uses the committed comparison returned by storage, not a losing model response", async () => {
@@ -299,11 +366,11 @@ describe("independent pilot evaluation recovery review", () => {
       throw new HttpError(499, "Canceled");
     });
 
-    expect((await POST(request(answer, controller.signal))).status).toBe(499);
+    expect((await POST(request(answer, controller.signal))).status).toBe(200);
     expect(mock.record).toHaveBeenCalledTimes(1);
     expect(mock.save).toHaveBeenCalledWith(userId, "post", evaluation);
-    expect(mock.saveComparison).not.toHaveBeenCalled();
-    expect(mock.structured.mock.calls[1][4].aborted).toBe(true);
+    expect(mock.saveComparison).toHaveBeenCalledTimes(1);
+    expect(mock.structured).toHaveBeenCalledTimes(1);
   });
 
   it("does not generate a comparison when durable score storage fails", async () => {

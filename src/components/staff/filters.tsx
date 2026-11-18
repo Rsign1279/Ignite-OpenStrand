@@ -90,13 +90,7 @@ export function AnalyticsFilters({
       <button className="button primary" type="submit">
         Apply filters
       </button>
-      <a
-        href={
-          filters.scope && filters.scope !== "students"
-            ? `${action}?scope=${filters.scope}`
-            : action
-        }
-      >
+      <a href={filters.scope ? `${action}?scope=${filters.scope}` : action}>
         Clear
       </a>
     </form>

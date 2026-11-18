@@ -19,7 +19,6 @@ import {
   profileSchema,
   answerSchema,
   evaluationSchema,
-  comparisonSchema,
   parseEvaluation,
   type Comparison,
 } from "@/lib/validation";
@@ -28,8 +27,11 @@ import {
   buildPreAssessmentPrompt,
   buildPracticeAssessmentPrompt,
   buildPostAssessmentPrompt,
-  buildComparisonPrompt,
 } from "@/lib/ai/prompts";
+import {
+  buildEvidenceComparison,
+  COMPARISON_REVIEW_VERSION,
+} from "@/lib/evidence-comparison";
 import { getScoringVersion } from "@/lib/ai/scoring-config";
 import { groundImprovementFeedback } from "@/lib/ai/grounded-coaching";
 import {
@@ -114,23 +116,27 @@ export async function POST(request: Request) {
       const comparison = recorded ? await cachedComparison() : null;
       if (recorded && (answer.stage !== "post" || comparison))
         return await respond(recorded, comparison ?? undefined);
-      const fingerprint = createHash("sha256")
-        .update(
-          JSON.stringify({
-            questionId: question.id,
-            stage: answer.stage,
-            transcript: answer.transcript,
-            preRequestId: answer.preRequestId,
-            preTranscript: answer.preTranscript,
-          }),
-        )
-        .digest("hex");
-      await limitLogicalSubmission(
-        user.id,
-        "assessment",
-        requestId,
-        fingerprint,
-      );
+      // Repairing a missing local comparison needs no inference quota. The
+      // exact saved answer/pair has already been checked under the same lock.
+      if (!recorded) {
+        const fingerprint = createHash("sha256")
+          .update(
+            JSON.stringify({
+              questionId: question.id,
+              stage: answer.stage,
+              transcript: answer.transcript,
+              preRequestId: answer.preRequestId,
+              preTranscript: answer.preTranscript,
+            }),
+          )
+          .digest("hex");
+        await limitLogicalSubmission(
+          user.id,
+          "assessment",
+          requestId,
+          fingerprint,
+        );
+      }
       if (request.signal.aborted)
         throw new HttpError(499, "Review canceled. Your answer is still here.");
       const evaluateNewAnswer = async () => {
@@ -189,7 +195,7 @@ export async function POST(request: Request) {
       // Keep the completed score even if quota prevents the comparison for now.
       if (answer.stage !== "post") return await respond(saved);
       await saveAssessment(user.id, "post", saved.evaluation);
-      if (!answer.preRequestId)
+      if (!answer.preRequestId || !answer.preTranscript)
         throw new HttpError(
           409,
           "Start with a first answer before comparing responses.",
@@ -200,19 +206,38 @@ export async function POST(request: Request) {
         answer.preRequestId,
       );
       if (storedComparison) return await respond(saved, storedComparison, true);
-      const generated = await ai.structured(
-        "comparison",
-        buildComparisonPrompt(student.strand, answer.questionId),
-        { pre: answer.preTranscript, post: answer.transcript },
-        comparisonSchema,
-        request.signal,
-        user.id,
+      // Earlier rubric formats can still be compared as text. Never try to
+      // reinterpret their scores through the current STAR score schema.
+      const first =
+        preVersion === saved.scoringVersion
+          ? await findRecordedAssessmentWithMetadata(
+              user.id,
+              answer.preRequestId,
+              answer.preTranscript,
+              question.id,
+              "pre",
+            )
+          : null;
+      const generated = buildEvidenceComparison(
+        answer.preTranscript,
+        answer.transcript,
+        saved.evaluation.improvementArea,
+        first && first.scoringVersion === saved.scoringVersion
+          ? {
+              before: first.evaluation.scores,
+              after: saved.evaluation.scores,
+              comparable: true,
+            }
+          : preVersion !== saved.scoringVersion
+            ? { comparable: false }
+            : undefined,
       );
       const persisted = await saveRecordedComparison(
         user.id,
         requestId,
         answer.preRequestId,
-        { ...generated, nextStep: saved.evaluation.improvementArea },
+        generated,
+        COMPARISON_REVIEW_VERSION,
       );
       return await respond(saved, persisted, true);
     });

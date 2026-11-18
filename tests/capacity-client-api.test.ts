@@ -150,6 +150,24 @@ it("preserves a provider's day-long Retry-After without automatic resubmission",
   expect(fetch).toHaveBeenCalledOnce();
 });
 
+it.each([
+  ["/api/interview/evaluate", "888", "Scoring", "15 minutes"],
+  ["/api/transcribe", "8", "Voice transcription", "8 seconds"],
+])(
+  "shows the provider wait in plain language for %s",
+  async (path, seconds, label, wait) => {
+    const fetch = vi
+      .fn()
+      .mockResolvedValue(busy(seconds, "AI_PROVIDER_RATE_LIMIT"));
+    vi.stubGlobal("fetch", fetch);
+    await expect(api(path, {})).rejects.toMatchObject({
+      message: `${label} is temporarily at capacity. Keep this tab open and try again in about ${wait}.`,
+      retryAfterSeconds: Number(seconds),
+    });
+    expect(fetch).toHaveBeenCalledOnce();
+  },
+);
+
 it("bounds repeated short admission failures instead of retrying forever", async () => {
   const fetch = vi.fn().mockImplementation(() => Promise.resolve(busy("1")));
   vi.stubGlobal("fetch", fetch);
