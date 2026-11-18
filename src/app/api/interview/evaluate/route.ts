@@ -31,6 +31,7 @@ import {
   buildComparisonPrompt,
 } from "@/lib/ai/prompts";
 import { getScoringVersion } from "@/lib/ai/scoring-config";
+import { groundImprovementFeedback } from "@/lib/ai/grounded-coaching";
 import {
   LEGACY_SCORING_VERSION,
   RUBRIC_SCORING_VERSION,
@@ -132,9 +133,8 @@ export async function POST(request: Request) {
       );
       if (request.signal.aborted)
         throw new HttpError(499, "Review canceled. Your answer is still here.");
-      const evaluation =
-        recorded?.evaluation ??
-        parseEvaluation(
+      const evaluateNewAnswer = async () => {
+        const generated = parseEvaluation(
           await ai.structured(
             "assessment",
             answer.stage === "pre"
@@ -160,6 +160,9 @@ export async function POST(request: Request) {
             user.id,
           ),
         );
+        return groundImprovementFeedback(generated, answer.transcript);
+      };
+      const evaluation = recorded?.evaluation ?? (await evaluateNewAnswer());
       if (!recorded)
         await recordAttempt(
           user.id,

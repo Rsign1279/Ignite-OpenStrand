@@ -109,6 +109,35 @@ beforeEach(() => {
 });
 
 describe("independent pilot evaluation recovery review", () => {
+  it("replaces new coaching that supplies a student's missing responsibility before saving", async () => {
+    const generated = {
+      ...evaluation,
+      scores: { situation: 3, task: 2, action: 3, result: 2 },
+      improvementArea:
+        'Clarify your task, such as "I was tasked with drafting a neutral summary."',
+    };
+    mock.structured.mockResolvedValue(generated);
+    const response = await POST(
+      request({
+        ...answer,
+        stage: "pre",
+        requestId: undefined,
+        preRequestId: undefined,
+        preTranscript: undefined,
+      }),
+    );
+    expect(response.status).toBe(200);
+    const { evaluation: reviewed } = await response.json();
+    expect(reviewed).toMatchObject({
+      scores: generated.scores,
+      total: 10,
+      strongestPart: generated.strongestPart,
+      improvementArea: "Explain the task or goal you took responsibility for.",
+    });
+    expect(mock.record.mock.calls[0]?.[3]).toEqual(reviewed);
+    expect(mock.structured).toHaveBeenCalledTimes(1);
+  });
+
   it("returns an immutable completed comparison without provider work or submission quota", async () => {
     mock.find.mockResolvedValue(saved);
     mock.findComparison.mockResolvedValue(comparison);
