@@ -2,7 +2,7 @@ import Link from "next/link";
 import { staffPage, pageFilters } from "@/lib/analytics/pages";
 import { loadAttempts } from "@/lib/analytics/data";
 import { filterAttempts, studentSummaries } from "@/lib/analytics/aggregate";
-import { filterQuery } from "@/lib/analytics/model";
+import { filterQuery, scopeLabel } from "@/lib/analytics/model";
 import { StaffShell } from "@/components/staff/shell";
 import { AnalyticsFilters } from "@/components/staff/filters";
 import { getStrand } from "@/config/strands";
@@ -16,7 +16,7 @@ export default async function RawData({
 }) {
   await staffPage();
   const params = await searchParams,
-    filters = pageFilters(params),
+    filters = pageFilters({ ...params, scope: params.scope ?? "all" }),
     rows = filterAttempts(await loadAttempts(undefined, true), filters),
     summaries = studentSummaries(rows),
     derived = new Map(
@@ -41,27 +41,34 @@ export default async function RawData({
           <div>
             <span className="eyebrow">RAW DATA</span>
             <h1>Every scored attempt.</h1>
-            <p>CSV includes answers, feedback, and per-question summaries.</p>
+            <p>{scopeLabel(filters.scope)} · Answers, scores, and feedback.</p>
           </div>
           <a
             className="button secondary"
             href={`/api/staff/export-csv?${query}`}
           >
-            Export CSV
+            {filters.scope === "qa"
+              ? "Download scored QA CSV"
+              : filters.scope === "students"
+                ? "Download student attempts CSV"
+                : "Download all attempts CSV"}
           </a>
         </div>
         <AnalyticsFilters filters={filters} action="/staff" />
-        {filters.scope && filters.scope !== "students" && (
-          <p className="registration-evidence-note">
-            Synthetic QA is marked below and excluded from the default student
-            view.
-          </p>
-        )}
+        <p className="registration-evidence-note">
+          {filters.scope === "all"
+            ? "Showing student and synthetic QA attempts. Choose Students only to hide test data."
+            : filters.scope === "qa"
+              ? "Synthetic QA test answers are not evidence of student improvement."
+              : "Student attempts only. Synthetic QA is excluded."}
+        </p>
         <section className="table-panel">
           <div className="table-heading">
-            <h2>{rows.length} attempts</h2>
+            <h2>
+              {rows.length} scored {rows.length === 1 ? "attempt" : "attempts"}
+            </h2>
             <Link href={`/staff/dashboard?${query}`}>
-              View dashboard & PDF export
+              Open overview for these sessions
             </Link>
           </div>
           <div
@@ -75,6 +82,7 @@ export default async function RawData({
                 <tr>
                   {[
                     "Student",
+                    "Session",
                     "Strand",
                     "Question",
                     "Attempt",
@@ -102,10 +110,14 @@ export default async function RawData({
                         <Link href={`/staff/student/${a.student_id}?${query}`}>
                           {a.student_name}
                         </Link>
-                        {a.qa_cohort_id && (
+                      </td>
+                      <td>
+                        {a.qa_cohort_id ? (
                           <span className="pill qa-session-badge">
                             Synthetic QA
                           </span>
+                        ) : (
+                          <span className="pill">Student</span>
                         )}
                       </td>
                       <td>{getStrand(a.strand).name}</td>

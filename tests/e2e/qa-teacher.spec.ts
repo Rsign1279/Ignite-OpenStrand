@@ -75,6 +75,12 @@ test("QA lab shows only marked test identities with QA-filtered history and expo
   ).toHaveCount(24);
   await expect(page.locator("body")).not.toContainText("Real cohort learner");
   await expect(
+    page.getByRole("link", { name: "Download all scored QA CSV", exact: true }),
+  ).toHaveAttribute("href", "/api/staff/export-csv?scope=qa");
+  await expect(
+    page.getByRole("link", { name: "Review QA scores & answers", exact: true }),
+  ).toHaveAttribute("href", "/staff?scope=qa");
+  await expect(
     page.getByRole("link", {
       name: "View scored attempts for Pilot QA 01",
       exact: true,
@@ -87,8 +93,11 @@ test("QA lab shows only marked test identities with QA-filtered history and expo
     .getByRole("textbox", { name: "Search by name" })
     .fill("Pilot QA 01");
   await expect(page.locator("tbody tr")).toHaveCount(1);
+  await expect(
+    page.getByRole("link", { name: "Download all scored QA CSV", exact: true }),
+  ).toHaveAttribute("href", "/api/staff/export-csv?scope=qa");
   const downloadPromise = page.waitForEvent("download");
-  await page.getByRole("button", { name: "Export CSV" }).click();
+  await page.getByRole("button", { name: "Download QA roster" }).click();
   const download = await downloadPromise;
   expect(download.suggestedFilename()).toBe("ignite-qa-registrations.csv");
   const csv = readFileSync((await download.path())!, "utf8");

@@ -38,6 +38,8 @@ vi.mock("@/lib/ai/provider", () => ({
 import { POST } from "@/app/api/interview/evaluate/route";
 import { POST as transfer } from "@/app/api/interview/transfer-question/route";
 import { RUBRIC_SCORING_VERSION } from "@/config/rubric-anchors";
+import { buildEvidenceComparison } from "@/lib/evidence-comparison";
+import { getScoringVersion } from "@/lib/ai/scoring-config";
 import { HttpError } from "@/lib/http";
 const assessment = {
   scores: {
@@ -70,7 +72,7 @@ beforeEach(() => {
   mock.save.mockResolvedValue(undefined);
   mock.record.mockResolvedValue(undefined);
   mock.find.mockResolvedValue(null);
-  mock.validatePre.mockResolvedValue(undefined);
+  mock.validatePre.mockResolvedValue(getScoringVersion());
   mock.structured.mockResolvedValue(assessment);
   mock.comparison.mockResolvedValue(null);
   mock.saveComparison.mockImplementation(
@@ -141,11 +143,8 @@ describe("Authenticated AI endpoints", () => {
     expect(r.status).toBe(503);
     expect(JSON.stringify(await r.json())).not.toContain("PRIVATE");
   });
-  it("independently evaluates post and then compares", async () => {
-    mock.structured.mockResolvedValueOnce(assessment).mockResolvedValueOnce({
-      improvements: ["Clearer task", "Specific outcome"],
-      nextStep: "Add feedback",
-    });
+  it("independently evaluates post and compares exact text without another provider call", async () => {
+    mock.structured.mockResolvedValueOnce(assessment);
     const r = await POST(
       request({
         transcript: "My detailed post answer",
@@ -158,14 +157,14 @@ describe("Authenticated AI endpoints", () => {
     expect(mock.structured.mock.calls[0][2]).toEqual({
       transcript: "My detailed post answer",
     });
-    expect(mock.structured.mock.calls[1][2]).toEqual({
-      pre: "My previous answer",
-      post: "My detailed post answer",
-    });
     expect(mock.structured.mock.calls[0][5]).toBe("user-1");
-    expect(mock.structured.mock.calls[1][5]).toBe("user-1");
-    expect((await r.json()).comparison.nextStep).toBe(
-      assessment.improvementArea,
+    expect(mock.structured).toHaveBeenCalledTimes(1);
+    expect((await r.json()).comparison).toEqual(
+      buildEvidenceComparison(
+        "My previous answer",
+        "My detailed post answer",
+        assessment.improvementArea,
+      ),
     );
   });
   it("question endpoint validates empty body", async () => {
@@ -210,11 +209,6 @@ it.each(["pre", "post", "practice"] as const)(
       profile: { name: "Student", strand: "education", ignite_year: 2 },
     });
     mock.structured.mockResolvedValueOnce(assessment);
-    if (stage === "post")
-      mock.structured.mockResolvedValueOnce({
-        improvements: ["Clearer context", "Specific action"],
-        nextStep: "A separate suggestion",
-      });
     const response = await POST(
       request({
         transcript: "My own school experience",
@@ -262,10 +256,7 @@ it("keeps comparison coaching tied to the stored assessment when concurrent repl
       evaluation: winner,
       scoringVersion: "original-model-version",
     });
-  mock.structured.mockResolvedValueOnce(assessment).mockResolvedValueOnce({
-    improvements: ["Clearer context", "Specific action"],
-    nextStep: "A different model suggestion",
-  });
+  mock.structured.mockResolvedValueOnce(assessment);
   const response = await POST(
     request({
       transcript: "My latest answer",
@@ -280,10 +271,14 @@ it("keeps comparison coaching tied to the stored assessment when concurrent repl
   const body = await response.json();
   expect(body.evaluation).toEqual(winner);
   expect(body.comparison.nextStep).toBe(winner.improvementArea);
-  expect(body.comparison.improvements).toEqual([
-    "Clearer context",
-    "Specific action",
-  ]);
+  expect(body.comparison).toEqual(
+    buildEvidenceComparison(
+      "My earlier answer",
+      "My latest answer",
+      winner.improvementArea,
+      { comparable: false },
+    ),
+  );
 });
 it("does not return success when learning storage fails", async () => {
   mock.save.mockRejectedValue(new HttpError(503, "Unable to save results"));

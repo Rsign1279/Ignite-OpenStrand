@@ -101,8 +101,7 @@ export const filterQuery = (filters: Filters) => {
   if (filters.to) query.set("to", filters.to);
   if (filters.minAttempts > 1)
     query.set("minAttempts", String(filters.minAttempts));
-  if (filters.scope && filters.scope !== "students")
-    query.set("scope", filters.scope);
+  if (filters.scope) query.set("scope", filters.scope);
   return query.toString();
 };
 export type QuestionSummary = {

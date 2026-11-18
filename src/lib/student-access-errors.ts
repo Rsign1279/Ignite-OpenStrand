@@ -24,7 +24,7 @@ export function studentAccessMessage(error: unknown) {
     failure?.name === "TypeError" ||
     failure?.status === 0
   )
-    return "We couldn't reach student sign-in. Your details are still here. Try again.";
+    return "We couldn't reach student sign-in. Your details are still here. Try again. If this continues at school, ask your advisor or school IT to check sign-in access.";
 
   return "We couldn't start your student session. Your details are still here. Try again.";
 }

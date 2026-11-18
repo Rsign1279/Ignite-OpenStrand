@@ -12,13 +12,17 @@ import type { DataScope } from "@/lib/analytics/model";
 export function StaffShell({
   children,
   active = "overview",
-  scope = "students",
+  scope,
 }: {
   children: React.ReactNode;
   active?: "overview" | "raw" | "registrations" | "qa";
   scope?: DataScope;
 }) {
-  const query = scope === "students" ? "" : `?scope=${scope}`;
+  const query =
+    !scope || scope === "students" || (active === "raw" && scope === "all")
+      ? ""
+      : `?scope=${scope}`;
+  const rawQuery = scope ? `?scope=${scope}` : "";
   return (
     <div className="studio staff-studio">
       <header className="header">
@@ -41,7 +45,7 @@ export function StaffShell({
             Overview
           </Link>
           <Link
-            href={`/staff${query}`}
+            href={`/staff${rawQuery}`}
             aria-current={active === "raw" ? "page" : undefined}
           >
             <Table2 size={17} aria-hidden="true" />

@@ -104,10 +104,16 @@ export class GroqProvider implements AIProvider {
     signal?: AbortSignal,
     userId?: string,
   ): Promise<T> {
+    const unavailable = () =>
+      new HttpError(
+        503,
+        "We couldn't review your answer right now. Your typed answer is still here. Please try again.",
+      );
     for (let attempt = 0; attempt < 2; attempt++) {
+      let result;
       try {
         const model = getScoringModel();
-        const result = await this.request(
+        result = await this.request(
           "text",
           model,
           () =>
@@ -143,25 +149,24 @@ export class GroqProvider implements AIProvider {
           signal,
           userId,
         );
+      } catch (error) {
+        if (error instanceof HttpError) throw error;
+        // A failed connection can leave the provider processing the request.
+        // Let the student retry deliberately instead of silently sending it again.
+        throw unavailable();
+      }
+      try {
         if (result.choices[0]?.finish_reason === "length")
           throw new Error("Incomplete structured output");
         return schema.parse(
           JSON.parse(result.choices[0]?.message.content ?? ""),
         );
-      } catch (error) {
-        if (error instanceof HttpError) throw error;
-        const status = statusOf(error);
-        if (
-          attempt === 1 ||
-          (status && status >= 400 && status < 500 && status !== 408)
-        )
-          throw new HttpError(
-            503,
-            "We couldn't review your answer right now. Your typed answer is still here. Please try again.",
-          );
+      } catch {
+        // Retry only when a response arrived but the structured output is unusable.
+        if (attempt === 1) throw unavailable();
       }
     }
-    throw new Error("Invalid AI output");
+    throw unavailable();
   }
   async transcribe(file: File, signal?: AbortSignal, userId?: string) {
     let result;

@@ -117,13 +117,21 @@ it.each([400, 401, 403, 404, 429])(
     expect(mocked.create).toHaveBeenCalledOnce();
   },
 );
-it.each([500, 502, 503, 408])("bounds transient retries %s", async (status) => {
-  mocked.create.mockRejectedValue({ status });
-  await expect(
-    new GroqProvider().structured("evaluation", "Rubric", {}, evaluationSchema),
-  ).rejects.toMatchObject({ status: 503 });
-  expect(mocked.create).toHaveBeenCalledTimes(2);
-});
+it.each([500, 502, 503, 408, undefined])(
+  "does not silently resend after a transport failure (%s)",
+  async (status) => {
+    mocked.create.mockRejectedValue({ status });
+    await expect(
+      new GroqProvider().structured(
+        "evaluation",
+        "Rubric",
+        {},
+        evaluationSchema,
+      ),
+    ).rejects.toMatchObject({ status: 503 });
+    expect(mocked.create).toHaveBeenCalledOnce();
+  },
+);
 it("rejects token-truncated output even if it looks parseable", async () => {
   mocked.create.mockResolvedValue({
     choices: [{ finish_reason: "length", message: { content: "{}" } }],

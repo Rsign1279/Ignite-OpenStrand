@@ -177,8 +177,7 @@ function SceneFilmPlayer({
       await player.play();
     } catch (error) {
       if (request !== playRequest.current || !player.isConnected) return;
-      // Pausing a pending play request is a deliberate user action, not a
-      // failed film. Native controls and the external pause button both do it.
+      // Pausing a pending play request is a deliberate user action.
       if (!(error instanceof DOMException && error.name === "AbortError")) {
         setFailed(true);
       }
@@ -221,7 +220,8 @@ function SceneFilmPlayer({
           src={`/films/${strand}.mp4`}
           muted
           playsInline
-          controls={started}
+          disablePictureInPicture
+          disableRemotePlayback
           preload="metadata"
           poster={`/films/${strand}.webp`}
           aria-label={`Silent first-person walk-in: ${scene.place}. You enter through a doorway, walk to the interview table, and settle into your seat.`}
@@ -285,7 +285,7 @@ function SceneFilmPlayer({
           <span>
             <Film size={14} /> IGNITE ORIGINAL SCENE
           </span>
-          <span>12 SEC / SILENT</span>
+          <span>SILENT SCENE</span>
         </div>
         {!started && !failed && !loading && (
           <button

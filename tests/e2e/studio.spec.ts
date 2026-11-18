@@ -850,7 +850,7 @@ test("scene film plays real local media with pause and replay controls", async (
     )
     .toBeGreaterThan(0);
   await expect(film).toHaveJSProperty("muted", true);
-  await expect(film).toHaveJSProperty("controls", true);
+  await expect(film).toHaveJSProperty("controls", false);
   await page.getByRole("button", { name: "Pause scene film" }).click();
   await expect(film).toHaveJSProperty("paused", true);
   await page
