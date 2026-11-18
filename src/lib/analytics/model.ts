@@ -1,12 +1,30 @@
 import { z } from "zod";
 import { strandIds, rubric } from "@/config/strands";
-import { storedScoresSchema } from "@/lib/validation";
+import { comparisonSchema, storedScoresSchema } from "@/lib/validation";
 import { LEGACY_SCORING_VERSION } from "@/config/rubric-anchors";
 export { LEGACY_SCORING_VERSION };
+export const dataScopeSchema = z.enum(["students", "qa", "all"]);
+export type DataScope = z.infer<typeof dataScopeSchema>;
+export const scopeLabel = (scope?: DataScope) =>
+  scope === "qa"
+    ? "Synthetic QA sessions"
+    : scope === "all"
+      ? "All sessions (includes QA)"
+      : "Student sessions";
+export const matchesScope = (
+  profile: { qa_cohort_id?: string | null },
+  scope: DataScope = "students",
+) =>
+  scope === "all" ||
+  (scope === "qa" ? !!profile.qa_cohort_id : !profile.qa_cohort_id);
 export const attemptSchema = z.object({
   id: z.uuid(),
   student_id: z.uuid(),
   student_name: z.string(),
+  qa_cohort_id: z
+    .uuid()
+    .nullish()
+    .transform((value) => value ?? null),
   strand: z.enum(strandIds),
   question_id: z.string(),
   question_text: z.string(),
@@ -17,6 +35,13 @@ export const attemptSchema = z.object({
   stage: z.enum(["pre", "post", "practice"]),
   answer_text: z.string().nullable().optional(),
   feedback_text: z.string().nullable().optional(),
+  comparison: comparisonSchema
+    .extend({
+      pre_attempt_id: z.uuid().optional(),
+      review_version: z.string().min(1).max(300),
+      created_at: z.iso.datetime({ offset: true }),
+    })
+    .optional(),
   is_legacy: z.boolean().default(false),
   scoring_version: z
     .string()
@@ -25,8 +50,12 @@ export const attemptSchema = z.object({
     .nullish()
     .transform((value) => value ?? LEGACY_SCORING_VERSION),
 });
-export type Attempt = Omit<z.infer<typeof attemptSchema>, "scoring_version"> & {
+export type Attempt = Omit<
+  z.infer<typeof attemptSchema>,
+  "scoring_version" | "qa_cohort_id"
+> & {
   scoring_version?: string;
+  qa_cohort_id?: string | null;
 };
 export type Filters = {
   strand: string[];
@@ -34,6 +63,7 @@ export type Filters = {
   from: string;
   to: string;
   minAttempts: number;
+  scope?: DataScope;
 };
 export const filterSchema = z
   .object({
@@ -42,13 +72,14 @@ export const filterSchema = z
     from: z.union([z.literal(""), z.iso.date()]).default(""),
     to: z.union([z.literal(""), z.iso.date()]).default(""),
     minAttempts: z.coerce.number().int().min(1).max(10000).default(1),
+    scope: dataScopeSchema.optional(),
   })
   .refine(
     (v) => !v.from || !v.to || v.from <= v.to,
     "Start date must precede end date",
   );
 export function parseFilters(params: URLSearchParams): Filters {
-  return filterSchema.parse({
+  const filters = filterSchema.parse({
     strand: params
       .getAll("strand")
       .flatMap((v) => v.split(","))
@@ -57,7 +88,10 @@ export function parseFilters(params: URLSearchParams): Filters {
     from: params.get("from") ?? "",
     to: params.get("to") ?? "",
     minAttempts: params.get("minAttempts") ?? params.get("min_attempts") ?? 1,
+    scope: params.get("scope") ?? undefined,
   });
+  if (filters.scope === undefined) delete filters.scope;
+  return filters;
 }
 export const filterQuery = (filters: Filters) => {
   const query = new URLSearchParams();
@@ -67,6 +101,8 @@ export const filterQuery = (filters: Filters) => {
   if (filters.to) query.set("to", filters.to);
   if (filters.minAttempts > 1)
     query.set("minAttempts", String(filters.minAttempts));
+  if (filters.scope && filters.scope !== "students")
+    query.set("scope", filters.scope);
   return query.toString();
 };
 export type QuestionSummary = {
@@ -85,6 +121,7 @@ export type QuestionSummary = {
 export type StudentSummary = {
   student_id: string;
   student_name: string;
+  qa_cohort_id?: string | null;
   strand: Attempt["strand"];
   total_attempts: number;
   unique_questions: number;

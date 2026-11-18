@@ -20,6 +20,18 @@ export function AnalyticsFilters({
           defaultValue={filters.student}
         />
       </div>
+      <div>
+        <label htmlFor="session-scope">Sessions</label>
+        <select
+          id="session-scope"
+          name="scope"
+          defaultValue={filters.scope ?? "students"}
+        >
+          <option value="students">Students only</option>
+          <option value="qa">Synthetic QA</option>
+          <option value="all">All, including QA</option>
+        </select>
+      </div>
       <details className="strand-picker">
         <summary>
           Strands{" "}
@@ -78,7 +90,15 @@ export function AnalyticsFilters({
       <button className="button primary" type="submit">
         Apply filters
       </button>
-      <a href={action}>Clear</a>
+      <a
+        href={
+          filters.scope && filters.scope !== "students"
+            ? `${action}?scope=${filters.scope}`
+            : action
+        }
+      >
+        Clear
+      </a>
     </form>
   );
 }

@@ -8,12 +8,27 @@ const mock = vi.hoisted(() => ({
   record: vi.fn(),
   find: vi.fn(),
   validatePre: vi.fn(),
+  comparison: vi.fn(),
+  saveComparison: vi.fn(),
 }));
 vi.mock("@/lib/learning", () => ({
   saveAssessment: mock.save,
   recordAttempt: mock.record,
   findRecordedAssessmentWithMetadata: mock.find,
   validatePreQuestion: mock.validatePre,
+}));
+vi.mock("@/lib/request-admission", () => ({
+  withAssessmentLock: async (
+    _user: string,
+    _id: string,
+    operation: () => Promise<unknown>,
+  ) => operation(),
+  limitLogicalSubmission: (user: string, bucket: string) =>
+    mock.limit(user, bucket),
+}));
+vi.mock("@/lib/assessment-comparisons", () => ({
+  findRecordedComparison: mock.comparison,
+  saveRecordedComparison: mock.saveComparison,
 }));
 vi.mock("@/lib/auth", () => ({ requireStudent: mock.auth }));
 vi.mock("@/lib/rate-limit", () => ({ rateLimit: mock.limit }));
@@ -57,6 +72,10 @@ beforeEach(() => {
   mock.find.mockResolvedValue(null);
   mock.validatePre.mockResolvedValue(undefined);
   mock.structured.mockResolvedValue(assessment);
+  mock.comparison.mockResolvedValue(null);
+  mock.saveComparison.mockImplementation(
+    async (_user, _post, _pre, value) => value,
+  );
 });
 describe("Authenticated AI endpoints", () => {
   it("rejects unauthenticated requests without calling AI", async () => {
@@ -75,6 +94,7 @@ describe("Authenticated AI endpoints", () => {
     );
     expect(response.status).toBe(200);
     expect((await response.json()).evaluation.total).toBe(10);
+    expect(mock.structured.mock.calls[0][5]).toBe("user-1");
     expect(mock.limit).toHaveBeenCalledWith("user-1", "assessment");
     expect(mock.structured.mock.calls[0][2]).toEqual({
       transcript: "I organized a school event and learned to delegate.",
@@ -130,6 +150,7 @@ describe("Authenticated AI endpoints", () => {
       request({
         transcript: "My detailed post answer",
         preTranscript: "My previous answer",
+        preRequestId: "22222222-2222-4222-8222-222222222222",
         stage: "post",
       }),
     );
@@ -141,6 +162,8 @@ describe("Authenticated AI endpoints", () => {
       pre: "My previous answer",
       post: "My detailed post answer",
     });
+    expect(mock.structured.mock.calls[0][5]).toBe("user-1");
+    expect(mock.structured.mock.calls[1][5]).toBe("user-1");
     expect((await r.json()).comparison.nextStep).toBe(
       assessment.improvementArea,
     );
@@ -197,7 +220,12 @@ it.each(["pre", "post", "practice"] as const)(
         transcript: "My own school experience",
         stage,
         questionId: "education-teamwork-v1",
-        ...(stage === "post" ? { preTranscript: "My earlier answer" } : {}),
+        ...(stage === "post"
+          ? {
+              preTranscript: "My earlier answer",
+              preRequestId: "22222222-2222-4222-8222-222222222222",
+            }
+          : {}),
       }),
     );
     expect(response.status).toBe(200);
@@ -227,10 +255,13 @@ it("keeps comparison coaching tied to the stored assessment when concurrent repl
     total: 10,
     improvementArea: "Name the responsibility that was yours in this project.",
   };
-  mock.find.mockResolvedValueOnce(null).mockResolvedValueOnce({
-    evaluation: winner,
-    scoringVersion: "original-model-version",
-  });
+  mock.find
+    .mockResolvedValueOnce(null)
+    .mockResolvedValueOnce(null)
+    .mockResolvedValueOnce({
+      evaluation: winner,
+      scoringVersion: "original-model-version",
+    });
   mock.structured.mockResolvedValueOnce(assessment).mockResolvedValueOnce({
     improvements: ["Clearer context", "Specific action"],
     nextStep: "A different model suggestion",
@@ -349,10 +380,13 @@ it("returns the stored winner's score when concurrent identical requests finish 
     total: 7,
     scores: { ...assessment.scores, action: 0 },
   };
-  mock.find.mockResolvedValueOnce(null).mockResolvedValueOnce({
-    evaluation: winner,
-    scoringVersion: "original-model-version",
-  });
+  mock.find
+    .mockResolvedValueOnce(null)
+    .mockResolvedValueOnce(null)
+    .mockResolvedValueOnce({
+      evaluation: winner,
+      scoringVersion: "original-model-version",
+    });
   const response = await POST(
     request({
       transcript: "My answer",
@@ -414,7 +448,7 @@ it.each([
       scoringVersion: postVersion,
       comparison: { nextStep: assessment.improvementArea },
     });
-    expect(mock.record.mock.calls[0][7]).toBe(postVersion);
+    expect(mock.record).not.toHaveBeenCalled();
   },
 );
 
@@ -454,8 +488,9 @@ it("scores independent practice with the full rubric, recomputes totals and reco
     "practice",
     expect.objectContaining({ total: 10 }),
     expect.any(String),
-    undefined,
+    expect.any(String),
     "education-teamwork-v1",
+    undefined,
     undefined,
   );
   expect(mock.save).not.toHaveBeenCalled();

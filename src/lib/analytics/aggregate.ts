@@ -1,6 +1,10 @@
 import { isStarScores } from "@/lib/validation";
 import { strands, rubric } from "@/config/strands";
-import { LEGACY_SCORING_VERSION, type QuestionSummary } from "./model";
+import {
+  LEGACY_SCORING_VERSION,
+  matchesScope,
+  type QuestionSummary,
+} from "./model";
 import type {
   Analytics,
   Attempt,
@@ -26,6 +30,7 @@ export function filterAttempts(attempts: Attempt[], filters: Filters) {
     : Infinity;
   let selected = attempts.filter(
     (a) =>
+      matchesScope(a, filters.scope) &&
       (!filters.strand.length || filters.strand.includes(a.strand)) &&
       (!filters.student ||
         a.student_name
@@ -88,6 +93,7 @@ export function studentSummaries(attempts: Attempt[]): StudentSummary[] {
       return {
         student_id: id,
         student_name: sorted.at(-1)!.student_name,
+        qa_cohort_id: sorted.at(-1)!.qa_cohort_id ?? null,
         strand: sorted.at(-1)!.strand,
         total_attempts: sorted.length,
         unique_questions: questions.length,

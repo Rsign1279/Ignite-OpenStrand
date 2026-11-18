@@ -103,13 +103,11 @@ it("stores rubric values only, omitting free-text feedback", async () => {
     strongestPart: "PRIVATE",
     improvementArea: "PRIVATE",
   });
-  expect(mocks.from).toHaveBeenCalledWith("learning_results");
-  expect(mocks.upsert).toHaveBeenCalledWith({
-    user_id: "student",
-    post_scores: scores,
-    updated_at: expect.any(String),
+  expect(mocks.rpc).toHaveBeenCalledWith("refresh_interview_summary", {
+    p_student_id: "student",
   });
-  expect(JSON.stringify(mocks.upsert.mock.calls)).not.toContain("PRIVATE");
+  expect(mocks.upsert).not.toHaveBeenCalled();
+  expect(JSON.stringify(mocks.rpc.mock.calls)).not.toContain("PRIVATE");
 });
 it("stores transfer indicators and completion without the observation", async () => {
   await saveTransfer("student", {
@@ -172,7 +170,7 @@ it("persists canonical selected question metadata instead of the legacy default"
       p_question_id: "technology-teamwork-v1",
       p_question_text: expect.stringContaining("worked with a team"),
       p_evaluation: expect.objectContaining({
-        scoring_version: expect.stringMatching(/^ignite-star-rubric-v2\|groq:/),
+        scoring_version: expect.stringMatching(/^ignite-star-rubric-v3\|groq:/),
       }),
     }),
   );

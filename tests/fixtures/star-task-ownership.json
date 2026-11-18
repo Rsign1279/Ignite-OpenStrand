@@ -1,0 +1,15 @@
+{
+  "purpose": "Synthetic adversarial input for reviewing Task ownership in scoring instructions, not provider grading or a measured scoring result.",
+  "cases": [
+    {
+      "id": "situation-problem-without-student-owned-task",
+      "questionId": "technology-teamwork-v1",
+      "transcript": "At coding club the demo page failed before class. The teacher fixed it.",
+      "reviewChecks": [
+        "The failed demo page may supply Situation context.",
+        "No student-owned task, responsibility, or goal is stated; a problem alone does not establish Task evidence.",
+        "The teacher's action must not be treated as evidence that the student took responsibility."
+      ]
+    }
+  ]
+}

@@ -84,7 +84,7 @@ it("rejects missing Task, extra communication scores and old output from the cur
     evaluationSchema.safeParse({ ...evaluation, scores: earlier }).success,
   ).toBe(false);
   expect(storedScoresSchema.parse(earlier)).toEqual(earlier);
-  expect(RUBRIC_SCORING_VERSION).toBe("ignite-star-rubric-v2");
+  expect(RUBRIC_SCORING_VERSION).toBe("ignite-star-rubric-v3");
   expect(legacyRubric.map((r) => r.key)).toContain("professionalCommunication");
 });
 

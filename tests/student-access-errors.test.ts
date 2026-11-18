@@ -22,7 +22,7 @@ it("offers appropriate recovery for signup throttling and verification", () => {
     studentAccessMessage(
       new AuthApiError("Rate limit", 429, "over_request_rate_limit"),
     ),
-  ).toContain("wait a minute");
+  ).toContain("wait before retrying");
   expect(
     studentAccessMessage(new AuthApiError("Captcha", 400, "captcha_failed")),
   ).toContain("could not complete its verification");

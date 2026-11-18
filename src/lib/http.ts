@@ -42,6 +42,13 @@ export async function readJson(request: Request, max = 70000) {
   }
 }
 export function failure(error: unknown) {
+  const code =
+    error instanceof HttpError &&
+    "code" in error &&
+    (error.code === "AI_CAPACITY_BUSY" ||
+      error.code === "AI_PROVIDER_RATE_LIMIT")
+      ? error.code
+      : undefined;
   const status =
     error instanceof HttpError
       ? error.status
@@ -52,16 +59,23 @@ export function failure(error: unknown) {
     error instanceof HttpError ? error.retryAfterSeconds : undefined;
   const retryAfter =
     typeof requestedWait === "number" && Number.isFinite(requestedWait)
-      ? Math.max(1, Math.min(3600, Math.ceil(requestedWait)))
+      ? Math.max(
+          1,
+          Math.min(
+            code === "AI_PROVIDER_RATE_LIMIT" ? 86400 : 3600,
+            Math.ceil(requestedWait),
+          ),
+        )
       : 60;
   return Response.json(
     {
+      ...(code ? { code } : {}),
       error:
         error instanceof HttpError
           ? error.message
           : status === 400
             ? "Please check your response and try again."
-            : "We couldn't process your interview response right now. Your recording has not been saved. Please try again.",
+            : "We couldn't process your interview response right now. Your answer is still here. Please try again.",
     },
     {
       status,

@@ -186,6 +186,26 @@ function SceneFilmPlayer({
     }
   }
 
+  function finishAtTerminalFrame(player: HTMLVideoElement) {
+    // WebKit can stop one floating-point tick before duration without ever
+    // emitting ended. A decoded final position (within 1ms) is complete; an
+    // in-progress seek or a paused preview near the end is not.
+    const terminal =
+      player.ended ||
+      (!player.seeking &&
+        player.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA &&
+        Number.isFinite(player.duration) &&
+        player.duration > 0 &&
+        player.currentTime >= player.duration - 0.001);
+    if (!terminal) return false;
+    player.pause();
+    setPlaying(false);
+    setLoading(false);
+    setStarted(true);
+    setEnded(true);
+    return true;
+  }
+
   const chapter =
     seconds < 3.5
       ? { number: 1, title: "Step inside" }
@@ -205,8 +225,11 @@ function SceneFilmPlayer({
           preload="metadata"
           poster={`/films/${strand}.webp`}
           aria-label={`Silent first-person walk-in: ${scene.place}. You enter through a doorway, walk to the interview table, and settle into your seat.`}
-          onPlay={() => setLoading(true)}
-          onPlaying={() => {
+          onPlay={(event) => {
+            if (!finishAtTerminalFrame(event.currentTarget)) setLoading(true);
+          }}
+          onPlaying={(event) => {
+            if (finishAtTerminalFrame(event.currentTarget)) return;
             setPlaying(true);
             setLoading(false);
             setStarted(true);
@@ -214,12 +237,14 @@ function SceneFilmPlayer({
             setFailed(false);
           }}
           onWaiting={(event) => {
+            if (finishAtTerminalFrame(event.currentTarget)) return;
             if (!event.currentTarget.paused) {
               setLoading(true);
               setPlaying(false);
             }
           }}
-          onPause={() => {
+          onPause={(event) => {
+            if (finishAtTerminalFrame(event.currentTarget)) return;
             setPlaying(false);
             setLoading(false);
           }}
@@ -230,6 +255,8 @@ function SceneFilmPlayer({
           }}
           onTimeUpdate={(event) => {
             const player = event.currentTarget;
+            setSeconds(player.currentTime);
+            if (finishAtTerminalFrame(player)) return;
             // WebKit can report waiting after playback has resumed without a
             // second playing event. Advancing media time with a decoded frame
             // is the reliable signal that the room is actually moving again.
@@ -245,7 +272,6 @@ function SceneFilmPlayer({
               setEnded(false);
               setFailed(false);
             }
-            setSeconds(player.currentTime);
           }}
           onError={() => {
             setFailed(true);

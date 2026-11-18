@@ -109,9 +109,16 @@ test("all ten strand films decode, fit a narrow screen, and preserve interview a
         (element: HTMLVideoElement) => element.duration,
       );
       await decodedFrame(film, duration - 0.15);
-      await page
-        .getByRole("button", { name: "Play scene film", exact: true })
-        .click();
+      const play = page.getByRole("button", {
+        name: "Play scene film",
+        exact: true,
+      });
+      await expect(film).toHaveJSProperty("paused", true);
+      await expect(play).toBeVisible();
+      await expect(
+        page.getByRole("button", { name: "Replay scene film" }),
+      ).toHaveCount(0);
+      await play.click();
       const replay = page.getByRole("button", { name: "Replay scene film" });
       await expect(replay).toBeVisible();
       const ready = page.getByRole("button", {
